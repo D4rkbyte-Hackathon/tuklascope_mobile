@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'screens/splash_screen.dart'; // We are importing your custom screen here!
 
 void main() {
-  runApp(const TuklascopeApp());
+  // ProviderScope is the Riverpod "cloud" that holds our gamified state
+  runApp(const ProviderScope(child: TuklascopeApp()));
 }
 
 class TuklascopeApp extends StatelessWidget {
@@ -11,14 +14,14 @@ class TuklascopeApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Tuklascope',
+      debugShowCheckedModeBanner:
+          false, // This hides that little red "DEBUG" banner in the corner!
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      // We will route this to our actual Splash Screen later!
-      home: const Scaffold(
-        body: Center(child: Text('Tuklascope System Initialization...')),
-      ),
+      home:
+          const SplashScreen(), // Boom. The Splash Screen is now the starting point.
     );
   }
 }
