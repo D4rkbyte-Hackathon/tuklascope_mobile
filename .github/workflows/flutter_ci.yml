@@ -12,6 +12,11 @@ jobs:
     # We run this on a standard Ubuntu Linux server provided by GitHub
     runs-on: ubuntu-latest
 
+    # Tell the runner to execute all 'run' commands inside the mobile folder
+    defaults:
+      run:
+        working-directory: ./mobile
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
