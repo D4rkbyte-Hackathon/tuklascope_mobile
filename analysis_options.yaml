@@ -7,9 +7,9 @@
 
 # The following line activates a set of recommended lints for Flutter apps,
 # packages, and plugins designed to encourage good coding practices.
-include: package:flutter_lints/flutter.yaml
+#include: package:flutter_lints/flutter.yaml
 
-linter:
+# linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
   # included above or to enable additional rules. A list of all available lints
@@ -20,9 +20,34 @@ linter:
   # or a specific dart file by using the `// ignore: name_of_lint` and
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
-  rules:
+  # rules:
     # avoid_print: false  # Uncomment to disable the `avoid_print` rule
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    # Ignore auto-generated files so they don't clog up our error logs
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+  errors:
+    # Treat missing return types and parameters as fatal errors
+    missing_required_param: error
+    missing_return: error
+    # Warn us if someone leaves a "TODO" in the code for too long
+    todo: warning
+
+linter:
+  rules:
+    # Enforce strict, clean Flutter code
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - prefer_final_locals
+    - always_declare_return_types
+    - avoid_print # Force developers to use a real logger, not print()
+    - sort_child_properties_last
+    - use_key_in_widget_constructors
