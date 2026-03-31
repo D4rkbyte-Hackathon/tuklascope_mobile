@@ -3,9 +3,9 @@ name: Tuklascope CI
 # This tells GitHub to run this script whenever a Pull Request is made to 'main'
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
@@ -15,20 +15,23 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-      
+
       - name: Set up Flutter Environment
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
-          
+          channel: "stable"
+
+      - name: Create Dummy .env File for CI
+        run: touch .env
+
       - name: Install dependencies
         run: flutter pub get
-        
+
       - name: Verify formatting (Fails if they didn't run 'make format')
         run: dart format --output=none --set-exit-if-changed .
-        
+
       - name: Analyze project source (Fails if they broke our rules in analysis_options.yaml)
         run: flutter analyze
-        
+
       - name: Run automated tests
         run: flutter test
