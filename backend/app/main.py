@@ -1,23 +1,26 @@
-from app.api import gemini
 from fastapi import FastAPI
-from dotenv import load_dotenv
-import os
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
+from app.api.v1.api_router import api_router
 
-# 1. WE MUST LOAD THE .ENV FILE BEFORE DOING ANYTHING ELSE
-load_dotenv()
-
-# 2. NOW WE CAN IMPORT THE AI ROUTE
-
-# 3. INITIALIZE THE APP
 app = FastAPI(
-    title="Tuklascope Backend API",
-    description="AI-Powered Holistic Discovery Application Orchestrator",
-    version="1.0.0"
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-app.include_router(gemini.router, prefix="/api", tags=["AI Discovery"])
+# Crucial for Frontend integration!
+app.add_middleware(
+    CORSMiddleware,
+    # Update this to specific origins (like the flutter web URL) in production
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
-@app.get("/")
-async def root():
-    return {"status": "ok", "message": "Tuklascope API is running!"}
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "message": "API is highly operational."}
