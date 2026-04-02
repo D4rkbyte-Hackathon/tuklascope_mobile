@@ -6,3 +6,5 @@ langchain-core>=0.1.28
 langchain-google-genai>=0.0.9
 supabase>=2.3.0
 python-multipart>=0.0.9
+qdrant-client>=1.7.3
+langchain-community>=0.0.13
