@@ -4,3 +4,4 @@ pydantic>=2.5.3
 pydantic-settings>=2.1.0
 langchain-core>=0.1.28
 langchain-google-genai>=0.0.9
+supabase>=2.3.0
