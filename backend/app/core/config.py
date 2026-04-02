@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     QDRANT_URL: str | None = None
     QDRANT_API_KEY: str | None = None
 
+    # Neo4j Graph Database Keys
+    NEO4J_URI: str | None = None
+    NEO4J_USERNAME: str | None = None
+    NEO4J_PASSWORD: str | None = None
+
     # Allows loading from .env file for local development
     # extra="ignore" tells Pydantic not to crash if it finds other unexpected variables in the .env
     model_config = SettingsConfigDict(

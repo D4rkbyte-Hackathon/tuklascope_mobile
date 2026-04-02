@@ -8,3 +8,4 @@ supabase>=2.3.0
 python-multipart>=0.0.9
 qdrant-client>=1.7.3
 langchain-community>=0.0.13
+neo4j>=5.14.1
