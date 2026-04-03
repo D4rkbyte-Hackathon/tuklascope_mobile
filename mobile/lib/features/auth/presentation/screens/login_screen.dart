@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../onboarding/compass_questions_screen.dart';
 
 // Import our Riverpod provider so we can access Supabase
 import '../../providers/auth_provider.dart';
@@ -32,6 +33,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
+
+        // ADD THIS NAVIGATION BLOCK:
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => CompassQuestionsScreen()),
+        );
+      }
     } on AuthException catch (e) {
       // Supabase throws this if the password is wrong, user doesn't exist, etc.
       if (mounted) {
@@ -66,9 +75,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
+      // ADD THIS NAVIGATION BLOCK:
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Success! You are now registered.')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => CompassQuestionsScreen()),
         );
       }
     } on AuthException catch (e) {
