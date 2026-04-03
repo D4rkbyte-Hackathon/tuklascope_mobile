@@ -30,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen> {
       // If returning user, skip login and compass -> Go straight to Main Navigation
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => MainNavigation()),
+        MaterialPageRoute(builder: (context) => MainNavigation()), //add const later eg const MainNavigation (mas smooth daw ingon gemini)
       );
     } else {
       // If new or logged out -> Go to Login Screen
