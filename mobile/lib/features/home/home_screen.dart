@@ -26,12 +26,11 @@ class HomeScreen extends ConsumerWidget {
               // A. Tell Supabase to kill the session and delete the token
               await ref.read(authServiceProvider).signOut();
 
-              // B. Kick the user back to the Splash Screen
+              // B. Kick the user back to the Splash Screen using the ROOT Navigator!
               if (context.mounted) {
-                Navigator.pushAndRemoveUntil(
-                  context,
+                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const SplashScreen()),
-                  (route) => false, // This completely destroys the navigation history so they can't hit "Back"
+                  (route) => false, // Destroys everything, including the Bottom Nav Bar
                 );
               }
             },
