@@ -6,6 +6,8 @@ import '../../../onboarding/compass_questions_screen.dart';
 // Import our Riverpod provider so we can access Supabase
 import '../../providers/auth_provider.dart';
 
+import '../../../../core/widgets/gradient_scaffold.dart';
+
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -116,7 +118,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(title: const Text('Tuklascope'), centerTitle: true),
       body: Center(
         child: SingleChildScrollView(

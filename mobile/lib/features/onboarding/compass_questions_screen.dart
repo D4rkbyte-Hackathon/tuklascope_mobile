@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'compass_results_screen.dart';
 
+import '../../core/widgets/gradient_scaffold.dart';
+
 class CompassQuestionsScreen extends StatelessWidget {
   const CompassQuestionsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(title: const Text('The Compass')),
       body: Center(
         child: Column(
