@@ -82,7 +82,7 @@ class _MainNavigationState extends State<MainNavigation> {
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
               BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: 'Scan'),
               BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Pathways'),
-              BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+              BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Pathfinder'),
               BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'),
             ],
           ),
