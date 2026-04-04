@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart'; // Needed for ConsumerW
 import '../auth/providers/auth_provider.dart';
 import '../onboarding/splash_screen.dart';
 
+import '../../core/widgets/gradient_scaffold.dart';
+
 // 1. Change StatelessWidget to ConsumerWidget
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -12,7 +14,7 @@ class HomeScreen extends ConsumerWidget {
   // 2. Add 'WidgetRef ref' to the build method parameters
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [

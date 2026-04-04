@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/gradient_scaffold.dart';
+
 class LiveFeedScreen extends StatelessWidget {
   const LiveFeedScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(title: const Text('Live Feed')),
       body: Center(
         child: Column(
@@ -84,7 +86,7 @@ class TeaserDoorsScreen extends StatelessWidget {
   const TeaserDoorsScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(title: const Text('Teaser Doors')), // Free Back Button!
       body: const Center(child: Text('Screen 3.3: Teaser Doors')),
     );
@@ -95,7 +97,7 @@ class DiscoveryCardsScreen extends StatelessWidget {
   const DiscoveryCardsScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(title: const Text('Discovery Cards')), // Free Back Button!
       body: const Center(child: Text('Screen 3.4: Discovery Cards')),
     );

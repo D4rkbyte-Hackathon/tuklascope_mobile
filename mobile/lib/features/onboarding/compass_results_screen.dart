@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../../main_navigation.dart';
 
+import '../../core/widgets/gradient_scaffold.dart';
+
 class CompassResultsScreen extends StatelessWidget {
   const CompassResultsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: const Text('Your Results'),
         // Optional: Remove the back button if you don't want them retaking it immediately

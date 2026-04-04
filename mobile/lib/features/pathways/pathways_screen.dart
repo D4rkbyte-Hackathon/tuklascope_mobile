@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/gradient_scaffold.dart';
+
 class PathwaysScreen extends StatelessWidget {
   const PathwaysScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(title: const Text('Learning Pathways')),
       body: Center(
         child: Column(
@@ -32,7 +34,7 @@ class RewardScreen extends StatelessWidget {
   const RewardScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(title: const Text('Reward Unlocked!')), // Free Back Button!
       body: const Center(child: Text('Screen 4.2: Action Success / Reward UI')),
     );
