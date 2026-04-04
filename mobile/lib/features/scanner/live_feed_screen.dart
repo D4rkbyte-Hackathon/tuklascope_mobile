@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'teaser_doors_screen.dart'; // <-- Add this near your other imports
 
 class LiveFeedScreen extends StatefulWidget {
   const LiveFeedScreen({super.key});
@@ -64,11 +65,13 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
     _setCamera(_selectedCameraIndex);
   }
 
-  // The mock action: Skips taking a picture and just opens the modal
+  // The mock action: Skips taking a picture and just opens the floating dialog
   void _triggerScanningModal() {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      backgroundColor: Colors.transparent, // Crucial for our gradient modal later
+      // This darkens the camera feed behind the dialog to make it POP!
+      barrierColor: Colors.black.withOpacity(0.7), 
+      barrierDismissible: false, // Optional: Prevents them from tapping outside to cancel
       builder: (context) => const ScanningModal(),
     );
   }
@@ -215,30 +218,114 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
   }
 }
 
-// --- TEMPORARY SCANNING MODAL SKELETON ---
-// (We will style this fully when we tackle Screen 3.2 next!)
-class ScanningModal extends StatelessWidget {
+// --- 3.2 THE ANALYZING MODAL (FLOATING VERSION) ---
+class ScanningModal extends StatefulWidget {
   const ScanningModal({super.key});
 
   @override
+  State<ScanningModal> createState() => _ScanningModalState();
+}
+
+class _ScanningModalState extends State<ScanningModal> {
+  
+  @override
+  void initState() {
+    super.initState();
+    
+    // THE MAGIC TIMER: Wait 3 seconds, then navigate
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return; 
+
+      // 1. Close this Floating Dialog
+      Navigator.pop(context); 
+      
+      // 2. Push directly to Screen 3.3 (Teaser Doors)
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const TeaserDoorsScreen()),
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 300,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Center(
+    // Dialog is the magic widget that floats in the center
+    return Dialog(
+      backgroundColor: Colors.transparent, // Makes the default white square invisible
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24), // Gives it breathing room from the phone edges
+      child: Container(
+        height: 320, // Slightly shorter since we removed the drag handle
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFFFFDF4), Color(0xFFD9D7CE)],
+          ),
+          // Round ALL FOUR corners now!
+          borderRadius: BorderRadius.circular(32),
+          // Add a soft glow behind the dialog to lift it off the dark background
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              spreadRadius: 5,
+            ),
+          ],
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 20),
-            const Text('Analyzing...', style: TextStyle(fontSize: 20)),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            )
+            // THE SCANNING GRAPHIC
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // 1. The Outer Progress Ring
+                const SizedBox(
+                  width: 100,
+                  height: 100,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 6,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF9800)), 
+                  ),
+                ),
+                // 2. The Inner Icon Container
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0B3C6A).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.document_scanner_rounded,
+                    size: 36,
+                    color: Color(0xFF0B3C6A),
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 35),
+
+            // THE TEXT
+            const Text(
+              'Analyzing Artifact...',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0B3C6A), 
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Cross-referencing historical databases',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
           ],
         ),
       ),
