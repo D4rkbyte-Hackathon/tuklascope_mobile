@@ -34,7 +34,7 @@ class RewardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Reward Unlocked!')), // Free Back Button!
-      body: const Center(child: Text('Screen 4.2: Action Success / Reward UI')),
+      body: const Center(child: Text('Screen 4.2: Action Success / Reward UI, edit herrreee')),
     );
   }
 }
