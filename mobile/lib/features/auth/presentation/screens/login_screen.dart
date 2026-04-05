@@ -62,6 +62,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _signUp() async {
+    // Check if user is already signed in
+    final currentUser = ref.read(authServiceProvider).currentUser;
+    if (currentUser != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You are already signed in. Please log out first to create a new account.'),
+            backgroundColor: Color(0xFFFF9800),
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -91,6 +105,81 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('An unexpected error occurred')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    // Check if user is already signed in
+    final currentUser = ref.read(authServiceProvider).currentUser;
+    if (currentUser != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You are already signed in.'),
+            backgroundColor: Color(0xFF64B5F6),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      // Call the Google Sign In method from the auth service
+      final authResponse = await ref
+          .read(authServiceProvider)
+          .signInWithGoogle();
+
+      if (authResponse != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Successfully signed in with Google!'),
+              backgroundColor: Color(0xFF64B5F6),
+            ),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const CompassQuestionsScreen()),
+          );
+        }
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Authentication Error: ${e.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        String errorMessage = 'Failed to sign in with Google';
+        if (e.toString().contains('MISSING_EMAIL')) {
+          errorMessage = 'Google account has no email. Please use another account.';
+        } else if (e.toString().contains('PlatformException')) {
+          errorMessage = 'Google Sign In was cancelled or failed. Please try again.';
+        } else if (e.toString().contains('GOOGLE_WEB_CLIENT_ID is missing')) {
+          errorMessage = 'Google configuration is missing. Please contact support.';
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     } finally {
@@ -197,9 +286,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       _buildSocialButton(
                         icon: Icons.g_mobiledata, // Placeholder Google icon
                         label: 'Google',
-                        onPressed: () {
-                          // TODO: Implement Google Sign In
-                        },
+                        onPressed: _signInWithGoogle,
                       ),
                       const SizedBox(height: 16),
 
