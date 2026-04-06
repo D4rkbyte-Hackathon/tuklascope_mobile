@@ -52,8 +52,8 @@ class _SplashScreenState extends State<SplashScreen> {
         // 4. Swap the Text for your actual image!
         child: Image.asset(
           'assets/images/logo.png', // Change 'logo.png' if your file is named something else!
-          width: 250, // Adjust these numbers to make your logo bigger or smaller
-          height: 250,
+          width: 500, // Adjust these numbers to make your logo bigger or smaller
+          height: 500,
           fit: BoxFit.contain, // Ensures the logo scales cleanly
         ),
       ),
