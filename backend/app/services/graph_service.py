@@ -45,30 +45,45 @@ def update_skill_tree(user_id: str, object_name: str, chosen_lens: str, xp_award
         logger.error(f"Failed to update Neo4j Skill Tree: {str(e)}")
 
 
-def get_dominant_strand(user_id: str) -> dict | None:
+def get_user_skill_web(user_id: str) -> dict | None:
     """
-    Queries Neo4j to find which Academic Strand the user has the most XP in.
+    Queries Neo4j to build a complete profile of the user's learning journey,
+    including all strand XP and recent objects scanned.
     """
     if not neo4j_db.driver:
         return None
 
-    # Cypher: Find the user, follow the EXPLORED arrows to the strands,
-    # sort by XP, and return the top 1.
-    query = """
+    # Query 1: Get XP distribution across all strands
+    xp_query = """
     MATCH (u:User {id: $user_id})-[e:EXPLORED]->(s:Strand)
     RETURN s.name AS strand, e.total_xp AS xp
-    ORDER BY xp DESC
-    LIMIT 1
+    """
+
+    # Query 2: Get the unique physical objects they scanned
+    objects_query = """
+    MATCH (u:User {id: $user_id})-[:SCANNED]->(o:Object)
+    RETURN DISTINCT o.name AS object_name LIMIT 10
     """
 
     try:
-        records, summary, keys = neo4j_db.driver.execute_query(
-            query, user_id=user_id)
-        if records:
-            return {"strand": records[0]["strand"], "xp": records[0]["xp"]}
-        return None
+        xp_records, _, _ = neo4j_db.driver.execute_query(
+            xp_query, user_id=user_id)
+        obj_records, _, _ = neo4j_db.driver.execute_query(
+            objects_query, user_id=user_id)
+
+        if not xp_records:
+            return None
+
+        xp_distribution = {record["strand"]: record["xp"]
+                           for record in xp_records}
+        scanned_objects = [record["object_name"] for record in obj_records]
+
+        return {
+            "xp_distribution": xp_distribution,
+            "scanned_objects": scanned_objects
+        }
     except Exception as e:
-        logger.error(f"Failed to fetch dominant strand from Neo4j: {str(e)}")
+        logger.error(f"Failed to fetch Skill Web from Neo4j: {str(e)}")
         return None
 
 
