@@ -35,6 +35,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   ];
 
   bool _isLoading = false;
+  bool _obscurePassword = true; // Added state variable for password toggle
 
   Future<void> _signUp() async {
     // Basic validation
@@ -64,14 +65,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       final user = authResponse.user;
 
       if (user != null) {
-        // 2. Save Education Level (and create profile row) in the 'profiles' table.
-        // We use upsert so if a row somehow exists it updates, otherwise it inserts.
-        await Supabase.instance.client.from('profiles').upsert({
+        // 2. Save Education Level using strict .insert() as requested to fix RLS
+        await Supabase.instance.client.from('profiles').insert({
           'id': user.id, // Primary key linking to auth.users
           'email': user.email,
           'education_level': _selectedEducationLevel,
-          // You can pass name, city, and country here later once you are ready!
-          // 'display_name': _nameController.text.trim(),
         });
 
         if (mounted) {
@@ -84,21 +82,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           );
         }
       }
-} on AuthException catch (e) {
+    } on AuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.red));
       }
     } catch (e) {
-      // 1. Print the error to your debug console
       print("🚨 SIGNUP ERROR: $e"); 
       
       if (mounted) {
-        // 2. Show the actual error message to the screen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'), 
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5), // Keep it on screen longer so you can read it
+            duration: const Duration(seconds: 5), 
           ),
         );
       }
@@ -218,7 +214,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   controller: _passwordController,
                   label: 'Password',
                   icon: Icons.lock_outline,
-                  obscureText: true,
+                  obscureText: _obscurePassword, // Dynamic obscureText
+                  suffixIcon: IconButton(        // Added suffix toggle button
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey[600],
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 )
                 .animate()
                 .fade(duration: 600.ms, delay: 400.ms)
@@ -236,7 +243,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       ElevatedButton(
                         onPressed: _signUp,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF64B5F6), // Requested Blue
+                          backgroundColor: const Color(0xFF64B5F6),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -273,7 +280,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             child: const Text(
                               'Log In',
                               style: TextStyle(
-                                color: Color(0xFFFF6B2C), // Requested Orange
+                                color: Color(0xFFFF6B2C),
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -294,13 +301,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
-  // Helper widget for standard text inputs
   Widget _buildCustomTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
+    Widget? suffixIcon, // Added parameter
   }) {
     return TextField(
       controller: controller,
@@ -311,6 +318,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey[600]),
         prefixIcon: Icon(icon, color: const Color(0xFF64B5F6)),
+        suffixIcon: suffixIcon, // Apply parameter
         filled: true,
         fillColor: Colors.white.withOpacity(0.8),
         enabledBorder: OutlineInputBorder(
@@ -325,7 +333,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
-  // Helper widget for the Education Level Dropdown
   Widget _buildCustomDropdown({
     required String label,
     required IconData icon,

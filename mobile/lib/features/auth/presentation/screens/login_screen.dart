@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_animate/flutter_animate.dart'; // 1. IMPORT FLUTTER ANIMATE
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../onboarding/compass_questions_screen.dart';
 import 'signup_screen.dart'; 
@@ -19,7 +19,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  
   bool _isLoading = false;
+  bool _obscurePassword = true; // Added state variable for password toggle
 
   Future<void> _signIn() async {
     setState(() {
@@ -145,7 +147,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            // 2. REMOVED TweenAnimationBuilder. Animations are now handled on individual elements below.
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -184,7 +185,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   controller: _passwordController,
                   label: 'Password',
                   icon: Icons.lock_outline,
-                  obscureText: true,
+                  obscureText: _obscurePassword, // Dynamic obscureText
+                  suffixIcon: IconButton(        // Added suffix toggle button
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey[600],
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 )
                 .animate()
                 .fade(duration: 600.ms, delay: 300.ms)
@@ -296,7 +308,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 800.ms),
                     ],
                   )
-                  // Animating the wrapper of the buttons to catch the login button itself
                   .animate()
                   .fade(duration: 600.ms, delay: 400.ms)
                   .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 400.ms),
@@ -314,6 +325,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     required IconData icon,
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
+    Widget? suffixIcon, // Added parameter
   }) {
     return TextField(
       controller: controller,
@@ -324,6 +336,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey[600]),
         prefixIcon: Icon(icon, color: const Color(0xFF64B5F6)), 
+        suffixIcon: suffixIcon, // Apply parameter
         filled: true,
         fillColor: Colors.white.withOpacity(0.8), 
         enabledBorder: OutlineInputBorder(
