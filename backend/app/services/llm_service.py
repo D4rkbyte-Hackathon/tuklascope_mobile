@@ -64,28 +64,30 @@ async def generate_discovery_from_image(image_bytes: bytes, grade_level: str) ->
             status_code=500, detail=f"AI Vision Processing Failed: {str(e)}")
 
 
-async def generate_holistic_pathfinder(xp_distribution: dict, scanned_objects: list) -> PathfinderResponse:
+async def generate_holistic_pathfinder(xp_distribution: dict, top_skills: dict) -> PathfinderResponse:
     try:
         structured_pathfinder = llm.with_structured_output(PathfinderResponse)
 
         prompt_text = (
             "You are a visionary Filipino Career Guidance Counselor. "
-            "A student has been using an app to explore the world. Here is their complete Skill Web:\n"
-            f"- XP Distribution: {xp_distribution}\n"
-            f"- Recently Scanned Objects: {scanned_objects}\n\n"
-            "Analyze this intersection of data and generate exactly 3 highly personalized college degree or career recommendations in the Philippines. "
-            "You MUST follow this 3-Tiered Strategy:\n"
-            "1. 'The Specialist': Based primarily on their highest XP strand.\n"
-            "2. 'The Interdisciplinary': A hybrid career that beautifully combines their Top 2 highest strands.\n"
-            "3. 'The Object-Driven': A wildcard career based on the physical themes of the objects they scanned, even if it contradicts their top strand.\n"
-            "Make the descriptions inspiring, logical, and culturally relevant."
+            "A student has been building an RPG-style academic Skill Tree. Here is their entire profile:\n"
+            f"- Strand XP Distribution: {xp_distribution}\n"
+            f"- Leveled-Up Skills: {top_skills}\n\n"
+            "Analyze this ENTIRE constellation of data. Generate exactly 3 highly personalized college degree or career recommendations in the Philippines.\n\n"
+            "CRITICAL RULE: DO NOT focus on just one specific strand or one specific skill. "
+            "Every single recommendation MUST be a 'Synthesis Career'—a path that requires the combination of their diverse skills.\n\n"
+            "Follow these 3 Synthesis Archetypes:\n"
+            "1. 'The Integrator': A career that perfectly blends their top technical skills with their top social/business skills.\n"
+            "2. 'The Problem-Solver': A career that uses their unique combination of skills to solve a specific, real-world issue in the Philippines.\n"
+            "3. 'The Trailblazer': An emerging or modern career path where their specific web of skills gives them a unique, unfair advantage.\n\n"
+            "In your descriptions, explicitly mention HOW the combination of their different skills makes them perfect for this role."
         )
 
         result = await structured_pathfinder.ainvoke(prompt_text)
         return result
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Pathfinder V2 AI Failed: {str(e)}")
+            status_code=500, detail=f"Pathfinder AI Failed: {str(e)}")
 
 
 async def generate_learning_deck(object_name: str, strand: str, grade_level: str, existing_skills: list[str]) -> LearningDeckResponse:
