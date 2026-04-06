@@ -64,24 +64,28 @@ async def generate_discovery_from_image(image_bytes: bytes, grade_level: str) ->
             status_code=500, detail=f"AI Vision Processing Failed: {str(e)}")
 
 
-async def generate_career_recommendations(strand: str, xp: int) -> PathfinderResponse:
+async def generate_holistic_pathfinder(xp_distribution: dict, scanned_objects: list) -> PathfinderResponse:
     try:
         structured_pathfinder = llm.with_structured_output(PathfinderResponse)
 
         prompt_text = (
-            "You are a highly encouraging Filipino Career Guidance Counselor. "
-            f"A student has been using an app to explore the world around them and has shown a massive interest in the '{strand}' academic strand, "
-            f"accumulating {xp} Experience Points (XP) in this area. "
-            f"Based on their strong inclination toward {strand}, recommend 3 specific college degrees or career tracks in the Philippines. "
-            "Make the descriptions inspiring and culturally relevant. "
-            f"Ensure the 'dominant_strand' field is exactly '{strand}' and 'total_xp_in_strand' is {xp}."
+            "You are a visionary Filipino Career Guidance Counselor. "
+            "A student has been using an app to explore the world. Here is their complete Skill Web:\n"
+            f"- XP Distribution: {xp_distribution}\n"
+            f"- Recently Scanned Objects: {scanned_objects}\n\n"
+            "Analyze this intersection of data and generate exactly 3 highly personalized college degree or career recommendations in the Philippines. "
+            "You MUST follow this 3-Tiered Strategy:\n"
+            "1. 'The Specialist': Based primarily on their highest XP strand.\n"
+            "2. 'The Interdisciplinary': A hybrid career that beautifully combines their Top 2 highest strands.\n"
+            "3. 'The Object-Driven': A wildcard career based on the physical themes of the objects they scanned, even if it contradicts their top strand.\n"
+            "Make the descriptions inspiring, logical, and culturally relevant."
         )
 
         result = await structured_pathfinder.ainvoke(prompt_text)
         return result
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Pathfinder AI Failed: {str(e)}")
+            status_code=500, detail=f"Pathfinder V2 AI Failed: {str(e)}")
 
 
 async def generate_learning_deck(object_name: str, strand: str, grade_level: str, existing_skills: list[str]) -> LearningDeckResponse:
