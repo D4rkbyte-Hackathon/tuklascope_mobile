@@ -3,6 +3,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from app.core.config import settings
 from app.schemas.discover import DiscoverResponse, DiscoverRequest
+from app.schemas.pathfinder import PathfinderResponse
+from app.schemas.cards import LearningDeckResponse
 from fastapi import HTTPException
 
 # Initialize LLM with the safely loaded API key
@@ -60,3 +62,46 @@ async def generate_discovery_from_image(image_bytes: bytes, grade_level: str) ->
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"AI Vision Processing Failed: {str(e)}")
+
+
+async def generate_career_recommendations(strand: str, xp: int) -> PathfinderResponse:
+    try:
+        structured_pathfinder = llm.with_structured_output(PathfinderResponse)
+
+        prompt_text = (
+            "You are a highly encouraging Filipino Career Guidance Counselor. "
+            f"A student has been using an app to explore the world around them and has shown a massive interest in the '{strand}' academic strand, "
+            f"accumulating {xp} Experience Points (XP) in this area. "
+            f"Based on their strong inclination toward {strand}, recommend 3 specific college degrees or career tracks in the Philippines. "
+            "Make the descriptions inspiring and culturally relevant. "
+            f"Ensure the 'dominant_strand' field is exactly '{strand}' and 'total_xp_in_strand' is {xp}."
+        )
+
+        result = await structured_pathfinder.ainvoke(prompt_text)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Pathfinder AI Failed: {str(e)}")
+
+
+async def generate_learning_deck(object_name: str, strand: str, grade_level: str, existing_skills: list[str]) -> LearningDeckResponse:
+    try:
+        structured_deck = llm.with_structured_output(LearningDeckResponse)
+
+        # The Semantic Net Prompt
+        prompt_text = (
+            f"You are a Filipino educational guide writing for a {grade_level} student. "
+            f"The user scanned a '{object_name}' and selected the '{strand}' academic strand. "
+            "Generate a 3-Card Learning Deck (Concept, Real World, and Challenge).\n\n"
+            "DATA GOVERNANCE RULE for the 'domain' and 'skill' fields:\n"
+            f"1. You MUST categorize the 'domain' under an official {strand} discipline (e.g., 'Mechanical Engineering', 'Sociology', 'Accounting').\n"
+            f"2. Here are the specific skills already in our database for {strand}: {existing_skills}\n"
+            "3. If the core concept matches an existing skill conceptually, YOU MUST USE THE EXACT EXISTING SKILL STRING. "
+            "Only invent a new skill name if it is fundamentally different."
+        )
+
+        result = await structured_deck.ainvoke(prompt_text)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Learning Deck AI Failed: {str(e)}")

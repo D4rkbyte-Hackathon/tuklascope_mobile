@@ -43,3 +43,48 @@ def update_skill_tree(user_id: str, object_name: str, chosen_lens: str, xp_award
     except Exception as e:
         # We don't want a graph failure to crash the whole API, so we just log it.
         logger.error(f"Failed to update Neo4j Skill Tree: {str(e)}")
+
+
+def get_dominant_strand(user_id: str) -> dict | None:
+    """
+    Queries Neo4j to find which Academic Strand the user has the most XP in.
+    """
+    if not neo4j_db.driver:
+        return None
+
+    # Cypher: Find the user, follow the EXPLORED arrows to the strands,
+    # sort by XP, and return the top 1.
+    query = """
+    MATCH (u:User {id: $user_id})-[e:EXPLORED]->(s:Strand)
+    RETURN s.name AS strand, e.total_xp AS xp
+    ORDER BY xp DESC
+    LIMIT 1
+    """
+
+    try:
+        records, summary, keys = neo4j_db.driver.execute_query(
+            query, user_id=user_id)
+        if records:
+            return {"strand": records[0]["strand"], "xp": records[0]["xp"]}
+        return None
+    except Exception as e:
+        logger.error(f"Failed to fetch dominant strand from Neo4j: {str(e)}")
+        return None
+
+
+def get_existing_skills_for_strand(strand_name: str) -> list[str]:
+    """Fetches all existing skills under a specific strand to feed the Semantic Net."""
+    if not neo4j_db.driver:
+        return []
+
+    query = """
+    MATCH (s:Strand {name: $strand_name})<-[:BELONGS_TO]-(t:Topic)
+    RETURN t.name AS topic_name LIMIT 50
+    """
+    try:
+        records, _, _ = neo4j_db.driver.execute_query(
+            query, strand_name=strand_name.upper())
+        return [record["topic_name"] for record in records]
+    except Exception as e:
+        logger.error(f"Failed to fetch existing skills: {str(e)}")
+        return []
