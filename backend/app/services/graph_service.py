@@ -1,95 +1,17 @@
-from app.core.graph_db import neo4j_db
 import logging
+# Assuming neo4j_db is initialized in your core database module
+from app.core.database import neo4j_db
 
 logger = logging.getLogger(__name__)
 
 
-def update_skill_tree(user_id: str, object_name: str, chosen_lens: str, xp_awarded: int):
-    """
-    Draws the user's discovery path in Neo4j.
-    Uses MERGE to prevent duplicate nodes and build an interconnected web.
-    """
-    if not neo4j_db.driver:
-        logger.warning("Graph DB not connected. Skipping skill tree update.")
-        return
-
-    # The Cypher Query: Drawing the map
-    query = """
-    // 1. Find or create the core nodes
-    MERGE (u:User {id: $user_id})
-    MERGE (o:Object {name: $object_name})
-    MERGE (s:Strand {name: $chosen_lens})
-    
-    // 2. Draw the relationships between them
-    MERGE (u)-[:SCANNED]->(o)
-    MERGE (o)-[:BELONGS_TO]->(s)
-    
-    // 3. Track how many times the user explores this specific strand
-    MERGE (u)-[e:EXPLORED]->(s)
-    ON CREATE SET e.count = 1, e.total_xp = $xp_awarded
-    ON MATCH SET e.count = e.count + 1, e.total_xp = e.total_xp + $xp_awarded
-    """
-
-    try:
-        neo4j_db.driver.execute_query(
-            query,
-            user_id=user_id,
-            object_name=object_name.strip().title(),  # Standardize formatting
-            chosen_lens=chosen_lens.strip().upper(),
-            xp_awarded=xp_awarded
-        )
-        logger.info(
-            f"Successfully mapped {object_name} to the Kaalaman Skill Tree for user {user_id}")
-    except Exception as e:
-        # We don't want a graph failure to crash the whole API, so we just log it.
-        logger.error(f"Failed to update Neo4j Skill Tree: {str(e)}")
-
-
-def get_user_skill_web(user_id: str) -> dict | None:
-    """
-    Queries Neo4j to build a complete profile of the user's learning journey,
-    including all strand XP and recent objects scanned.
-    """
-    if not neo4j_db.driver:
-        return None
-
-    # Query 1: Get XP distribution across all strands
-    xp_query = """
-    MATCH (u:User {id: $user_id})-[e:EXPLORED]->(s:Strand)
-    RETURN s.name AS strand, e.total_xp AS xp
-    """
-
-    # Query 2: Get the unique physical objects they scanned
-    objects_query = """
-    MATCH (u:User {id: $user_id})-[:SCANNED]->(o:Object)
-    RETURN DISTINCT o.name AS object_name LIMIT 10
-    """
-
-    try:
-        xp_records, _, _ = neo4j_db.driver.execute_query(
-            xp_query, user_id=user_id)
-        obj_records, _, _ = neo4j_db.driver.execute_query(
-            objects_query, user_id=user_id)
-
-        if not xp_records:
-            return None
-
-        xp_distribution = {record["strand"]: record["xp"]
-                           for record in xp_records}
-        scanned_objects = [record["object_name"] for record in obj_records]
-
-        return {
-            "xp_distribution": xp_distribution,
-            "scanned_objects": scanned_objects
-        }
-    except Exception as e:
-        logger.error(f"Failed to fetch Skill Web from Neo4j: {str(e)}")
-        return None
-
-
 def get_existing_skills_for_strand(strand_name: str) -> list[str]:
-    """Fetches all existing skills under a specific strand to feed the Semantic Net."""
+    """
+    Fetches all existing skills under a specific strand to feed the Semantic Net.
+    Prevents the AI from hallucinating duplicate skill names.
+    """
     if not neo4j_db.driver:
+        logger.error("Neo4j driver not initialized.")
         return []
 
     query = """
@@ -103,3 +25,95 @@ def get_existing_skills_for_strand(strand_name: str) -> list[str]:
     except Exception as e:
         logger.error(f"Failed to fetch existing skills: {str(e)}")
         return []
+
+
+def get_user_skill_web(user_id: str) -> dict | None:
+    """
+    Queries Neo4j to build a complete Constellation profile of the user's learning journey.
+    Pulls their overall XP distribution AND their highest-leveled specific skills.
+    """
+    if not neo4j_db.driver:
+        logger.error("Neo4j driver not initialized.")
+        return None
+
+    # Query 1: Get overall XP distribution across the 4 main strands
+    xp_query = """
+    MATCH (u:User {id: $user_id})-[e:EXPLORED]->(s:Strand)
+    RETURN s.name AS strand, e.total_xp AS xp
+    """
+
+    # Query 2: Get their highest leveled Skills/Topics (The RPG mechanic)
+    skills_query = """
+    MATCH (u:User {id: $user_id})-[m:MASTERED]->(t:Topic)
+    RETURN t.name AS skill_name, m.count AS level
+    ORDER BY level DESC LIMIT 5
+    """
+
+    try:
+        xp_records, _, _ = neo4j_db.driver.execute_query(
+            xp_query, user_id=user_id)
+        skill_records, _, _ = neo4j_db.driver.execute_query(
+            skills_query, user_id=user_id)
+
+        if not xp_records:
+            return None
+
+        xp_distribution = {record["strand"]: record["xp"]
+                           for record in xp_records}
+        top_skills = {record["skill_name"]: record["level"]
+                      for record in skill_records}
+
+        return {
+            "xp_distribution": xp_distribution,
+            "top_skills": top_skills
+        }
+    except Exception as e:
+        logger.error(f"Failed to fetch Skill Web from Neo4j: {str(e)}")
+        return None
+
+
+def save_skill_to_graph(user_id: str, strand_name: str, skill_name: str, xp_awarded: int) -> bool:
+    """
+    Saves the mastered skill to the Neo4j Skill Tree.
+    Creates the nodes if they don't exist, and levels them up if they do.
+    """
+    if not neo4j_db.driver:
+        logger.error("Neo4j driver not initialized.")
+        return False
+
+    query = """
+    // 1. Find the User
+    MATCH (u:User {id: $user_id})
+
+    // 2. Ensure the Strand exists and update their overall Strand XP
+    MERGE (s:Strand {name: $strand_name})
+    MERGE (u)-[e:EXPLORED]->(s)
+    ON CREATE SET e.total_xp = $xp_awarded
+    ON MATCH SET e.total_xp = e.total_xp + $xp_awarded
+
+    // 3. Ensure the Topic (Skill) exists and connect it to the Strand
+    MERGE (t:Topic {name: $skill_name})
+    MERGE (t)-[:BELONGS_TO]->(s)
+
+    // 4. The RPG Mechanic: Link User to the Topic and Level it up!
+    MERGE (u)-[m:MASTERED]->(t)
+    ON CREATE SET m.count = 1
+    ON MATCH SET m.count = m.count + 1
+    
+    RETURN u, s, t
+    """
+
+    try:
+        neo4j_db.driver.execute_query(
+            query,
+            user_id=user_id,
+            strand_name=strand_name.upper(),
+            skill_name=skill_name,
+            xp_awarded=xp_awarded
+        )
+        logger.info(
+            f"Successfully saved/leveled up skill '{skill_name}' for user {user_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to graph skill to Neo4j: {str(e)}")
+        return False
