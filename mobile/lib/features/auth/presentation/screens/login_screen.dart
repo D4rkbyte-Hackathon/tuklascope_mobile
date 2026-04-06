@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+
 import '../../../onboarding/compass_questions_screen.dart';
+import 'signup_screen.dart'; 
 
-// Import our Riverpod provider so we can access Supabase
 import '../../providers/auth_provider.dart';
-
 import '../../../../core/widgets/gradient_scaffold.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -16,19 +17,17 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  // Controllers to read what the user types
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // Loading state to show a spinner while talking to Supabase
+  
   bool _isLoading = false;
+  bool _obscurePassword = true; // Added state variable for password toggle
 
   Future<void> _signIn() async {
     setState(() {
       _isLoading = true;
     });
     try {
-      // Read the auth service and attempt to sign in
       await ref
           .read(authServiceProvider)
           .signInWithEmailPassword(
@@ -61,63 +60,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _signUp() async {
-    // Check if user is already signed in
-    final currentUser = ref.read(authServiceProvider).currentUser;
-    if (currentUser != null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('You are already signed in. Please log out first to create a new account.'),
-            backgroundColor: Color(0xFFFF9800),
-          ),
-        );
-      }
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      // Read the auth service and attempt to register a new user
-      await ref
-          .read(authServiceProvider)
-          .signUpWithEmailPassword(
-            _emailController.text.trim(),
-            _passwordController.text.trim(),
-          );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Success! You are now registered.')),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const CompassQuestionsScreen()),
-        );
-      }
-    } on AuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An unexpected error occurred')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
   Future<void> _signInWithGoogle() async {
-    // Check if user is already signed in
     final currentUser = ref.read(authServiceProvider).currentUser;
     if (currentUser != null) {
       if (mounted) {
@@ -135,7 +78,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _isLoading = true;
     });
     try {
-      // Call the Google Sign In method from the auth service
       final authResponse = await ref
           .read(authServiceProvider)
           .signInWithGoogle();
@@ -201,7 +143,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return GradientScaffold(
-      // We removed the AppBar to give it a modern, full-screen clean look
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -210,51 +151,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // "Login" Text at the top
+                // --- TITLE ANIMATION ---
                 const Text(
                   'Login',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF0B3C6A), // Tuklascope Dark Blue
+                    color: Color(0xFF0B3C6A), 
                   ),
-                ),
+                )
+                .animate()
+                .fade(duration: 600.ms, delay: 100.ms)
+                .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 100.ms),
+                
                 const SizedBox(height: 48),
 
-                // Email Textbar
+                // --- EMAIL FIELD ANIMATION ---
                 _buildCustomTextField(
                   controller: _emailController,
                   label: 'Email',
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
-                ),
+                )
+                .animate()
+                .fade(duration: 600.ms, delay: 200.ms)
+                .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 200.ms),
+                
                 const SizedBox(height: 20),
 
-                // Password Textbar
+                // --- PASSWORD FIELD ANIMATION ---
                 _buildCustomTextField(
                   controller: _passwordController,
                   label: 'Password',
                   icon: Icons.lock_outline,
-                  obscureText: true,
-                ),
+                  obscureText: _obscurePassword, // Dynamic obscureText
+                  suffixIcon: IconButton(        // Added suffix toggle button
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey[600],
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                )
+                .animate()
+                .fade(duration: 600.ms, delay: 300.ms)
+                .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 300.ms),
+                
                 const SizedBox(height: 32),
 
+                // --- LOGIN BUTTON / SPINNER ANIMATION ---
                 if (_isLoading)
                   const Center(child: CircularProgressIndicator(color: Color(0xFF64B5F6)))
                 else
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Custom Login Button
                       ElevatedButton(
                         onPressed: _signIn,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF64B5F6), // Your specified blue
+                          backgroundColor: const Color(0xFF64B5F6),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(32),
                           ),
                           elevation: 0,
                         ),
@@ -266,7 +230,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       
                       const SizedBox(height: 24),
                       
-                      // "Or sign in with" Divider
+                      // --- DIVIDER ANIMATION ---
                       Row(
                         children: [
                           Expanded(child: Divider(color: Colors.grey[400])),
@@ -279,45 +243,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           Expanded(child: Divider(color: Colors.grey[400])),
                         ],
-                      ),
+                      )
+                      .animate()
+                      .fade(duration: 600.ms, delay: 500.ms)
+                      .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 500.ms),
+                      
                       const SizedBox(height: 24),
 
-                      // Google Button
+                      // --- GOOGLE BUTTON ANIMATION ---
                       _buildSocialButton(
-                        icon: Icons.g_mobiledata, // Placeholder Google icon
+                        imagePath: 'assets/images/google.png',
                         label: 'Google',
                         onPressed: _signInWithGoogle,
-                      ),
+                      )
+                      .animate()
+                      .fade(duration: 600.ms, delay: 600.ms)
+                      .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 600.ms),
+                      
                       const SizedBox(height: 16),
 
-                      // Facebook Button
+                      // --- FACEBOOK BUTTON ANIMATION ---
                       _buildSocialButton(
-                        icon: Icons.facebook,
+                        imagePath: 'assets/images/facebook.png',
                         label: 'Facebook',
-                        onPressed: () {
-                          // TODO: Implement Facebook Sign In
-                        },
-                      ),
+                        onPressed: () {},
+                      )
+                      .animate()
+                      .fade(duration: 600.ms, delay: 700.ms)
+                      .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 700.ms),
+                      
                       const SizedBox(height: 32),
 
-                      // Create Account Button
-                      OutlinedButton(
-                        onPressed: _signUp,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFFF9800), // Your specified Orange
-                          side: const BorderSide(color: Color(0xFFFF9800), width: 2),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                      // --- FOOTER TEXT ANIMATION ---
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Don't have an account? ",
+                            style: TextStyle(
+                              color: Colors.grey[700], 
+                              fontSize: 15,
+                            ),
                           ),
-                        ),
-                        child: const Text(
-                          'Create Account',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const SignupScreen()),
+                              );
+                            },
+                            child: const Text(
+                              'Create Account',
+                              style: TextStyle(
+                                color: Color(0xFFFF6B2C), 
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                      .animate()
+                      .fade(duration: 600.ms, delay: 800.ms)
+                      .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 800.ms),
                     ],
-                  ),
+                  )
+                  .animate()
+                  .fade(duration: 600.ms, delay: 400.ms)
+                  .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 400.ms),
               ],
             ),
           ),
@@ -326,46 +319,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // --- HELPER METHODS FOR CLEAN UI ---
-
   Widget _buildCustomTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
+    Widget? suffixIcon, // Added parameter
   }) {
     return TextField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
-      style: const TextStyle(color: Color(0xFF0B3C6A)), // Dark text for typing
+      style: const TextStyle(color: Color(0xFF0B3C6A)),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey[600]),
-        prefixIcon: Icon(icon, color: const Color(0xFF64B5F6)), // The light blue icon
+        prefixIcon: Icon(icon, color: const Color(0xFF64B5F6)), 
+        suffixIcon: suffixIcon, // Apply parameter
         filled: true,
-        fillColor: Colors.white.withOpacity(0.8), // Slightly transparent white fill
+        fillColor: Colors.white.withOpacity(0.8), 
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 1.5), // Light blue border
+          borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 1.5), 
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 2.5), // Thicker when tapped
+          borderRadius: BorderRadius.circular(32),
+          borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 2.5), 
         ),
       ),
     );
   }
 
   Widget _buildSocialButton({
-    required IconData icon,
+    required String imagePath,
     required String label,
     required VoidCallback onPressed,
   }) {
     return ElevatedButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon, size: 28, color: const Color(0xFF0B3C6A)),
+      icon: Image.asset(imagePath, width: 24, height: 24),
       label: Text(
         label,
         style: const TextStyle(
@@ -375,12 +368,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFFFFDF4), // Your specified cream color
+        backgroundColor: const Color(0xFFFFFDF4),
         foregroundColor: const Color(0xFF0B3C6A),
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          // Subtle border to make it pop against the background
+          borderRadius: BorderRadius.circular(32),
           side: BorderSide(color: Colors.grey[300]!, width: 1), 
         ),
         elevation: 0,

@@ -1,55 +1,167 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import 'compass_results_screen.dart';
 
-// --- MOCK DATA FOR THE 5 QUESTIONS ---
-const List<Map<String, dynamic>> _mockQuestions = [
-  {
-    'question': 'You are faced with a challenging problem. How do you usually approach it?',
-    'options': [
-      'Analyze the situation systematically using logic and data.',
-      'Look for creative, out-of-the-box solutions.',
-      'Consider the human element and how it affects people.',
-      'Take practical, hands-on steps to build a prototype.',
-    ]
-  },
-  {
-    'question': 'What kind of environment do you thrive in the most?',
-    'options': [
-      'A structured lab or research facility.',
-      'A dynamic, fast-paced corporate setting.',
-      'A collaborative community or classroom.',
-      'A workshop or fieldwork environment.',
-    ]
-  },
-  {
-    'question': 'When exploring historical artifacts, what fascinates you the most?',
-    'options': [
-      'The technological advancements and inventions.',
-      'The economic trade routes and wealth creation.',
-      'The cultural shifts, philosophies, and societal norms.',
-      'The architecture, crafts, and physical materials used.',
-    ]
-  },
-  {
-    'question': 'In a group project, what is your typical role?',
-    'options': [
-      'The researcher who finds all the data and facts.',
-      'The manager who organizes the timeline and resources.',
-      'The communicator who ensures everyone is heard.',
-      'The builder who actually puts the final product together.',
-    ]
-  },
-  {
-    'question': 'What is your ultimate career goal?',
-    'options': [
-      'To discover or invent something entirely new.',
-      'To lead a successful enterprise or business venture.',
-      'To inspire, teach, or help others in society.',
-      'To master a highly specialized technical skill.',
-    ]
-  }
-];
+// --- 1. DATA MODELS FOR SCORING ---
+enum Affinity { stem, abm, humss, tvl }
+
+class CompassOption {
+  final String text;
+  final Affinity affinity;
+  const CompassOption({required this.text, required this.affinity});
+}
+
+class CompassQuestion {
+  final String question;
+  final List<CompassOption> options;
+  const CompassQuestion({required this.question, required this.options});
+}
+
+// --- 2. QUESTION BANKS PER EDUCATION LEVEL ---
+final Map<String, List<CompassQuestion>> _questionBanks = {
+  'Elementary': [
+    const CompassQuestion(
+      question: 'What is your favorite activity at school?',
+      options: [
+        CompassOption(text: 'Doing science experiments or math puzzles.', affinity: Affinity.stem),
+        CompassOption(text: 'Being the group leader or selling items at the fair.', affinity: Affinity.abm),
+        CompassOption(text: 'Reading stories or helping my classmates.', affinity: Affinity.humss),
+        CompassOption(text: 'Building things with blocks or doing arts and crafts.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'If you had a free afternoon, what would you do?',
+      options: [
+        CompassOption(text: 'Watch a video about space or animals.', affinity: Affinity.stem),
+        CompassOption(text: 'Play a board game where you manage money.', affinity: Affinity.abm),
+        CompassOption(text: 'Write a story or talk with friends.', affinity: Affinity.humss),
+        CompassOption(text: 'Help fix something broken in the house.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'When solving a puzzle, how do you do it?',
+      options: [
+        CompassOption(text: 'Sort the pieces by color and shape first.', affinity: Affinity.stem),
+        CompassOption(text: 'Plan who does what part if I have help.', affinity: Affinity.abm),
+        CompassOption(text: 'Ask someone how they would solve it.', affinity: Affinity.humss),
+        CompassOption(text: 'Just start putting pieces together to see what fits.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'What kind of hero do you like the most?',
+      options: [
+        CompassOption(text: 'The genius inventor with cool gadgets.', affinity: Affinity.stem),
+        CompassOption(text: 'The smart leader who creates the master plan.', affinity: Affinity.abm),
+        CompassOption(text: 'The kind hero who saves the town and makes peace.', affinity: Affinity.humss),
+        CompassOption(text: 'The strong hero who builds the base and weapons.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'What would be a fun field trip?',
+      options: [
+        CompassOption(text: 'A science museum or a zoo.', affinity: Affinity.stem),
+        CompassOption(text: 'A big office building or a bank.', affinity: Affinity.abm),
+        CompassOption(text: 'A history museum or watching a play.', affinity: Affinity.humss),
+        CompassOption(text: 'A factory or a giant bakery.', affinity: Affinity.tvl),
+      ],
+    ),
+  ],
+  'High School': [
+    const CompassQuestion(
+      question: 'What kind of school project excites you the most?',
+      options: [
+        CompassOption(text: 'Coding a program or conducting a lab experiment.', affinity: Affinity.stem),
+        CompassOption(text: 'Creating a business plan or marketing a product.', affinity: Affinity.abm),
+        CompassOption(text: 'Writing an essay on social issues or debating.', affinity: Affinity.humss),
+        CompassOption(text: 'Drafting a design or assembling a physical model.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'In a group activity, what role do you naturally take?',
+      options: [
+        CompassOption(text: 'The researcher finding data and facts.', affinity: Affinity.stem),
+        CompassOption(text: 'The manager assigning tasks and tracking progress.', affinity: Affinity.abm),
+        CompassOption(text: 'The communicator ensuring everyone gets along.', affinity: Affinity.humss),
+        CompassOption(text: 'The creator making the final presentation or prototype.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'Which of these problems would you most want to solve?',
+      options: [
+        CompassOption(text: 'Finding a cure for a disease or inventing a new tech.', affinity: Affinity.stem),
+        CompassOption(text: 'Improving the economy or starting a successful company.', affinity: Affinity.abm),
+        CompassOption(text: 'Fighting for human rights or helping communities.', affinity: Affinity.humss),
+        CompassOption(text: 'Designing better infrastructure or creating culinary recipes.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'What is your preferred way of learning?',
+      options: [
+        CompassOption(text: 'Understanding the underlying formulas and logic.', affinity: Affinity.stem),
+        CompassOption(text: 'Analyzing case studies and real-world strategies.', affinity: Affinity.abm),
+        CompassOption(text: 'Discussing theories and understanding human behavior.', affinity: Affinity.humss),
+        CompassOption(text: 'Hands-on practice and repetition.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'Which extracurricular activity sounds best?',
+      options: [
+        CompassOption(text: 'Robotics or Math Club.', affinity: Affinity.stem),
+        CompassOption(text: 'Student Council or Finance Club.', affinity: Affinity.abm),
+        CompassOption(text: 'School Paper or Drama Club.', affinity: Affinity.humss),
+        CompassOption(text: 'Culinary Arts or Drafting/Woodshop.', affinity: Affinity.tvl),
+      ],
+    ),
+  ],
+  'Others': [
+    const CompassQuestion(
+      question: 'You are faced with a complex, real-world challenge. How do you approach it?',
+      options: [
+        CompassOption(text: 'Analyze the situation systematically using data and algorithms.', affinity: Affinity.stem),
+        CompassOption(text: 'Evaluate resource allocation, risks, and financial impact.', affinity: Affinity.abm),
+        CompassOption(text: 'Consider the societal impact and ethical implications.', affinity: Affinity.humss),
+        CompassOption(text: 'Take practical, hands-on steps to build a functional solution.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'What kind of environment do you thrive in the most?',
+      options: [
+        CompassOption(text: 'A structured lab or highly technical research facility.', affinity: Affinity.stem),
+        CompassOption(text: 'A fast-paced corporate boardroom or entrepreneurial hub.', affinity: Affinity.abm),
+        CompassOption(text: 'A collaborative NGO, classroom, or public service sector.', affinity: Affinity.humss),
+        CompassOption(text: 'A dynamic workshop, kitchen, or fieldwork environment.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'When reading the news, what section do you jump to first?',
+      options: [
+        CompassOption(text: 'Technology, Science, or Medicine.', affinity: Affinity.stem),
+        CompassOption(text: 'Markets, Business, or the Economy.', affinity: Affinity.abm),
+        CompassOption(text: 'World News, Politics, or Opinion Editorials.', affinity: Affinity.humss),
+        CompassOption(text: 'Lifestyle, Automotive, or Craftsmanship.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'If you were to write a book, what would it be about?',
+      options: [
+        CompassOption(text: 'The future of artificial intelligence and space travel.', affinity: Affinity.stem),
+        CompassOption(text: 'Strategies for scaling a global enterprise.', affinity: Affinity.abm),
+        CompassOption(text: 'A deep dive into human psychology or history.', affinity: Affinity.humss),
+        CompassOption(text: 'A comprehensive guide to mastering a trade or craft.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'What is your ultimate career goal?',
+      options: [
+        CompassOption(text: 'To discover or invent something entirely new.', affinity: Affinity.stem),
+        CompassOption(text: 'To lead a successful enterprise or multinational venture.', affinity: Affinity.abm),
+        CompassOption(text: 'To inspire, teach, or create positive social change.', affinity: Affinity.humss),
+        CompassOption(text: 'To be recognized as a master of a highly specialized skill.', affinity: Affinity.tvl),
+      ],
+    ),
+  ],
+};
 
 class CompassQuestionsScreen extends StatefulWidget {
   const CompassQuestionsScreen({super.key});
@@ -59,18 +171,64 @@ class CompassQuestionsScreen extends StatefulWidget {
 }
 
 class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
-  // A map to store the selected answer index for each question.
-  // Key = Question Index (0-4), Value = Selected Option Index (0-3)
-  final Map<int, int> _selectedAnswers = {};
+  // TODO: Replace this with the user's actual education level from Riverpod/Supabase
+  final String _userEducationLevel = 'Others'; 
+  
+  late final List<CompassQuestion> _activeQuestions;
+  final Map<int, CompassOption> _selectedAnswers = {};
 
-  // Check if the user has answered all 5 questions
-  bool get _isAllAnswered => _selectedAnswers.length == _mockQuestions.length;
+  @override
+  void initState() {
+    super.initState();
+    // Default to 'Others' if the specific level isn't found or is Senior High School (which shares 'Others')
+    _activeQuestions = _questionBanks[_userEducationLevel] ?? _questionBanks['Others']!;
+  }
+
+  bool get _isAllAnswered => _selectedAnswers.length == _activeQuestions.length;
 
   void _submitAnswers() {
     if (_isAllAnswered) {
+      // 1. Initialize scores
+      Map<Affinity, int> scores = {
+        Affinity.stem: 0,
+        Affinity.abm: 0,
+        Affinity.humss: 0,
+        Affinity.tvl: 0,
+      };
+
+      // 2. Tally points
+      for (var option in _selectedAnswers.values) {
+        scores[option.affinity] = (scores[option.affinity] ?? 0) + 1;
+      }
+
+      // 3. Convert to percentages (0.0 to 1.0)
+      int totalQuestions = _activeQuestions.length;
+      Map<Affinity, double> percentages = {
+        Affinity.stem: scores[Affinity.stem]! / totalQuestions,
+        Affinity.abm: scores[Affinity.abm]! / totalQuestions,
+        Affinity.humss: scores[Affinity.humss]! / totalQuestions,
+        Affinity.tvl: scores[Affinity.tvl]! / totalQuestions,
+      };
+
+      // 4. Find the top affinity
+      Affinity topAffinity = Affinity.stem;
+      double highestScore = -1;
+      percentages.forEach((affinity, score) {
+        if (score > highestScore) {
+          highestScore = score;
+          topAffinity = affinity;
+        }
+      });
+
+      // 5. Navigate and pass data
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const CompassResultsScreen()),
+        MaterialPageRoute(
+          builder: (context) => CompassResultsScreen(
+            topAffinity: topAffinity,
+            affinityScores: percentages,
+          ),
+        ),
       );
     }
   }
@@ -81,31 +239,41 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'Tuklascope Compass',
-          style: TextStyle(
-            color: Color(0xFF0B3C6A), // Dark Blue
-            fontWeight: FontWeight.bold,
+        automaticallyImplyLeading: false, // REMOVED BACK BUTTON
+        centerTitle: true, // CENTRALIZED TITLE
+        title: RichText(
+          text: const TextSpan(
+            style: TextStyle(
+              fontSize: 24, // SLIGHTLY BIGGER
+              fontWeight: FontWeight.w900,
+              fontFamily: 'Roboto',
+            ),
+            children: [
+              TextSpan(text: 'Tuklascope ', style: TextStyle(color: Color(0xFF0B3C6A))),
+              TextSpan(text: 'Compass', style: TextStyle(color: Color(0xFFFF6B2C))),
+            ],
           ),
-        ),
-        iconTheme: const IconThemeData(color: Color(0xFF0B3C6A)),
+        )
+        .animate()
+        .fade(duration: 600.ms)
+        .slideY(begin: -0.2, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
       ),
       body: Column(
         children: [
-          // THE SCROLLABLE QUESTIONS LIST
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.all(24.0),
               physics: const BouncingScrollPhysics(),
-              itemCount: _mockQuestions.length,
+              itemCount: _activeQuestions.length,
               separatorBuilder: (context, index) => const SizedBox(height: 32),
               itemBuilder: (context, questionIndex) {
-                return _buildQuestionCard(questionIndex);
+                return _buildQuestionCard(questionIndex)
+                    .animate()
+                    .fade(duration: 600.ms, delay: (100 * questionIndex).ms) // STAGGERED ANIMATION
+                    .slideY(begin: -0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (100 * questionIndex).ms);
               },
             ),
           ),
-
-          // THE BOTTOM PROCEED BUTTON (Sticks to the bottom)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
             decoration: BoxDecoration(
@@ -123,11 +291,10 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  // The button is strictly disabled (grayed out) until _isAllAnswered is true!
                   onPressed: _isAllAnswered ? _submitAnswers : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF9800), // Tuklascope Orange
-                    disabledBackgroundColor: Colors.grey[300], // Gray when incomplete
+                    backgroundColor: const Color(0xFFFF9800),
+                    disabledBackgroundColor: Colors.grey[300],
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -142,7 +309,10 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                     ),
                   ),
                 ),
-              ),
+              )
+              .animate()
+              .fade(duration: 600.ms, delay: 500.ms)
+              .slideY(begin: 0.5, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 500.ms),
             ),
           ),
         ],
@@ -150,11 +320,8 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
     );
   }
 
-  // --- HELPER: BUILDS THE WHITE QUESTION CARD ---
   Widget _buildQuestionCard(int questionIndex) {
-    final questionData = _mockQuestions[questionIndex];
-    final String questionText = questionData['question'];
-    final List<String> options = questionData['options'];
+    final questionData = _activeQuestions[questionIndex];
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -172,45 +339,37 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Small Header: "Question X of 5"
           Text(
-            'QUESTION ${questionIndex + 1} OF ${_mockQuestions.length}',
+            'QUESTION ${questionIndex + 1} OF ${_activeQuestions.length}',
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: Color(0xFFFF9800), // Orange
+              color: Color(0xFFFF9800),
               letterSpacing: 1.2,
             ),
           ),
           const SizedBox(height: 12),
-          
-          // The Actual Question
           Text(
-            questionText,
+            questionData.question,
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF0B3C6A), // Dark Blue
+              color: Color(0xFF0B3C6A),
               height: 1.3,
             ),
           ),
           const SizedBox(height: 24),
-
-          // The Options
-          ...List.generate(options.length, (optionIndex) {
-            return _buildOptionButton(questionIndex, optionIndex, options[optionIndex]);
+          ...List.generate(questionData.options.length, (optionIndex) {
+            return _buildOptionButton(questionIndex, questionData.options[optionIndex], optionIndex);
           }),
         ],
       ),
     );
   }
 
-  // --- HELPER: BUILDS THE INTERACTIVE OPTION ROWS ---
-  Widget _buildOptionButton(int questionIndex, int optionIndex, String text) {
-    // Check if THIS specific option is the one selected for THIS question
-    final bool isSelected = _selectedAnswers[questionIndex] == optionIndex;
-    
-    // Letters A, B, C, D
+  Widget _buildOptionButton(int questionIndex, CompassOption option, int optionIndex) {
+    // Check if the currently selected option for this question matches this option exactly
+    final bool isSelected = _selectedAnswers[questionIndex] == option;
     final String optionLetter = String.fromCharCode(65 + optionIndex);
 
     return Padding(
@@ -218,7 +377,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
       child: InkWell(
         onTap: () {
           setState(() {
-            _selectedAnswers[questionIndex] = optionIndex;
+            _selectedAnswers[questionIndex] = option; // Save the actual option object!
           });
         },
         borderRadius: BorderRadius.circular(16),
@@ -235,7 +394,6 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
           ),
           child: Row(
             children: [
-              // The A, B, C, D Circle
               Container(
                 width: 32,
                 height: 32,
@@ -258,11 +416,9 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-              
-              // The Option Text
               Expanded(
                 child: Text(
-                  text,
+                  option.text,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
