@@ -1,6 +1,6 @@
 import logging
 # Assuming neo4j_db is initialized in your core database module
-from app.core.database import neo4j_db
+from app.core.graph_db import neo4j_db
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +82,8 @@ def save_skill_to_graph(user_id: str, strand_name: str, skill_name: str, xp_awar
         return False
 
     query = """
-    // 1. Find the User
-    MATCH (u:User {id: $user_id})
+    // 1. Find or Create the User (Fixed: Changed MATCH to MERGE)
+    MERGE (u:User {id: $user_id})
 
     // 2. Ensure the Strand exists and update their overall Strand XP
     MERGE (s:Strand {name: $strand_name})

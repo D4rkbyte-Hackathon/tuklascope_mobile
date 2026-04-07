@@ -28,7 +28,7 @@ async def get_career_recommendations(
         # 2. Ask Gemini to synthesize the web into the 3 Tiers
         recommendations = await generate_holistic_pathfinder(
             xp_distribution=skill_web["xp_distribution"],
-            scanned_objects=skill_web["scanned_objects"]
+            top_skills=skill_web["top_skills"]
         )
 
         return recommendations
