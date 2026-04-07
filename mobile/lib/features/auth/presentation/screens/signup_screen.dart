@@ -65,10 +65,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       final user = authResponse.user;
 
       if (user != null) {
-        // 2. Save Education Level using strict .insert() as requested to fix RLS
-        await Supabase.instance.client.from('profiles').insert({
-          'id': user.id, // Primary key linking to auth.users
+        // 2. Use .upsert() to prevent duplicate key crashes, and save ALL data
+        await Supabase.instance.client.from('profiles').upsert({
+          'id': user.id, 
           'email': user.email,
+          'full_name': _nameController.text.trim(),
+          'city': _cityController.text.trim(),
+          'country': _countryController.text.trim(),
           'education_level': _selectedEducationLevel,
         });
 

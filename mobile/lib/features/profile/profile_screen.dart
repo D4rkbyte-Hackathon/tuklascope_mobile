@@ -1,17 +1,79 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // ADDED SUPABASE IMPORT
 
 import '../../core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import 'pathfinder_blueprint_sheet.dart';
 
-/// Aligns with [PathwaysScreen] / RewardScreen: cream canvas, navy `0xFF0D3B66`, orange accents.
-class ProfileScreen extends StatelessWidget {
+// CHANGED TO STATEFUL WIDGET TO LOAD DATA
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
   static const Color _navy = Color(0xFF0D3B66);
   static const Color _cream = Color(0xFFF9F6F0);
   static const Color _linkBlue = Color(0xFF42A5F5);
   static const Color _avgLevel = Color(0xFFE65100);
+
+  // ADDED STATE VARIABLES
+  String _fullName = 'Loading...';
+  String _educationLevel = '...';
+  String _location = '';
+  int _streak = 0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserProfile();
+  }
+
+  // ADDED FETCH FUNCTION
+  Future<void> _fetchUserProfile() async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final data = await Supabase.instance.client
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .single();
+
+      if (mounted) {
+        setState(() {
+          _fullName = data['full_name'] ?? 'New Explorer';
+          _educationLevel = data['education_level'] ?? 'Curious Mind';
+          _streak = data['current_streak'] ?? 0;
+
+          final city = data['city'] ?? '';
+          final country = data['country'] ?? '';
+          if (city.isNotEmpty && country.isNotEmpty) {
+            _location = '$city, $country';
+          } else {
+            _location = city + country;
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching profile: $e');
+      if (mounted) {
+        setState(() {
+          _fullName = 'Explorer';
+          _educationLevel = 'Ready to learn';
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,78 +84,90 @@ class ProfileScreen extends StatelessWidget {
       ),
       body: ColoredBox(
         color: _cream,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            8,
-            20,
-            MediaQuery.paddingOf(context).bottom + 88,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ProfileHeaderCard(navy: _navy, linkBlue: _linkBlue),
-              const SizedBox(height: 28),
-              RichText(
-                textAlign: TextAlign.center,
-                text: TextSpan(
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    height: 1.15,
-                  ),
+        //  ADDED LOADING SPINNER WHILE FETCHING
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  8,
+                  20,
+                  MediaQuery.paddingOf(context).bottom + 88,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    TextSpan(
-                      text: 'Your ',
-                      style: TextStyle(color: _navy),
+                    // 🚀 PASSED DYNAMIC DATA TO HEADER CARD
+                    _ProfileHeaderCard(
+                      navy: _navy,
+                      linkBlue: _linkBlue,
+                      fullName: _fullName,
+                      educationLevel: _educationLevel,
+                      location: _location,
+                      streak: _streak,
                     ),
-                    const TextSpan(
-                      text: 'Skill Tree',
-                      style: TextStyle(color: Colors.orange),
+                    const SizedBox(height: 28),
+                    RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          height: 1.15,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: 'Your ',
+                            style: TextStyle(color: _navy),
+                          ),
+                          const TextSpan(
+                            text: 'Skill Tree',
+                            style: TextStyle(color: Colors.orange),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Watch your knowledge grow! Every discovery adds to your personal skill network and unlocks new learning pathways.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    _StatsGridCard(navy: _navy, avgLevelColor: _avgLevel),
+                    const SizedBox(height: 20),
+                    _SkillTreePlaceholderCard(),
+                    const SizedBox(height: 20),
+                    _ProfilePromoCard(
+                      borderColor: Colors.orange,
+                      title: 'Open Your Blueprint',
+                      description: 'From core principles to career path.',
+                      buttonLabel: 'Open Pathfinder →',
+                      buttonColor: _navy,
+                      onPressed: () => showPathfinderBlueprintSheet(
+                        context,
+                        onNavigateToScan: () =>
+                            MainNavScope.maybeOf(context)?.goToTab(1),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _ProfilePromoCard(
+                      borderColor: _navy.withValues(alpha: 0.35),
+                      title: 'Ready to expand your network?',
+                      description:
+                          'Upload a photo of any object around you and discover the concepts behind it!',
+                      buttonLabel: 'Start Discovery →',
+                      buttonColor: Colors.orange,
+                      onPressed: () =>
+                          MainNavScope.maybeOf(context)?.goToTab(1),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Watch your knowledge grow! Every discovery adds to your personal skill network and unlocks new learning pathways.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 28),
-              _StatsGridCard(navy: _navy, avgLevelColor: _avgLevel),
-              const SizedBox(height: 20),
-              _SkillTreePlaceholderCard(),
-              const SizedBox(height: 20),
-              _ProfilePromoCard(
-                borderColor: Colors.orange,
-                title: 'Open Your Blueprint',
-                description: 'From core principles to career path.',
-                buttonLabel: 'Open Pathfinder →',
-                buttonColor: _navy,
-                onPressed: () => showPathfinderBlueprintSheet(
-                  context,
-                  onNavigateToScan: () =>
-                      MainNavScope.maybeOf(context)?.goToTab(1),
-                ),
-              ),
-              const SizedBox(height: 16),
-              _ProfilePromoCard(
-                borderColor: _navy.withValues(alpha: 0.35),
-                title: 'Ready to expand your network?',
-                description:
-                    'Upload a photo of any object around you and discover the concepts behind it!',
-                buttonLabel: 'Start Discovery →',
-                buttonColor: Colors.orange,
-                onPressed: () => MainNavScope.maybeOf(context)?.goToTab(1),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -121,7 +195,7 @@ class _ProfilePromoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
       decoration: BoxDecoration(
-        color: ProfileScreen._cream,
+        color: const Color(0xFFF9F6F0),
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: borderColor, width: 1),
       ),
@@ -134,7 +208,7 @@ class _ProfilePromoCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: ProfileScreen._navy,
+              color: Color(0xFF0D3B66),
             ),
           ),
           const SizedBox(height: 10),
@@ -172,8 +246,20 @@ class _ProfilePromoCard extends StatelessWidget {
 class _ProfileHeaderCard extends StatelessWidget {
   final Color navy;
   final Color linkBlue;
+  // ADDED REQUIRED VARIABLES FOR DYNAMIC DATA
+  final String fullName;
+  final String educationLevel;
+  final String location;
+  final int streak;
 
-  const _ProfileHeaderCard({required this.navy, required this.linkBlue});
+  const _ProfileHeaderCard({
+    required this.navy, 
+    required this.linkBlue,
+    required this.fullName,
+    required this.educationLevel,
+    required this.location,
+    required this.streak,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +294,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Juan Dela Cruz',
+                      fullName, // REPLACED HARDCODED NAME
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -217,7 +303,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Highschool',
+                      location.isNotEmpty ? '$educationLevel • $location' : educationLevel, // REPLACED HARDCODED HIGHSCHOOL
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -234,7 +320,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                         children: [
                           const TextSpan(text: 'Daily Streak '),
                           TextSpan(
-                            text: '69',
+                            text: '$streak', // REPLACED HARDCODED STREAK
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
