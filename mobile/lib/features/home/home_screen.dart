@@ -127,19 +127,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               // --- UPDATED DEBUG LOGOUT BUTTON ---
               Positioned(
                 top: 8,
-                left: 16,
+                right: 16,
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.grey), // Changed icon to a logout door
+                    icon: const Icon(Icons.logout, color: Colors.grey),
                     tooltip: 'Debug Logout',
                     onPressed: () {
-                      // Completely clears the stack and routes to Login!
-                      Navigator.pushAndRemoveUntil(
-                        context,
+                      // ADDED 'rootNavigator: true' TO DESTROY THE BOTTOM NAV BAR
+                      Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                         MaterialPageRoute(builder: (context) => const LoginScreen()),
                         (route) => false,
                       );
