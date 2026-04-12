@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/gradient_scaffold.dart';
 
 class PathwaysScreen extends StatelessWidget {
   const PathwaysScreen({super.key});
@@ -11,7 +12,7 @@ class PathwaysScreen extends StatelessWidget {
       if (didPop) return;
       // You can add custom logic here if you wanted to show a "Are you sure?" dialog
     }, 
-    child: Scaffold(
+    child: GradientScaffold(
       //appBar: AppBar(title: const Text('Learning Pathways')),
       body: Center(
         child: ListView.builder(
