@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart'; // 1. IMPORT ADDED
 
 /// Opens a near-full-screen sheet that can be dragged down from the top to dismiss.
 Future<void> showPathfinderBlueprintSheet(
@@ -36,93 +37,131 @@ class PathfinderBlueprintSheet extends StatelessWidget {
       snap: true,
       snapSizes: const [0.42, 0.96],
       builder: (context, scrollController) {
+        
+        // 2. Group elements into a list & swap SizedBoxes for Padding
+        final List<Widget> sheetItems = [
+          // Drag Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          // Title
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: RichText(
+              textAlign: TextAlign.center,
+              text: const TextSpan(
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  height: 1.25,
+                ),
+                children: [
+                  TextSpan(
+                    text: 'Your Blueprint:\n',
+                    style: TextStyle(color: _navy),
+                  ),
+                  TextSpan(
+                    text: 'From Core Principles To Career Paths',
+                    style: TextStyle(color: Colors.orange),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Intro Text
+          const Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: Text(
+              'Kamusta! Your skill tree shows how your interests connect across tracks—here are field strengths and program ideas tailored for you.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+                height: 1.4,
+              ),
+            ),
+          ),
+          // Timestamp
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Text(
+              'Last Updated 8/7/30',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.black.withValues(alpha: 0.38),
+              ),
+            ),
+          ),
+          // Strongest Fields Card
+          Padding(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: const _StrongestFieldsCard(navy: _navy),
+          ),
+          // Programs
+          const Padding(
+            padding: EdgeInsets.only(bottom: 20),
+            child: _CollegeProgramCard(
+              borderColor: Colors.green,
+              title: 'BS Gwapo Engineering',
+              subtitle: 'Blahblah [AI generated stuff]',
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 20),
+            child: _CollegeProgramCard(
+              borderColor: Colors.orange,
+              title: 'BS Rizzler Engineering',
+              subtitle: 'Blahblah [AI generated stuff]',
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 20),
+            child: _CollegeProgramCard(
+              borderColor: Colors.orange,
+              title: 'BS Alpha Wolf Engineering',
+              subtitle: 'Blahblah [AI generated stuff]',
+            ),
+          ),
+          // CTA Bottom Card
+          _BlueprintCtaCard(
+            navy: _navy,
+            onStartDiscovery: () {
+              Navigator.of(context).pop();
+              onNavigateToScan();
+            },
+          ),
+        ];
+
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           child: Material(
             color: _cream,
-            child: ListView(
-              controller: scrollController,
+            child: ListView.builder( // 3. Swapped to ListView.builder
+              controller: scrollController, // Crucial for bottom sheet dragging
               padding: EdgeInsets.fromLTRB(20, 10, 20, bottomInset + 88),
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.black26,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                RichText(
-                  textAlign: TextAlign.center,
-                  text: const TextSpan(
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      height: 1.25,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: 'Your Blueprint:\n',
-                        style: TextStyle(color: _navy),
-                      ),
-                      TextSpan(
-                        text: 'From Core Principles To Career Paths',
-                        style: TextStyle(color: Colors.orange),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Kamusta! Your skill tree shows how your interests connect across tracks—here are field strengths and program ideas tailored for you.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Last Updated 8/7/30',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.black.withValues(alpha: 0.38),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _StrongestFieldsCard(navy: _navy),
-                const SizedBox(height: 20),
-                _CollegeProgramCard(
-                  borderColor: Colors.green,
-                  title: 'BS Gwapo Engineering',
-                  subtitle: 'Blahblah [AI generated stuff]',
-                ),
-                const SizedBox(height: 20),
-                _CollegeProgramCard(
-                  borderColor: Colors.orange,
-                  title: 'BS Rizzler Engineering',
-                  subtitle: 'Blahblah [AI generated stuff]',
-                ),
-                const SizedBox(height: 20),
-                _CollegeProgramCard(
-                  borderColor: Colors.orange,
-                  title: 'BS Alpha Wolf Engineering',
-                  subtitle: 'Blahblah [AI generated stuff]',
-                ),
-                const SizedBox(height: 20),
-                _BlueprintCtaCard(
-                  navy: _navy,
-                  onStartDiscovery: () {
-                    Navigator.of(context).pop();
-                    onNavigateToScan();
-                  },
-                ),
-              ],
+              itemCount: sheetItems.length,
+              itemBuilder: (context, index) {
+                // 4. Staggered Animation applied
+                return sheetItems[index]
+                    .animate()
+                    .fade(duration: 600.ms, delay: (100 * index).ms)
+                    .slideY(
+                      begin: 0.1, 
+                      end: 0, 
+                      duration: 600.ms, 
+                      curve: Curves.easeOutCubic, 
+                      delay: (100 * index).ms
+                    );
+              },
             ),
           ),
         );
@@ -130,6 +169,10 @@ class PathfinderBlueprintSheet extends StatelessWidget {
     );
   }
 }
+
+// -----------------------------------------------------------------------------
+// HELPER WIDGETS BELOW (Unchanged)
+// -----------------------------------------------------------------------------
 
 class _StrongestFieldsCard extends StatelessWidget {
   final Color navy;
