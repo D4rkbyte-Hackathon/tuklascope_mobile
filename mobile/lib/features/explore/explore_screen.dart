@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart'; // 1. IMPORT ADDED
 
 /// Placeholder model until user uploads / API are wired.
 class _ExploreNotePlaceholder {
@@ -163,12 +164,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
       separatorBuilder: (_, _) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         final item = _placeholders[index];
+        // 2. STAGGERED ANIMATION FOR HISTORY FEED
         return _NoteCard(
           title: item.title,
           subtitle: item.subtitle,
           tag: item.tag,
           accent: _orangeAccent,
-        );
+        )
+        .animate()
+        .fade(duration: 600.ms, delay: (100 * index).ms)
+        .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (100 * index).ms);
       },
     );
   }
@@ -213,12 +218,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final row = _discovererPlaceholders[index];
+              // 3. STAGGERED ANIMATION FOR LEADERBOARD FEED
               return _DiscovererRowCard(
                 name: row.name,
                 xpLabel: row.xpLabel,
                 orangeBorder: _orangeAccent,
                 trophyColor: _navyTitle,
-              );
+              )
+              .animate()
+              .fade(duration: 600.ms, delay: (100 * index).ms)
+              .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (100 * index).ms);
             },
           ),
         ),
