@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart'; // 1. IMPORT ADDED
+import '../../core/widgets/gradient_scaffold.dart';
 
 class PathwaysScreen extends StatelessWidget {
   const PathwaysScreen({super.key});
@@ -11,17 +13,26 @@ class PathwaysScreen extends StatelessWidget {
       if (didPop) return;
       // You can add custom logic here if you wanted to show a "Are you sure?" dialog
     }, 
-    child: Scaffold(
+    child: GradientScaffold(
       //appBar: AppBar(title: const Text('Learning Pathways')),
       body: Center(
         child: ListView.builder(
           itemCount: 1 + myProjects.length, // Total items in our "array"
           itemBuilder: (context, index) {
+            Widget item;
+            
             if (index == 0) {
-              return const HeaderSection(); // Your custom header widget
+              item = const HeaderSection(); // Your custom header widget
+            } else {
+              // This function runs for every item in the list
+              item = ProjectCard(data: myProjects[index - 1]);
             }
-            // This function runs for every item in the list
-            return ProjectCard(data: myProjects[index - 1]);
+            
+            // 2. STAGGERED ANIMATION APPLIED HERE
+            return item
+                .animate()
+                .fade(duration: 600.ms, delay: (100 * index).ms)
+                .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (100 * index).ms);
           },
         ),
       ),
@@ -34,18 +45,6 @@ class PathwaysScreen extends StatelessWidget {
 int activePathways = 2;
 double averageProgress = 37.5;
 int totalPoints = 900;
-
-// --- SECONDARY SKELETON ---         ///OLD REWARD SCREEN
-/*class RewardScreen extends StatelessWidget { 
-  const RewardScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Reward Unlocked!')), // Free Back Button!
-      body: const Center(child: Text('Screen 4.2: Action Success / Reward UI, edit herrreee')),
-    );
-  }
-}*/
 
 // Helper logic for the points section colors
   Color _getProgressColor(int progress) {
@@ -75,6 +74,12 @@ class RewardScreen extends StatelessWidget {
             height: MediaQuery.of(context).size.height * 0.6, // Covers top 60%
             width: double.infinity,
             fit: BoxFit.cover,
+            // Fallback for dead Discord links so it doesn't crash
+            errorBuilder: (context, error, stackTrace) => Container(
+              height: MediaQuery.of(context).size.height * 0.6,
+              color: Colors.grey[300],
+              child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+            ),
           ),
 
           // 2. MAIN CONTENT SCROLLER
@@ -257,12 +262,12 @@ class HeaderSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStat("(${activePathways})", "Active Pathways", Colors.green),
-              _buildStat("${averageProgress}%", "Average Progress", Colors.orange),
+              _buildStat("($activePathways)", "Active Pathways", Colors.green),
+              _buildStat("$averageProgress%", "Average Progress", Colors.orange),
             ],
           ),
           const SizedBox(height: 20),
-          _buildStat("(${totalPoints})", "Total Points Earned", const Color(0xFF0D3B66)),
+          _buildStat("($totalPoints)", "Total Points Earned", const Color(0xFF0D3B66)),
         ],
       ),
     );
@@ -312,7 +317,7 @@ class ProjectData {
   });
 }
 
-// CUSTOM CARD WIDGET FOR REUSABILITY (thanks geminein)
+// CUSTOM CARD WIDGET FOR REUSABILITY
 class ProjectCard extends StatelessWidget {
   final ProjectData data; // Receiving the "struct"
 
@@ -343,6 +348,12 @@ class ProjectCard extends StatelessWidget {
             height: 140,
             width: double.infinity,
             fit: BoxFit.cover,
+            // I added a quick errorBuilder here too just so it doesn't crash your list if a discord link dies!
+            errorBuilder: (context, error, stackTrace) => Container(
+              height: 140,
+              color: Colors.grey[200],
+              child: const Icon(Icons.image_not_supported, color: Colors.grey),
+            ),
           ),
 
           // Bottom Half: Text Content
@@ -405,7 +416,7 @@ class ProjectCard extends StatelessWidget {
         ],
       ),
     )
-     );
+      );
   }
 }
 

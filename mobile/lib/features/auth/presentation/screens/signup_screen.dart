@@ -330,7 +330,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(32),
-          borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 2.5),
+          borderSide: const BorderSide(color: Color(0xFFFF6B2C), width: 2.5),
         ),
       ),
     );
@@ -365,7 +365,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(32),
-          borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 2.5),
+          borderSide: const BorderSide(color: Color(0xFFFF6B2C), width: 2.5),
         ),
       ),
     );

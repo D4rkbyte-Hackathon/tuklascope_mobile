@@ -1,204 +1,151 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
-// --- IMPORT YOUR DESTINATION SCREENS ---
-import '../scanner/live_feed_screen.dart';
-import '../pathways/pathways_screen.dart';
-import '../profile/profile_screen.dart';
+import '../../core/widgets/gradient_scaffold.dart';
+import '../../core/navigation/main_nav_scope.dart'; 
+import '../scanner/tuklas_tutor_screen.dart'; 
+import '../auth/presentation/screens/login_screen.dart'; // ADDED: Import the Login Screen
 
-// --- AUTH IMPORTS FOR DEBUG LOGOUT ---
-import '../auth/providers/auth_provider.dart';
-import '../onboarding/splash_screen.dart';
-
-// Upgraded to ConsumerWidget to access Riverpod's 'ref'
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
-  // --- EXACT COLOR PALETTE ---
-  static const Color kDarkBlue = Color(0xFF0B3C6A);
-  static const Color kOrange = Color(0xFFFF6B2C);
-  static const Color kCardBg = Color(0xFFFFFDF4);
-  static const Color kLightBlue = Color(0xFF64B5F6);
-  static const Color kGreen = Color(0xFF388E3C);
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final Color primaryBlue = const Color(0xFF0B3C6A);
+  final Color secondaryBlue = const Color(0xFF0A233B); 
+  final Color accentOrange = const Color(0xFFFF6B2C);
+  final Color darkGreen = const Color(0xFF2E7D32); 
+  final Color textLight = const Color(0xFF4A4A4A);
+  final Color textDark = const Color(0xFF1A1A1A);
+  final Color bgLight = const Color(0xFFFFFDF4); 
+  final Color bgDark = const Color(0xFFD9D7CE);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final List<Widget> listItems = [
+      _buildDailyQuestCard(),
+      const SizedBox(height: 32),
+      
+      _buildHeroHeading('Discover', 'Everything'),
+      const SizedBox(height: 16),
+      
+      Text(
+        'Transform any object around you into a learning adventure. Take a photo and unlock the science behind everyday life!',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: textLight, fontSize: 16),
+      ),
+      const SizedBox(height: 32),
+
+      _buildInfoCard(
+        title: 'Tuklas-Araw',
+        description: 'Explore the science behind Filipino rice terraces - How do these ancient structures demonstrate physics and engineering?',
+        borderColor: accentOrange,
+        buttonText: 'Ask TuklasTutor about this →',
+        buttonGradient: [primaryBlue, secondaryBlue],
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TuklasTutorScreen())),
+      ),
+      const SizedBox(height: 24),
+
+      _buildDiscoverySection(),
+      const SizedBox(height: 48),
+
+      _buildHeroHeading('Explore Your', 'Learning\nJourney', isStacked: true),
+      const SizedBox(height: 16),
+      
+      Text(
+        'Track your progress, discover new pathways, and get personalized guidance for your academic journey.',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: textLight, fontSize: 16),
+      ),
+      const SizedBox(height: 32),
+
+      _buildFeatureCard(
+        title: 'Learning Pathways',
+        description: 'Structured learning journeys\nfrom beginner to advanced levels',
+        borderColor: primaryBlue,
+        buttonText: 'Explore Pathways →',
+        buttonTextColor: primaryBlue,
+        iconArea: const Icon(Icons.map_outlined, size: 64, color: Color(0xFF0B3C6A)),
+        onTap: () => MainNavScope.maybeOf(context)?.goToTab(2), 
+      ),
+      const SizedBox(height: 24),
+
+      _buildFeatureCard(
+        title: 'The "Kaalaman" Skill Tree',
+        description: 'Track your progress, discover new pathways,\nand get personalized guidance for your journey.',
+        borderColor: darkGreen,
+        buttonText: 'View Pathfinder →',
+        buttonTextColor: darkGreen,
+        iconArea: Icon(Icons.account_tree_outlined, size: 64, color: darkGreen),
+        onTap: () => MainNavScope.maybeOf(context)?.goToTab(3), 
+      ),
+      const SizedBox(height: 24),
+
+      _buildFeatureCard(
+        title: 'Tuklascope AI', 
+        description: 'Get personalized career and academic\nguidance based on your skills',
+        borderColor: const Color(0xFF8E24AA),
+        buttonText: 'Get Guidance →',
+        buttonTextColor: const Color(0xFF8E24AA),
+        iconArea: const Icon(Icons.auto_awesome_outlined, size: 64, color: Color(0xFF8E24AA)),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TuklasTutorScreen())),
+      ),
+      const SizedBox(height: 60), 
+    ];
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), 
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [bgLight, bgDark],
+          ),
+        ),
+        child: SafeArea(
+          child: Stack(
             children: [
-              // --- 1. THE QUEST BAR (STREAK, XP & DEBUG LOGOUT) ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Welcome back!',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: kDarkBlue,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      _buildStatBadge(Icons.local_fire_department_rounded, '12', kOrange),
-                      const SizedBox(width: 8),
-                      _buildStatBadge(Icons.diamond_rounded, '1,250 XP', kLightBlue),
-                      
-                      // THE DEBUG LOGOUT BUTTON
-                      IconButton(
-                        icon: const Icon(Icons.logout, color: kDarkBlue),
-                        tooltip: 'Debug Logout',
-                        onPressed: () async {
-                          // A. Kill the Supabase session
-                          await ref.read(authServiceProvider).signOut();
-
-                          // B. Nuke the navigation stack and go to Splash
-                          if (context.mounted) {
-                            Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                              MaterialPageRoute(builder: (context) => const SplashScreen()),
-                              (route) => false, 
-                            );
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              // --- 2. DISCOVER EVERYTHING SECTION ---
-              const Text(
-                'Discover Everything',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  color: kDarkBlue,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Transform any object around you into a learning adventure. Take a photo and unlock the science behind everyday life!',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // THE 2-COLUMN GRID (Tuklas Araw & Discovery)
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSquareCard(
-                      context: context,
-                      title: 'Tuklas Araw',
-                      icon: Icons.wb_sunny_rounded,
-                      buttonColor: kGreen,
-                      buttonText: 'Daily Scan',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Tuklas Araw coming soon!')),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildSquareCard(
-                      context: context,
-                      title: 'Discovery',
-                      icon: Icons.document_scanner_rounded,
-                      buttonColor: kOrange,
-                      buttonText: 'Scan Now',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LiveFeedScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 40),
-
-              // --- 3. EXPLORE YOUR LEARNING JOURNEY SECTION ---
-              const Text(
-                'Explore Your Learning Journey',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  color: kDarkBlue,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Track your progress, discover new pathways, and get personalized guidance for your academic journey.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // THE VERTICAL WIDE CARDS
-              _buildWideCard(
-                context: context,
-                title: 'Learning Pathways',
-                subtitle: 'Follow structured modules tailored to your SHS strand.',
-                icon: Icons.map_outlined,
-                accentColor: kLightBlue,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const PathwaysScreen()),
-                  );
+              ListView.builder(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+                itemCount: listItems.length,
+                itemBuilder: (context, index) {
+                  final item = listItems[index];
+                  if (item is SizedBox) return item; 
+                  
+                  return item
+                      .animate()
+                      .fade(duration: 600.ms, delay: (50 * (index % 10)).ms) 
+                      .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (50 * (index % 10)).ms);
                 },
               ),
-              const SizedBox(height: 16),
-              
-              _buildWideCard(
-                context: context,
-                title: 'Kaalaman Skill Tree',
-                subtitle: 'View your mastered skills and unlock new nodes.',
-                icon: Icons.account_tree_outlined,
-                accentColor: kGreen,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
 
-              _buildWideCard(
-                context: context,
-                title: 'Pathfinder AI',
-                subtitle: 'Ask questions and get intelligent study recommendations.',
-                icon: Icons.auto_awesome,
-                accentColor: kOrange,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pathfinder AI coming soon!')),
-                  );
-                },
+              // --- UPDATED DEBUG LOGOUT BUTTON ---
+              Positioned(
+                top: 8,
+                right: 16,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.grey),
+                    tooltip: 'Debug Logout',
+                    onPressed: () {
+                      // ADDED 'rootNavigator: true' TO DESTROY THE BOTTOM NAV BAR
+                      Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    },
+                  ),
+                ),
               ),
-              
-              const SizedBox(height: 40), 
             ],
           ),
         ),
@@ -206,90 +153,208 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // --- HELPER: STAT BADGE (STREAK/XP) ---
-  Widget _buildStatBadge(IconData icon, String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // =========================================================================
+  // HELPER WIDGETS
+  // =========================================================================
 
-  // --- HELPER: SQUARE CARDS (TOP ROW) ---
-  Widget _buildSquareCard({
-    required BuildContext context,
-    required String title,
-    required IconData icon,
-    required Color buttonColor,
-    required String buttonText,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildDailyQuestCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: BoxDecoration(
-        color: kCardBg, 
-        borderRadius: BorderRadius.circular(24),
+        color: bgLight,
+        borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: buttonColor.withOpacity(0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: buttonColor, size: 28),
-          ),
-          const SizedBox(height: 16),
           Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: kDarkBlue,
+            'Daily Discovery Quest',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: primaryBlue,
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: buttonColor,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          
+          Container(
+            height: 24,
+            decoration: BoxDecoration(
+              color: textLight, 
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.center,
+                  child: Text(
+                    '0/3 Discovered',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Text('69', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: accentOrange)),
+                    const SizedBox(height: 4),
+                    Text('Daily Streak', style: TextStyle(color: textLight, fontSize: 16, fontWeight: FontWeight.w600)),
+                  ],
                 ),
               ),
-              child: Text(buttonText, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Container(width: 1, height: 60, color: Colors.grey[400]), 
+              Expanded(
+                child: Column(
+                  children: [
+                    Text('420', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: primaryBlue)),
+                    const SizedBox(height: 4),
+                    Text('Total Points', style: TextStyle(color: textLight, fontSize: 16, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroHeading(String part1, String part2, {bool isStacked = false}) {
+    return RichText(
+      textAlign: TextAlign.center,
+      text: TextSpan(
+        style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, height: 1.2),
+        children: [
+          TextSpan(text: '$part1 ', style: TextStyle(color: primaryBlue)),
+          if (isStacked)
+            TextSpan(text: '\n$part2', style: TextStyle(color: accentOrange))
+          else
+            TextSpan(text: part2, style: TextStyle(color: accentOrange)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({
+    required String title,
+    required String description,
+    required Color borderColor,
+    required String buttonText,
+    required List<Color> buttonGradient,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: bgLight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: accentOrange),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 15, color: textDark, fontWeight: FontWeight.w600, height: 1.4),
+          ),
+          const SizedBox(height: 20),
+          _buildGradientButton(buttonText, buttonGradient, onTap: onTap),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiscoverySection() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: bgLight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: primaryBlue.withOpacity(0.5), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            'What will you discover today?',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primaryBlue),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Upload a photo or\nuse your camera to begin.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textLight, height: 1.4),
+          ),
+          const SizedBox(height: 24),
+          
+          _buildGradientButton(
+            'Start Discovery →', 
+            [const Color(0xFFFF9800), const Color(0xFFA1640B)], 
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+            onTap: () {
+              MainNavScope.maybeOf(context)?.goToTab(1);
+            }
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureCard({
+    required String title,
+    required String description,
+    required Color borderColor,
+    required String buttonText,
+    required Color buttonTextColor,
+    required Widget iconArea,
+    required VoidCallback onTap, 
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: bgLight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 2),
+      ),
+      child: Column(
+        children: [
+          SizedBox(height: 100, child: Center(child: iconArea)),
+          const SizedBox(height: 16),
+          
+          Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textLight)),
+          const SizedBox(height: 8),
+          
+          Text(description, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: textLight, height: 1.4)),
+          const SizedBox(height: 24),
+          
+          InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(buttonText, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: buttonTextColor)),
             ),
           ),
         ],
@@ -297,69 +362,39 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // --- HELPER: WIDE CARDS (BOTTOM LIST) ---
-  Widget _buildWideCard({
-    required BuildContext context,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color accentColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: kCardBg,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
+  Widget _buildGradientButton(String text, List<Color> gradientColors, {EdgeInsetsGeometry? padding, required VoidCallback onTap}) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: gradientColors,
         ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: accentColor, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: kDarkBlue,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[700],
-                      height: 1.4,
-                    ),
-                  ),
-                ],
+        borderRadius: BorderRadius.circular(50),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.last.withOpacity(0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          )
+        ]
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(50),
+          onTap: onTap, 
+          child: Padding(
+            padding: padding ?? const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white, 
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
-          ],
+          ),
         ),
       ),
     );

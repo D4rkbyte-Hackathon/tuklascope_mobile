@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // ADDED SUPABASE IMPORT
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import 'pathfinder_blueprint_sheet.dart';
 
-// CHANGED TO STATEFUL WIDGET TO LOAD DATA
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -19,7 +19,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static const Color _linkBlue = Color(0xFF42A5F5);
   static const Color _avgLevel = Color(0xFFE65100);
 
-  // ADDED STATE VARIABLES
   String _fullName = 'Loading...';
   String _educationLevel = '...';
   String _location = '';
@@ -32,7 +31,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _fetchUserProfile();
   }
 
-  // ADDED FETCH FUNCTION
   Future<void> _fetchUserProfile() async {
     try {
       final user = Supabase.instance.client.auth.currentUser;
@@ -77,6 +75,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Grouping all UI elements into a list for lazy rendering
+    // We use Padding instead of SizedBoxes so the animation cascades cleanly
+    final List<Widget> profileItems = [
+      _ProfileHeaderCard(
+        navy: _navy,
+        linkBlue: _linkBlue,
+        fullName: _fullName,
+        educationLevel: _educationLevel,
+        location: _location,
+        streak: _streak,
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: 28, bottom: 12),
+        child: RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              height: 1.15,
+            ),
+            children: [
+              TextSpan(text: 'Your ', style: TextStyle(color: _navy)),
+              const TextSpan(text: 'Skill Tree', style: TextStyle(color: Colors.orange)),
+            ],
+          ),
+        ),
+      ),
+      const Padding(
+        padding: EdgeInsets.only(bottom: 28),
+        child: Text(
+          'Watch your knowledge grow! Every discovery adds to your personal skill network and unlocks new learning pathways.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16, color: Colors.black87, height: 1.35),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: _StatsGridCard(navy: _navy, avgLevelColor: _avgLevel),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: _SkillTreePlaceholderCard(),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: _ProfilePromoCard(
+          borderColor: Colors.orange,
+          title: 'Open Your Blueprint',
+          description: 'From core principles to career path.',
+          buttonLabel: 'Open Pathfinder →',
+          buttonColor: _navy,
+          onPressed: () => showPathfinderBlueprintSheet(
+            context,
+            onNavigateToScan: () => MainNavScope.maybeOf(context)?.goToTab(1),
+          ),
+        ),
+      ),
+      _ProfilePromoCard(
+        borderColor: _navy.withValues(alpha: 0.35),
+        title: 'Ready to expand your network?',
+        description: 'Upload a photo of any object around you and discover the concepts behind it!',
+        buttonLabel: 'Start Discovery →',
+        buttonColor: Colors.orange,
+        onPressed: () => MainNavScope.maybeOf(context)?.goToTab(1),
+      ),
+    ];
+
     return GradientScaffold(
       appBar: AppBar(
         title: const Text('Profile & Skill Tree'),
@@ -84,94 +150,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: ColoredBox(
         color: _cream,
-        //  ADDED LOADING SPINNER WHILE FETCHING
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
+            : ListView.builder(
                 padding: EdgeInsets.fromLTRB(
                   20,
                   8,
                   20,
                   MediaQuery.paddingOf(context).bottom + 88,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // 🚀 PASSED DYNAMIC DATA TO HEADER CARD
-                    _ProfileHeaderCard(
-                      navy: _navy,
-                      linkBlue: _linkBlue,
-                      fullName: _fullName,
-                      educationLevel: _educationLevel,
-                      location: _location,
-                      streak: _streak,
-                    ),
-                    const SizedBox(height: 28),
-                    RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          height: 1.15,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: 'Your ',
-                            style: TextStyle(color: _navy),
-                          ),
-                          const TextSpan(
-                            text: 'Skill Tree',
-                            style: TextStyle(color: Colors.orange),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Watch your knowledge grow! Every discovery adds to your personal skill network and unlocks new learning pathways.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black87,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    _StatsGridCard(navy: _navy, avgLevelColor: _avgLevel),
-                    const SizedBox(height: 20),
-                    _SkillTreePlaceholderCard(),
-                    const SizedBox(height: 20),
-                    _ProfilePromoCard(
-                      borderColor: Colors.orange,
-                      title: 'Open Your Blueprint',
-                      description: 'From core principles to career path.',
-                      buttonLabel: 'Open Pathfinder →',
-                      buttonColor: _navy,
-                      onPressed: () => showPathfinderBlueprintSheet(
-                        context,
-                        onNavigateToScan: () =>
-                            MainNavScope.maybeOf(context)?.goToTab(1),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _ProfilePromoCard(
-                      borderColor: _navy.withValues(alpha: 0.35),
-                      title: 'Ready to expand your network?',
-                      description:
-                          'Upload a photo of any object around you and discover the concepts behind it!',
-                      buttonLabel: 'Start Discovery →',
-                      buttonColor: Colors.orange,
-                      onPressed: () =>
-                          MainNavScope.maybeOf(context)?.goToTab(1),
-                    ),
-                  ],
-                ),
+                itemCount: profileItems.length,
+                itemBuilder: (context, index) {
+                  // 2. Applying the staggered animation to each lazily-loaded list item
+                  return profileItems[index]
+                      .animate()
+                      .fade(duration: 600.ms, delay: (100 * index).ms)
+                      .slideY(
+                        begin: 0.1,
+                        end: 0,
+                        duration: 600.ms,
+                        curve: Curves.easeOutCubic,
+                        delay: (100 * index).ms,
+                      );
+                },
               ),
       ),
     );
   }
 }
+
+// -----------------------------------------------------------------------------
+// HELPER WIDGETS BELOW (Unchanged from your custom styling)
+// -----------------------------------------------------------------------------
 
 class _ProfilePromoCard extends StatelessWidget {
   final Color borderColor;
@@ -246,7 +256,6 @@ class _ProfilePromoCard extends StatelessWidget {
 class _ProfileHeaderCard extends StatelessWidget {
   final Color navy;
   final Color linkBlue;
-  // ADDED REQUIRED VARIABLES FOR DYNAMIC DATA
   final String fullName;
   final String educationLevel;
   final String location;
@@ -294,7 +303,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      fullName, // REPLACED HARDCODED NAME
+                      fullName,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -303,7 +312,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      location.isNotEmpty ? '$educationLevel • $location' : educationLevel, // REPLACED HARDCODED HIGHSCHOOL
+                      location.isNotEmpty ? '$educationLevel • $location' : educationLevel,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -320,7 +329,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                         children: [
                           const TextSpan(text: 'Daily Streak '),
                           TextSpan(
-                            text: '$streak', // REPLACED HARDCODED STREAK
+                            text: '$streak',
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -495,7 +504,6 @@ class _SkillTreePlaceholderCard extends StatelessWidget {
   }
 }
 
-/// Lightweight node graph evoking a skill tree (no asset required).
 class _SkillTreeGraphPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
