@@ -58,24 +58,20 @@ def save_discovery_choice(
     try:
         db_client, user_id = db_data
 
-        # 1. HARDCODED XP (Another developer will build the rule engine for this later)
-        calculated_xp = 50
-
-        # 2. Extract the skill for Neo4j directly from the JSON payload!
-        # This keeps our code DRY.
+        # 1. Extract the skill for Neo4j directly from the JSON payload
         extracted_skill = request.learning_deck.get(
             "concept_card", {}).get("skill", "General Knowledge")
 
-        # 3. SUPABASE: Save the Document state for the History Tab
+        # 2. SUPABASE: Save the Document state for the History Tab using the custom XP
         scan_id = save_user_discovery(
-            db_client, user_id, request, calculated_xp)
+            db_client, user_id, request)
 
-        # 4. NEO4J: Update the user's Knowledge Graph
+        # 3. NEO4J: Update the user's Knowledge Graph using the custom XP
         graph_success = save_skill_to_graph(
             user_id=user_id,
             strand_name=request.chosen_lens,
             skill_name=extracted_skill,
-            xp_awarded=calculated_xp
+            xp_awarded=request.xp_awarded
         )
 
         if not graph_success:
@@ -83,9 +79,9 @@ def save_discovery_choice(
 
         return SaveScanResponse(
             status="success",
-            message=f"Action completed! {calculated_xp} XP added.",
+            message=f"Action completed! {request.xp_awarded} XP added.",
             scan_id=str(scan_id),
-            xp_awarded=calculated_xp
+            xp_awarded=request.xp_awarded
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
