@@ -17,7 +17,7 @@ async def get_career_recommendations(
         _, user_id = db_data
 
         # 1. Ask Neo4j for the complete Skill Web
-        skill_web = get_user_skill_web(user_id)
+        skill_web = await get_user_skill_web(user_id)
 
         if not skill_web:
             raise HTTPException(

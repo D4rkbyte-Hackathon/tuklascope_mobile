@@ -16,7 +16,7 @@ async def create_learning_deck(
 ):
     try:
         # 1. Fetch existing skills from Neo4j (The Net)
-        existing_skills = get_existing_skills_for_strand(request.chosen_lens)
+        existing_skills = await get_existing_skills_for_strand(request.chosen_lens)
 
         # 2. Generate the 3-Card Deck using Gemini
         deck = await generate_learning_deck(
