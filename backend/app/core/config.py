@@ -6,6 +6,11 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     GEMINI_API_KEY: str
 
+    # Security: CORS Allowed Origins
+    # Defaulting to localhost for Flutter Web development
+    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000",
+                                  "http://localhost:8080", "http://localhost:8000"]
+
     # Database Keys (Allowing them to be optional for now since we are just doing AI)
     SUPABASE_URL: str | None = None
     SUPABASE_ANON_KEY: str | None = None

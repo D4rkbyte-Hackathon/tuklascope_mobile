@@ -10,14 +10,13 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Crucial for Frontend integration!
+# SECURE CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    # Update this to specific origins (like the flutter web URL) in production
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
