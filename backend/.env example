@@ -1,6 +1,0 @@
-# Google AI Studio - Gemini API Key
-GEMINI_API_KEY=your_api_key_here
-
-# Supabase Credentials
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_key
