@@ -1,17 +1,15 @@
 import logging
-# Assuming neo4j_db is initialized in your core database module
 from app.core.graph_db import neo4j_db
 
 logger = logging.getLogger(__name__)
 
 
-def get_existing_skills_for_strand(strand_name: str) -> list[str]:
+async def get_existing_skills_for_strand(strand_name: str) -> list[str]:
     """
     Fetches all existing skills under a specific strand to feed the Semantic Net.
     Prevents the AI from hallucinating duplicate skill names.
     """
     if not neo4j_db.driver:
-        logger.error("Neo4j driver not initialized.")
         return []
 
     query = """
@@ -19,7 +17,8 @@ def get_existing_skills_for_strand(strand_name: str) -> list[str]:
     RETURN t.name AS topic_name LIMIT 50
     """
     try:
-        records, _, _ = neo4j_db.driver.execute_query(
+        # AWAIT the query execution
+        records, _, _ = await neo4j_db.driver.execute_query(
             query, strand_name=strand_name.upper())
         return [record["topic_name"] for record in records]
     except Exception as e:
@@ -27,13 +26,12 @@ def get_existing_skills_for_strand(strand_name: str) -> list[str]:
         return []
 
 
-def get_user_skill_web(user_id: str) -> dict | None:
+async def get_user_skill_web(user_id: str) -> dict | None:
     """
     Queries Neo4j to build a complete Constellation profile of the user's learning journey.
     Pulls their overall XP distribution AND their highest-leveled specific skills.
     """
     if not neo4j_db.driver:
-        logger.error("Neo4j driver not initialized.")
         return None
 
     # Query 1: Get overall XP distribution across the 4 main strands
@@ -50,9 +48,10 @@ def get_user_skill_web(user_id: str) -> dict | None:
     """
 
     try:
-        xp_records, _, _ = neo4j_db.driver.execute_query(
+        # AWAIT both queries
+        xp_records, _, _ = await neo4j_db.driver.execute_query(
             xp_query, user_id=user_id)
-        skill_records, _, _ = neo4j_db.driver.execute_query(
+        skill_records, _, _ = await neo4j_db.driver.execute_query(
             skills_query, user_id=user_id)
 
         if not xp_records:
@@ -68,17 +67,16 @@ def get_user_skill_web(user_id: str) -> dict | None:
             "top_skills": top_skills
         }
     except Exception as e:
-        logger.error(f"Failed to fetch Skill Web from Neo4j: {str(e)}")
+        logger.error(f"Failed to fetch Skill Web: {str(e)}")
         return None
 
 
-def save_skill_to_graph(user_id: str, strand_name: str, skill_name: str, xp_awarded: int) -> bool:
+async def save_skill_to_graph(user_id: str, strand_name: str, skill_name: str, xp_awarded: int) -> bool:
     """
     Saves the mastered skill to the Neo4j Skill Tree.
     Creates the nodes if they don't exist, and levels them up if they do.
     """
     if not neo4j_db.driver:
-        logger.error("Neo4j driver not initialized.")
         return False
 
     query = """
@@ -104,15 +102,14 @@ def save_skill_to_graph(user_id: str, strand_name: str, skill_name: str, xp_awar
     """
 
     try:
-        neo4j_db.driver.execute_query(
+        # AWAIT the insert
+        await neo4j_db.driver.execute_query(
             query,
             user_id=user_id,
             strand_name=strand_name.upper(),
             skill_name=skill_name,
             xp_awarded=xp_awarded
         )
-        logger.info(
-            f"Successfully saved/leveled up skill '{skill_name}' for user {user_id}")
         return True
     except Exception as e:
         logger.error(f"Failed to graph skill to Neo4j: {str(e)}")

@@ -51,7 +51,7 @@ async def discover_from_vision(
 
 
 @router.post("/save", response_model=SaveScanResponse)
-def save_discovery_choice(
+async def save_discovery_choice(
     request: SaveScanRequest,
     db_data: tuple[Client, str] = Depends(get_user_db_client)
 ):
@@ -67,7 +67,7 @@ def save_discovery_choice(
             db_client, user_id, request)
 
         # 3. NEO4J: Update the user's Knowledge Graph using the custom XP
-        graph_success = save_skill_to_graph(
+        graph_success = await save_skill_to_graph(
             user_id=user_id,
             strand_name=request.chosen_lens,
             skill_name=extracted_skill,

@@ -1,4 +1,4 @@
-from neo4j import GraphDatabase, Driver
+from neo4j import AsyncGraphDatabase, AsyncDriver
 from app.core.config import settings
 import logging
 
@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class Neo4jConnection:
     def __init__(self):
-        self.driver: Driver | None = None
+        self.driver: AsyncDriver | None = None
         self.connect()
 
     def connect(self):
@@ -17,21 +17,19 @@ class Neo4jConnection:
             return
 
         try:
-            # Initialize the driver with basic routing and connection pooling
-            self.driver = GraphDatabase.driver(
+            # Initialize the ASYNC driver
+            self.driver = AsyncGraphDatabase.driver(
                 settings.NEO4J_URI,
                 auth=(settings.NEO4J_USERNAME, settings.NEO4J_PASSWORD)
             )
-            # Verify connectivity
-            self.driver.verify_connectivity()
-            logger.info("Successfully connected to Neo4j AuraDB!")
+            logger.info("Successfully initialized Async Neo4j AuraDB driver!")
         except Exception as e:
             logger.error(f"Failed to connect to Neo4j: {str(e)}")
             self.driver = None
 
-    def close(self):
+    async def close(self):
         if self.driver:
-            self.driver.close()
+            await self.driver.close()
 
 
 # Instantiate globally
