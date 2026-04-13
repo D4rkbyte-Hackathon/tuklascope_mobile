@@ -7,6 +7,12 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
+    object_name: str = Field(...,
+                             description="The scanned object being discussed")
+    strand: str = Field(...,
+                        description="The chosen academic strand (STEM, ABM, etc.)")
+    card_content: str = Field(
+        ..., description="The actual text of the learning card they are reading")
     message: str = Field(..., description="The user's current question")
     history: list[ChatMessage] = Field(
         default=[],
