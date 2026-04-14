@@ -1,7 +1,10 @@
+// mobile/lib/features/scanner/live_feed_screen.dart
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'teaser_doors_screen.dart'; // <-- Add this near your other imports
+import 'package:tuklascope_mobile/core/services/discovery_service.dart';
+import 'teaser_doors_screen.dart';
 
 class LiveFeedScreen extends StatefulWidget {
   const LiveFeedScreen({super.key});
@@ -38,23 +41,24 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
       enableAudio: false, // We only need visual for scanning
     );
 
-    _controller!.initialize().then((_) {
-      if (!mounted) return;
-      setState(() {
-        _isCameraInitialized = true;
-      });
-    }).catchError((e) {
-      debugPrint("Camera Error: $e");
-    });
+    _controller!
+        .initialize()
+        .then((_) {
+          if (!mounted) return;
+          setState(() {
+            _isCameraInitialized = true;
+          });
+        })
+        .catchError((e) {
+          debugPrint("Camera Error: $e");
+        });
   }
 
   void _toggleFlash() {
     if (_controller == null) return;
     setState(() {
       _isFlashOn = !_isFlashOn;
-      _controller!.setFlashMode(
-        _isFlashOn ? FlashMode.torch : FlashMode.off,
-      );
+      _controller!.setFlashMode(_isFlashOn ? FlashMode.torch : FlashMode.off);
     });
   }
 
@@ -65,15 +69,29 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
     _setCamera(_selectedCameraIndex);
   }
 
-  // The mock action: Skips taking a picture and just opens the floating dialog
-  void _triggerScanningModal() {
-    showDialog(
-      context: context,
-      // This darkens the camera feed behind the dialog to make it POP!
-      barrierColor: Colors.black.withOpacity(0.7), 
-      barrierDismissible: false, // Optional: Prevents them from tapping outside to cancel
-      builder: (context) => const ScanningModal(),
-    );
+  // This is our real photo capture logic!
+  Future<void> _takePictureAndScan() async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+    if (_controller!.value.isTakingPicture) return; // Prevent double-taps
+
+    try {
+      // 1. Snap the physical photo
+      final XFile rawImage = await _controller!.takePicture();
+      final File imageFile = File(rawImage.path);
+
+      // 2. Open the modal and pass the image into it
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        // This darkens the camera feed behind the dialog to make it POP!
+        barrierColor: Colors.black.withOpacity(0.7),
+        barrierDismissible:
+            false, // Prevents them from tapping outside to cancel
+        builder: (context) => ScanningModal(imageFile: imageFile),
+      );
+    } catch (e) {
+      debugPrint('Error taking picture: $e');
+    }
   }
 
   @override
@@ -82,7 +100,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
     super.dispose();
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     if (!_isCameraInitialized || _controller == null) {
       return const Scaffold(
@@ -94,18 +112,18 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
-        // REMOVED: fit: StackFit.expand, (This was causing the stretching!)
         children: [
-          // 1. THE CAMERA PREVIEW (Base Layer)
+          // 1. THE CAMERA PREVIEW
           Positioned.fill(
-            child: ClipRect( // Keeps the camera from bleeding off-screen
+            child: ClipRect(
+              // Keeps the camera from bleeding off-screen
               child: FittedBox(
                 fit: BoxFit.cover, // Zooms in just enough to hide black bars
                 child: SizedBox(
                   width: 100, // Arbitrary base width
-                  // THE MAGIC: Multiplying by the camera's raw landscape ratio 
+                  // THE MAGIC: Multiplying by the camera's raw landscape ratio
                   // forces this box into a perfect Portrait ratio!
-                  height: 100 * _controller!.value.aspectRatio, 
+                  height: 100 * _controller!.value.aspectRatio,
                   child: CameraPreview(_controller!),
                 ),
               ),
@@ -117,13 +135,15 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
             top: 0,
             left: 0,
             right: 0,
-            // ... The rest of your code stays exactly the same from here down!
             child: ClipRect(
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0), // The Blur Magic
+                filter: ImageFilter.blur(
+                  sigmaX: 10.0,
+                  sigmaY: 10.0,
+                ), // The Blur Magic
                 child: Container(
                   padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 10, // Safe area for notch
+                    top: MediaQuery.of(context).padding.top + 10,
                     bottom: 16,
                     left: 20,
                     right: 20,
@@ -131,11 +151,19 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                   color: Colors.black.withOpacity(0.4), // Darkens the blur
                   child: Row(
                     children: [
-                      const Icon(Icons.fiber_manual_record, color: Colors.green, size: 16),
+                      const Icon(
+                        Icons.fiber_manual_record,
+                        color: Colors.green,
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
                       const Text(
                         'Camera Active',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const Spacer(),
                       IconButton(
@@ -163,7 +191,9 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                 child: Container(
                   padding: EdgeInsets.only(
                     top: 20,
-                    bottom: MediaQuery.of(context).padding.bottom + 30, // Safe area for bottom swipe bar
+                    bottom:
+                        MediaQuery.of(context).padding.bottom +
+                        30, // Safe area for bottom swipe bar
                     left: 40,
                     right: 40,
                   ),
@@ -171,16 +201,19 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // GALLERY BUTTON (Mocks opening modal)
+                      // GALLERY BUTTON (Still mocked for now)
                       IconButton(
                         iconSize: 32,
-                        icon: const Icon(Icons.photo_library, color: Colors.white),
-                        onPressed: _triggerScanningModal,
+                        icon: const Icon(
+                          Icons.photo_library,
+                          color: Colors.white,
+                        ),
+                        onPressed: () {},
                       ),
 
-                      // THE SHUTTER BUTTON (Mocks taking a photo)
+                      // THE SHUTTER BUTTON (Triggers camera)
                       GestureDetector(
-                        onTap: _triggerScanningModal,
+                        onTap: _takePictureAndScan,
                         child: Container(
                           width: 80,
                           height: 80,
@@ -203,7 +236,10 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                       // FLIP CAMERA BUTTON
                       IconButton(
                         iconSize: 32,
-                        icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
+                        icon: const Icon(
+                          Icons.flip_camera_ios,
+                          color: Colors.white,
+                        ),
                         onPressed: _flipCamera,
                       ),
                     ],
@@ -218,44 +254,66 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
   }
 }
 
-// --- 3.2 THE ANALYZING MODAL (FLOATING VERSION) ---
+// --- 3.2 THE ANALYZING MODAL ---
 class ScanningModal extends StatefulWidget {
-  const ScanningModal({super.key});
+  final File imageFile; // The modal now requires the photo
+
+  const ScanningModal({super.key, required this.imageFile});
 
   @override
   State<ScanningModal> createState() => _ScanningModalState();
 }
 
 class _ScanningModalState extends State<ScanningModal> {
-  
   @override
   void initState() {
     super.initState();
-    
-    // THE MAGIC TIMER: Wait 3 seconds, then navigate
-    Future.delayed(const Duration(seconds: 3), () {
-      if (!mounted) return; 
+    _uploadAndAnalyze(); // Trigger actual API call
+  }
 
-      // 1. Close this Floating Dialog
-      Navigator.pop(context); 
-      
-      // 2. Push directly to Screen 3.3 (Teaser Doors)
+  // The actual backend communication logic
+  Future<void> _uploadAndAnalyze() async {
+    // Call our backend!
+    final aiResult = await DiscoveryService.analyzeImage(widget.imageFile);
+
+    if (!mounted) return;
+
+    // 1. Close the Analyzing Modal
+    Navigator.pop(context);
+
+    if (aiResult != null) {
+      // SUCCESS!
+      // Print the JSON so we can see it in VS Code Debug Console
+      debugPrint("🎯 AI RESPONSE: $aiResult");
+
+      // Go to the Teaser Doors and pass the JSON data!
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const TeaserDoorsScreen()),
+        MaterialPageRoute(
+          builder: (context) => TeaserDoorsScreen(aiData: aiResult),
+        ),
       );
-    });
+    } else {
+      // FAILURE: Show an error to the user
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Failed to analyze image. Ensure you have internet and try again.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Dialog is the magic widget that floats in the center
     return Dialog(
-      backgroundColor: Colors.transparent, // Makes the default white square invisible
+      backgroundColor: Colors.transparent,
       elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24), // Gives it breathing room from the phone edges
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
       child: Container(
-        height: 320, // Slightly shorter since we removed the drag handle
+        height: 320,
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
@@ -263,9 +321,7 @@ class _ScanningModalState extends State<ScanningModal> {
             end: Alignment.bottomCenter,
             colors: [Color(0xFFFFFDF4), Color(0xFFD9D7CE)],
           ),
-          // Round ALL FOUR corners now!
           borderRadius: BorderRadius.circular(32),
-          // Add a soft glow behind the dialog to lift it off the dark background
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.3),
@@ -277,20 +333,19 @@ class _ScanningModalState extends State<ScanningModal> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // THE SCANNING GRAPHIC
             Stack(
               alignment: Alignment.center,
               children: [
-                // 1. The Outer Progress Ring
                 const SizedBox(
                   width: 100,
                   height: 100,
                   child: CircularProgressIndicator(
                     strokeWidth: 6,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF9800)), 
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFFFF9800),
+                    ),
                   ),
                 ),
-                // 2. The Inner Icon Container
                 Container(
                   width: 70,
                   height: 70,
@@ -306,25 +361,19 @@ class _ScanningModalState extends State<ScanningModal> {
                 ),
               ],
             ),
-            
             const SizedBox(height: 35),
-
-            // THE TEXT
             const Text(
               'Analyzing Artifact...',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF0B3C6A), 
+                color: Color(0xFF0B3C6A),
               ),
             ),
             const SizedBox(height: 10),
             Text(
               'Cross-referencing historical databases',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
             ),
           ],
         ),
