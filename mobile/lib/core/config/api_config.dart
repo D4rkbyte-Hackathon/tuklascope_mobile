@@ -7,6 +7,6 @@ class ApiConfig {
 
   // Specific Endpoint Routes
   static const String discoverVision = '$baseUrl/discover/vision';
-  static const String generateLearnDeck = '$baseUrl/learn/generate';
+  static const String generateLearnDeck = '$baseUrl/learn/generate-deck';
   static const String pathfinderAnalyze = '$baseUrl/pathfinder/analyze';
 }
