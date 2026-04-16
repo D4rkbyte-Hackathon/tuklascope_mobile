@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../core/widgets/gradient_scaffold.dart';
+import '../../core/widgets/gradient_scaffold.dart'; //this contains the bg color
 import '../../core/navigation/main_nav_scope.dart'; 
 import '../scanner/tuklas_tutor_screen.dart'; 
 import '../auth/presentation/screens/login_screen.dart'; // ADDED: Import the Login Screen
@@ -97,21 +97,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       const SizedBox(height: 60), 
     ];
 
-    return Scaffold(
+    return GradientScaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [bgLight, bgDark],
-          ),
-        ),
         child: SafeArea(
           child: Stack(
             children: [
               ListView.builder(
                 physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(16.0, 20.0, 16.0, MediaQuery.paddingOf(context).bottom + 110),
+                padding: EdgeInsets.fromLTRB(16.0, 20.0, 16.0, MediaQuery.paddingOf(context).bottom),
                 itemCount: listItems.length,
                 itemBuilder: (context, index) {
                   final item = listItems[index];

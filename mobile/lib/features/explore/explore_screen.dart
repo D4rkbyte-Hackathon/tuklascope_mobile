@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart'; // 1. IMPORT ADDED
+import 'package:flutter_animate/flutter_animate.dart'; 
+import '../../core/widgets/gradient_scaffold.dart';
 
 /// Placeholder model until user uploads / API are wired.
 class _ExploreNotePlaceholder {
@@ -21,106 +22,151 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> {
-  static const Color _creamBg = Color(0xFFFFF8F0);
-  static const Color _orangeAccent = Color(0xFFFF9800);
-  static const Color _tabActiveBg = Color(0xFF4A5D6E);
+// 1. ADDED TickerProviderStateMixin for the multiple TabControllers
+class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateMixin {
+  static const Color _orangeAccent = Color(0xFFFF6B2C);
   static const Color _tabBorder = Color(0xFF8FA8BC);
   static const Color _tabInactiveText = Color(0xFF757575);
-  static const Color _tabActiveText = Color(0xFFE8E8E8);
   static const Color _navyTitle = Color(0xFF0B3C6A);
   static const Color _boardToggleBorder = Color(0xFF9BC4E2);
   static const Color _boardToggleSelected = Color(0xFF5F717D);
 
-  int _segment = 0;
-  /// 0 = By Grade Level, 1 = All Users (placeholder filter).
-  int _leaderboardFilter = 0;
+  // 2. REPLACED INT SEGMENTS WITH TAB CONTROLLERS
+  late TabController _mainTabController;
+  late TabController _filterTabController;
 
   static const List<_ExploreNotePlaceholder> _placeholders = [
-    _ExploreNotePlaceholder(
-      title: 'Notebooks',
-      subtitle: 'blahblah',
-      tag: 'STEM',
-    ),
-    _ExploreNotePlaceholder(
-      title: 'Lab handout',
-      subtitle: 'Scan from last week — review before quiz',
-      tag: 'STEM',
-    ),
-    _ExploreNotePlaceholder(
-      title: 'History timeline',
-      subtitle: 'Chapter 12 summary',
-      tag: 'HUMANITIES',
-    ),
-    _ExploreNotePlaceholder(
-      title: 'Sketch ideas',
-      subtitle: 'Quick doodles from the café',
-      tag: 'ART',
-    ),
+    _ExploreNotePlaceholder(title: 'Notebooks', subtitle: 'blahblah', tag: 'STEM'),
+    _ExploreNotePlaceholder(title: 'Lab handout', subtitle: 'Scan from last week — review before quiz', tag: 'STEM'),
+    _ExploreNotePlaceholder(title: 'History timeline', subtitle: 'Chapter 12 summary', tag: 'HUMANITIES'),
+    _ExploreNotePlaceholder(title: 'Sketch ideas', subtitle: 'Quick doodles from the café', tag: 'ART'),
   ];
 
   @override
-  Widget build(BuildContext context) {
-    final bottomInset =
-        MediaQuery.of(context).padding.bottom + 72;
+  void initState() {
+    super.initState();
+    _mainTabController = TabController(length: 2, vsync: this);
+    _filterTabController = TabController(length: 2, vsync: this);
+    
+    // Add listener to filter tab so we can rebuild the list if necessary in the future
+    _filterTabController.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
 
-    return Scaffold(
-      backgroundColor: _creamBg,
+  @override
+  void dispose() {
+    _mainTabController.dispose();
+    _filterTabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom + 72;
+
+    return GradientScaffold(
       body: SafeArea(
         bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: _buildSegmentTabs(),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              child: _buildMainSegmentTabs(),
             ),
-            if (_segment == 0) ...[
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildSearchField(),
+            
+            // 3. ADDED TABBARVIEW FOR SWIPEABLE MAIN SCREENS
+            Expanded(
+              child: TabBarView(
+                controller: _mainTabController,
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  // VIEW 1: History
+                  Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _buildSearchField(),
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(child: _buildHistoryFeed(bottomInset)),
+                    ],
+                  ),
+                  
+                  // VIEW 2: Leaderboards
+                  _buildLeaderboardsPanel(bottomInset),
+                ],
               ),
-              const SizedBox(height: 16),
-              Expanded(child: _buildHistoryFeed(bottomInset)),
-            ] else
-              Expanded(child: _buildLeaderboardsPanel(bottomInset)),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSegmentTabs() {
-    return Row(
-      children: [
-        Expanded(
-          child: _SegmentTab(
-            label: 'History',
-            selected: _segment == 0,
-            activeBg: _tabActiveBg,
-            activeText: _tabActiveText,
-            inactiveBorder: _tabBorder,
-            inactiveText: _tabInactiveText,
-            onTap: () => setState(() => _segment = 0),
-          ),
+  // ===========================================================================
+  // THE NEW ANIMATED TAB BARS
+  // ===========================================================================
+
+  Widget _buildMainSegmentTabs() {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: _tabBorder, width: 1.2),
+      ),
+      child: TabBar(
+        controller: _mainTabController,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent, // Hides default underline
+        indicator: BoxDecoration(
+          color: _orangeAccent,
+          borderRadius: BorderRadius.circular(25),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _SegmentTab(
-            label: 'View Leaderboards',
-            selected: _segment == 1,
-            activeBg: _tabActiveBg,
-            activeText: _tabActiveText,
-            inactiveBorder: _tabBorder,
-            inactiveText: _tabInactiveText,
-            onTap: () => setState(() => _segment = 1),
-          ),
-        ),
-      ],
+        labelColor: Colors.white,
+        unselectedLabelColor: _tabInactiveText,
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        tabs: const [
+          Tab(text: 'History'),
+          Tab(text: 'View Leaderboards'),
+        ],
+      ),
     );
   }
+
+  Widget _buildLeaderboardFilterToggle() {
+    return Container(
+      height: 44, // Slightly smaller than main tabs
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _boardToggleBorder, width: 1.2),
+      ),
+      child: TabBar(
+        controller: _filterTabController,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        indicator: BoxDecoration(
+          color: _boardToggleSelected,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        labelColor: Colors.white,
+        unselectedLabelColor: _tabInactiveText,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        tabs: const [
+          Tab(text: 'By Grade Level'),
+          Tab(text: 'All Users'),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // CONTENT WIDGETS
+  // ===========================================================================
 
   Widget _buildSearchField() {
     return Material(
@@ -131,15 +177,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
       child: TextField(
         decoration: InputDecoration(
           hintText: 'Search your previously scanned stuff...',
-          hintStyle: TextStyle(
-            color: Colors.grey.shade400,
-            fontSize: 15,
-          ),
-          prefixIcon: const Icon(
-            Icons.search,
-            color: _orangeAccent,
-            size: 28,
-          ),
+          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+          prefixIcon: const Icon(Icons.search, color: _orangeAccent, size: 28),
           isDense: true,
           filled: true,
           fillColor: Colors.white,
@@ -147,10 +186,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             borderRadius: BorderRadius.circular(18),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 14,
-            horizontal: 8,
-          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         ),
       ),
     );
@@ -164,7 +200,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
       separatorBuilder: (_, _) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         final item = _placeholders[index];
-        // 2. STAGGERED ANIMATION FOR HISTORY FEED
         return _NoteCard(
           title: item.title,
           subtitle: item.subtitle,
@@ -193,14 +228,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 height: 1.15,
               ),
               children: [
-                TextSpan(
-                  text: 'Top ',
-                  style: TextStyle(color: _navyTitle),
-                ),
-                TextSpan(
-                  text: 'Discoverers',
-                  style: TextStyle(color: _orangeAccent),
-                ),
+                TextSpan(text: 'Top ', style: TextStyle(color: _navyTitle)),
+                TextSpan(text: 'Discoverers', style: TextStyle(color: _orangeAccent)),
               ],
             ),
           ),
@@ -218,53 +247,20 @@ class _ExploreScreenState extends State<ExploreScreen> {
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final row = _discovererPlaceholders[index];
-              // 3. STAGGERED ANIMATION FOR LEADERBOARD FEED
               return _DiscovererRowCard(
                 name: row.name,
                 xpLabel: row.xpLabel,
                 orangeBorder: _orangeAccent,
                 trophyColor: _navyTitle,
               )
-              .animate()
-              .fade(duration: 600.ms, delay: (100 * index).ms)
-              .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (100 * index).ms);
+              // Added key so animations replay when filter tab is switched
+              .animate(key: ValueKey('leaderboard_${_filterTabController.index}_$index'))
+              .fade(duration: 600.ms, delay: (50 * index).ms)
+              .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (50 * index).ms);
             },
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildLeaderboardFilterToggle() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _boardToggleBorder, width: 1.2),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _BoardFilterChip(
-              label: 'By Grade Level',
-              selected: _leaderboardFilter == 0,
-              selectedBg: _boardToggleSelected,
-              inactiveText: _tabInactiveText,
-              onTap: () => setState(() => _leaderboardFilter = 0),
-            ),
-          ),
-          Expanded(
-            child: _BoardFilterChip(
-              label: 'All Users',
-              selected: _leaderboardFilter == 1,
-              selectedBg: _boardToggleSelected,
-              inactiveText: _tabInactiveText,
-              onTap: () => setState(() => _leaderboardFilter = 1),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -286,47 +282,6 @@ class _DiscovererPlaceholder {
 
   final String name;
   final String xpLabel;
-}
-
-class _BoardFilterChip extends StatelessWidget {
-  const _BoardFilterChip({
-    required this.label,
-    required this.selected,
-    required this.selectedBg,
-    required this.inactiveText,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final Color selectedBg;
-  final Color inactiveText;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? selectedBg : Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : inactiveText,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _DiscovererRowCard extends StatelessWidget {
@@ -386,57 +341,6 @@ class _DiscovererRowCard extends StatelessWidget {
             ),
             Icon(Icons.emoji_events_outlined, size: 30, color: trophyColor),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SegmentTab extends StatelessWidget {
-  const _SegmentTab({
-    required this.label,
-    required this.selected,
-    required this.activeBg,
-    required this.activeText,
-    required this.inactiveBorder,
-    required this.inactiveText,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final Color activeBg;
-  final Color activeText;
-  final Color inactiveBorder;
-  final Color inactiveText;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? activeBg : Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: selected
-                ? null
-                : Border.all(color: inactiveBorder, width: 1.2),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: selected ? activeText : inactiveText,
-            ),
-          ),
         ),
       ),
     );
@@ -521,7 +425,7 @@ class _NoteCard extends StatelessWidget {
   }
 }
 
-/// Secondary screen reachable via in-app navigation when you add real flows.
+// Keeping this so routing doesn't break if you call it anywhere!
 class LeaderboardsScreen extends StatelessWidget {
   const LeaderboardsScreen({super.key});
 
