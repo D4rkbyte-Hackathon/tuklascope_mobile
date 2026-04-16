@@ -1,30 +1,14 @@
+// mobile/lib/features/scanner/discovery_cards_screen.dart
 import 'package:flutter/material.dart';
 import '../../core/widgets/gradient_scaffold.dart';
+// NEW: Import the service we just made
+import 'package:tuklascope_mobile/core/services/learn_service.dart';
 
-// --- MOCK DATA ---
-const _mockData = {
-  'title': "Magellan's Cross",
-  'rating': "4.8",
-  'image':
-      'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?q=80&w=1000&auto=format&fit=crop',
-  'sections': {
-    'about':
-        "Magellan's Cross is a Christian cross planted by Portuguese and Spanish explorers as ordered by Ferdinand Magellan upon arriving in Cebu in the Philippines on April 21, 1521.",
-    'significance':
-        "This site is a symbol of the birth of Christianity in the land. It houses the original cross inside a tindalo wood case to protect it.",
-    'history':
-        "The kiosk that houses the cross was built in 1834. The ceiling of the kiosk is painted with a mural depicting the baptism of Rajah Humabon.",
-  },
-};
-
-// Changed to StatefulWidget to handle tab switching!
 class DiscoveryCardsScreen extends StatefulWidget {
-  // NEW: We are now demanding these three pieces of data!
   final String objectName;
   final String gradeLevel;
   final String selectedLens;
 
-  // Notice we removed 'title', and added the three new variables
   const DiscoveryCardsScreen({
     super.key,
     required this.objectName,
@@ -37,8 +21,48 @@ class DiscoveryCardsScreen extends StatefulWidget {
 }
 
 class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
-  // State variable to track which button is selected (0, 1, or 2)
   int _selectedIndex = 0;
+
+  // NEW: State variables for network handling
+  bool _isLoading = true;
+  String? _error;
+  Map<String, dynamic>? _deckData;
+
+  @override
+  void initState() {
+    super.initState();
+    // NEW: Fetch the data the moment the screen opens
+    _fetchLearningDeck();
+  }
+
+  // NEW: The network call
+  Future<void> _fetchLearningDeck() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final data = await LearnService.generateDeck(
+      objectName: widget.objectName,
+      gradeLevel: widget.gradeLevel,
+      selectedLens: widget.selectedLens,
+    );
+
+    if (!mounted) return;
+
+    if (data != null) {
+      setState(() {
+        _deckData = data;
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _error =
+            'Failed to generate the learning deck. Please check your connection.';
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +70,6 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // We add a subtle dark drop shadow to the white icons so they are visible over ANY image
         iconTheme: const IconThemeData(
           color: Colors.white,
           shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
@@ -56,136 +79,188 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
           IconButton(icon: const Icon(Icons.share), onPressed: () {}),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // --- 1. HERO IMAGE WITH LIGHT FADE ---
-            SizedBox(
-              height: 350, // Slightly shorter so we get to the content faster
-              child: Stack(
-                fit: StackFit.expand,
+      // NEW: Handle Loading and Error States gracefully
+      body: _isLoading
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.network(
-                    _mockData['image'] as String,
-                    fit: BoxFit.cover,
-                  ),
-                  // The gradient fade that blends the image into your LIGHT background
-                  Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black45, // Dark top for the AppBar icons
-                          Colors.transparent,
-                          Color(
-                            0xFFFFFDF4,
-                          ), // Fades seamlessly into your app's top background color!
-                        ],
-                        stops: [0.0, 0.4, 1.0],
-                      ),
+                  CircularProgressIndicator(color: Color(0xFF0B3C6A)),
+                  SizedBox(height: 16),
+                  Text(
+                    'Generating custom lesson...',
+                    style: TextStyle(
+                      color: Color(0xFF0B3C6A),
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
-            ),
-
-            // --- 2. CONTENT AREA ---
-            Transform.translate(
-              offset: const Offset(0, -20),
+            )
+          : _error != null
+          ? Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // TITLE ROW
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${widget.selectedLens.toUpperCase()}: ${widget.objectName}',
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              color: Color(
-                                0xFF0B3C6A,
-                              ), // Dark Blue for contrast
-                              height: 1.1,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF9800), // Orange
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _mockData['rating'] as String,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 48,
                     ),
-                    const SizedBox(height: 32),
-
-                    // --- 3. THE 3 INTERACTIVE TABS ---
-                    Row(
-                      children: [
-                        _buildTabButton(0, 'Quick Fact', Icons.bolt),
-                        const SizedBox(width: 8),
-                        _buildTabButton(1, 'Concepts', Icons.lightbulb_outline),
-                        const SizedBox(width: 8),
-                        _buildTabButton(
-                          2,
-                          'Hands-on',
-                          Icons.build_circle_outlined,
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
                     ),
                     const SizedBox(height: 24),
-
-                    // --- 4. THE DYNAMIC CONTENT CARD ---
-                    // This seamlessly switches out the card based on which button you tapped
-                    _buildActiveCard(),
-
-                    const SizedBox(height: 40),
+                    ElevatedButton(
+                      onPressed: _fetchLearningDeck,
+                      child: const Text('Try Again'),
+                    ),
                   ],
                 ),
               ),
+            )
+          : _buildContent(), // Show your UI if successful!
+    );
+  }
+
+  // YOUR EXACT ORIGINAL UI LAYOUT
+  Widget _buildContent() {
+    // Safely extract data with fallbacks
+    final xpReward = _deckData?['xp_reward']?.toString() ?? '50';
+    // Fallback to a generic abstract learning image if the AI doesn't provide a specific URL
+    final imageUrl =
+        _deckData?['image_url'] ??
+        'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?q=80&w=1000&auto=format&fit=crop';
+
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // --- 1. HERO IMAGE WITH LIGHT FADE ---
+          SizedBox(
+            height: 350,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  // Handle broken image links gracefully
+                  errorBuilder: (context, error, stackTrace) =>
+                      Container(color: Colors.grey[300]),
+                ),
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black45,
+                        Colors.transparent,
+                        Color(0xFFFFFDF4),
+                      ],
+                      stops: [0.0, 0.4, 1.0],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+
+          // --- 2. CONTENT AREA ---
+          Transform.translate(
+            offset: const Offset(0, -20),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // TITLE ROW
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${widget.selectedLens.toUpperCase()}: ${widget.objectName}',
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0B3C6A),
+                            height: 1.1,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF9800),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.star,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '+$xpReward XP', // NEW: Dynamic XP!
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+
+                  // --- 3. THE 3 INTERACTIVE TABS ---
+                  Row(
+                    children: [
+                      _buildTabButton(0, 'Quick Fact', Icons.bolt),
+                      const SizedBox(width: 8),
+                      _buildTabButton(1, 'Concepts', Icons.lightbulb_outline),
+                      const SizedBox(width: 8),
+                      _buildTabButton(
+                        2,
+                        'Hands-on',
+                        Icons.build_circle_outlined,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // --- 4. THE DYNAMIC CONTENT CARD ---
+                  _buildActiveCard(),
+
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // --- HELPER: TAB BUTTONS ---
   Widget _buildTabButton(int index, String label, IconData icon) {
     bool isSelected = _selectedIndex == index;
 
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          // Tell Flutter to rebuild the screen with the new active tab
           setState(() {
             _selectedIndex = index;
           });
@@ -227,38 +302,38 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
     );
   }
 
-  // --- HELPER: DYNAMIC CONTENT SWITCHER ---
   Widget _buildActiveCard() {
+    // NEW: Safely grab the AI generated text for each section
+    final quickFact =
+        _deckData?['quick_fact'] ??
+        "A fascinating fact about this artifact is currently hidden.";
+    final concept =
+        _deckData?['core_concept'] ??
+        "The underlying principles are still waiting to be discovered.";
+    final handsOn =
+        _deckData?['practical_application'] ??
+        "Try finding a way to apply this in your local community!";
+
     switch (_selectedIndex) {
       case 0:
-        return _buildGlassSection(
-          'Quick Fact',
-          (_mockData['sections'] as Map<String, String>)['about']!,
-        );
+        return _buildGlassSection('Quick Fact', quickFact);
       case 1:
-        return _buildGlassSection(
-          'Concepts',
-          (_mockData['sections'] as Map<String, String>)['significance']!,
-        );
+        return _buildGlassSection('Concepts', concept);
       case 2:
-        return _buildGlassSection(
-          'Hands-on Project',
-          (_mockData['sections'] as Map<String, String>)['history']!,
-        );
+        return _buildGlassSection('Hands-on Project', handsOn);
       default:
         return const SizedBox();
     }
   }
 
-  // --- HELPER: LIGHT THEME GLASS CARD ---
   Widget _buildGlassSection(String title, String content) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.6), // Light Frosted Glass
+        color: Colors.white.withOpacity(0.6),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white, width: 2), // Crisp white edge
+        border: Border.all(color: Colors.white, width: 2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -275,7 +350,7 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: Color(0xFFFF9800), // Orange section headers
+              color: Color(0xFFFF9800),
               letterSpacing: 1.2,
             ),
           ),
@@ -284,7 +359,7 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
             content,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey[800], // Dark gray for excellent readability
+              color: Colors.grey[800],
               height: 1.6,
             ),
           ),
