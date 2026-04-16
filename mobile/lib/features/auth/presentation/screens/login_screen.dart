@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../onboarding/compass_questions_screen.dart';
 import 'signup_screen.dart';
+import '../widgets/auth_gate.dart';
 
 import '../../providers/auth_controller.dart';
 import '../../../../core/widgets/gradient_scaffold.dart';
@@ -36,11 +37,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
 
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const CompassQuestionsScreen(),
-          ),
+        // RESET the entire navigation stack and let AuthGate handle routing
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+          (route) => false,
         );
       }
     } on AuthException catch (e) {
@@ -95,11 +95,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               backgroundColor: Color(0xFF64B5F6),
             ),
           );
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const CompassQuestionsScreen(),
-            ),
+          // RESET the entire navigation stack and let AuthGate handle routing
+          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const AuthGate()),
+            (route) => false,
           );
         }
       }

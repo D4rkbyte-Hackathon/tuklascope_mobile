@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
-import '../auth/providers/auth_controller.dart'; 
+import '../auth/providers/auth_controller.dart';
 import 'pathfinder_blueprint_sheet.dart';
+
+import '../auth/presentation/widgets/auth_gate.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -24,8 +26,8 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Profile & Skill Tree'),
         foregroundColor: _navy,
-        backgroundColor: Colors.transparent, 
-        elevation: 0, 
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       body: appUserState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -561,7 +563,8 @@ class EditProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with SingleTickerProviderStateMixin {
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   static const Color _navy = Color(0xFF0D3B66);
 
@@ -579,7 +582,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
 
   // 🚀 NEW FUNCTION: Opens a dialog and updates Supabase
   Future<void> _showEditNameDialog(String currentName) async {
-    final TextEditingController nameController = TextEditingController(text: currentName);
+    final TextEditingController nameController = TextEditingController(
+      text: currentName,
+    );
 
     await showDialog(
       context: context,
@@ -590,7 +595,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
             controller: nameController,
             decoration: const InputDecoration(
               hintText: 'Enter your new name',
-              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.orange)),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.orange),
+              ),
             ),
           ),
           actions: [
@@ -604,28 +611,35 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
                 final newName = nameController.text.trim();
                 if (newName.isNotEmpty && newName != currentName) {
                   try {
-                    final userId = Supabase.instance.client.auth.currentUser?.id;
+                    final userId =
+                        Supabase.instance.client.auth.currentUser?.id;
                     if (userId != null) {
                       // 1. Send to Supabase
                       await Supabase.instance.client
                           .from('profiles')
                           .update({'full_name': newName})
                           .eq('id', userId);
-                      
+
                       // 2. Tell Riverpod to refresh the data so the UI updates instantly!
                       ref.invalidate(appUserProvider);
-                      
+
                       if (context.mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: Colors.green),
+                          const SnackBar(
+                            content: Text('Profile updated successfully!'),
+                            backgroundColor: Colors.green,
+                          ),
                         );
                       }
                     }
                   } catch (e) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error updating profile: $e'), backgroundColor: Colors.red),
+                        SnackBar(
+                          content: Text('Error updating profile: $e'),
+                          backgroundColor: Colors.red,
+                        ),
                       );
                     }
                   }
@@ -670,7 +684,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
                 ),
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.black54,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
                 tabs: const [
                   Tab(text: 'Profile'),
                   Tab(text: 'Settings'),
@@ -679,7 +696,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
               ),
             ),
           ),
-          
+
           // THE TAB CONTENT VIEWS
           Expanded(
             child: TabBarView(
@@ -711,7 +728,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
 
         final profile = appUser.profile;
         final currentName = profile.fullName ?? 'Explorer';
-        final email = Supabase.instance.client.auth.currentUser?.email ?? 'No email';
+        final email =
+            Supabase.instance.client.auth.currentUser?.email ?? 'No email';
 
         return ListView(
           padding: const EdgeInsets.all(20),
@@ -729,7 +747,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
                     child: CircleAvatar(
                       radius: 65,
                       backgroundColor: Colors.grey[200],
-                      child: Icon(Icons.person, size: 70, color: Colors.grey[500]),
+                      child: Icon(
+                        Icons.person,
+                        size: 70,
+                        color: Colors.grey[500],
+                      ),
                     ),
                   ),
                   Positioned(
@@ -739,10 +761,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
                       decoration: const BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                        boxShadow: [
+                          BoxShadow(color: Colors.black26, blurRadius: 4),
+                        ],
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.camera_alt, color: Colors.orange, size: 22),
+                        icon: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.orange,
+                          size: 22,
+                        ),
                         onPressed: () {}, // Image picker logic goes here later
                       ),
                     ),
@@ -755,35 +783,60 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
 
             // Edit Info Card
             Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.black12),
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.person_outline, color: _navy),
-                    title: const Text('Full Name', style: TextStyle(color: Colors.black54, fontSize: 12)),
-                    subtitle: Text(currentName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    trailing: const Icon(Icons.edit, color: Colors.orange, size: 20),
-                    // 🚀 Calls our new edit function
-                    onTap: () => _showEditNameDialog(currentName),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.black12),
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.email_outlined, color: _navy),
-                    title: const Text('Email', style: TextStyle(color: Colors.black54, fontSize: 12)),
-                    subtitle: Text(email, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.person_outline, color: _navy),
+                        title: const Text(
+                          'Full Name',
+                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                        ),
+                        subtitle: Text(
+                          currentName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.edit,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                        // 🚀 Calls our new edit function
+                        onTap: () => _showEditNameDialog(currentName),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.email_outlined, color: _navy),
+                        title: const Text(
+                          'Email',
+                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                        ),
+                        subtitle: Text(
+                          email,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ).animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1),
+                )
+                .animate()
+                .fade(duration: 400.ms, delay: 100.ms)
+                .slideY(begin: 0.1),
 
             const SizedBox(height: 30),
           ],
         );
-      }
+      },
     );
   }
 
@@ -805,16 +858,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
             children: [
               SwitchListTile(
                 secondary: const Icon(Icons.dark_mode, color: Colors.orange),
-                title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.bold)),
-                value: false, 
+                title: const Text(
+                  'Dark Mode',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                value: false,
                 activeColor: Colors.orange,
                 onChanged: (bool value) {},
               ),
               const Divider(height: 1),
               SwitchListTile(
                 secondary: const Icon(Icons.vibration, color: Colors.orange),
-                title: const Text('Vibration', style: TextStyle(fontWeight: FontWeight.bold)),
-                value: true, 
+                title: const Text(
+                  'Vibration',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                value: true,
                 activeColor: Colors.orange,
                 onChanged: (bool value) {},
               ),
@@ -824,7 +883,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
         // Account Actions
         const Padding(
           padding: EdgeInsets.only(top: 20, bottom: 10),
-          child: Text('Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navy)),
+          child: Text(
+            'Account',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: _navy,
+            ),
+          ),
         ),
         Container(
           decoration: BoxDecoration(
@@ -835,18 +901,34 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
           child: Column(
             children: [
               ListTile(
-                title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: const Text(
+                  'Change Password',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 trailing: const Icon(Icons.lock_outline, color: Colors.orange),
                 onTap: () {},
               ),
               const Divider(height: 1),
               ListTile(
-                title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                title: const Text(
+                  'Sign Out',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
                 trailing: const Icon(Icons.logout, color: Colors.red),
                 onTap: () async {
                   await Supabase.instance.client.auth.signOut();
-                  if(context.mounted) {
-                     Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  if (context.mounted) {
+                    // Properly destroy the current navigation stack and return to the AuthGate
+                    Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    ).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (context) => const AuthGate()),
+                      (route) => false,
+                    );
                   }
                 },
               ),
@@ -854,9 +936,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
           ),
         ).animate().fade(duration: 400.ms, delay: 200.ms).slideY(begin: 0.1),
       ],
-      
     );
-    
   }
 
   // ---------------------------------------------------------------------------
@@ -882,7 +962,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
               Text(
                 'Tuklascope is a modern learning companion that helps you discover, track, and engage with educational content. Built with love and purpose to make learning accessible for everyone.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -891,7 +975,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
         const SizedBox(height: 20),
 
         // Developers
-        const Text('Developed by:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _navy)),
+        const Text(
+          'Developed by:',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: _navy,
+          ),
+        ),
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
@@ -903,27 +994,42 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with Sing
             children: [
               ListTile(
                 leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text('John Michael A. Nave', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                title: const Text(
+                  'John Michael A. Nave',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
+                ),
               ),
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text('James Andrew S. Ologuin', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                title: const Text(
+                  'James Andrew S. Ologuin',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
+                ),
               ),
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text('John Peter D. Pestaño', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                title: const Text(
+                  'John Peter D. Pestaño',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
+                ),
               ),
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text('Jordan A. Cabandon', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                title: const Text(
+                  'Jordan A. Cabandon',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
+                ),
               ),
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text('John Zachary N. Gillana', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                title: const Text(
+                  'John Zachary N. Gillana',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
+                ),
               ),
             ],
           ),

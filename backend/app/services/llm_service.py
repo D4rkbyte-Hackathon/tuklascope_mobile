@@ -5,38 +5,45 @@ from app.core.config import settings
 from app.schemas.discover import DiscoverResponse, DiscoverRequest
 from app.schemas.pathfinder import PathfinderResponse
 from app.schemas.cards import LearningDeckResponse
-from fastapi import HTTPException
 
-# Initialize LLM with the safely loaded API key
+# ==========================================
+# 1. GLOBAL LLM INITIALIZATION
+# ==========================================
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     google_api_key=settings.GEMINI_API_KEY,
     temperature=0.7
 )
 
-# Bind our Pydantic model directly to the LLM to guarantee strict JSON output
-structured_llm = llm.with_structured_output(DiscoverResponse)
+# Bind Pydantic models globally to prevent latency/overhead on every API call
+structured_discover = llm.with_structured_output(DiscoverResponse)
+structured_pathfinder = llm.with_structured_output(PathfinderResponse)
+structured_deck = llm.with_structured_output(LearningDeckResponse)
 
-# Past text-based function for fallback/testing purposes
+# ==========================================
+# 2. SERVICE FUNCTIONS
+# ==========================================
 
 
 async def generate_discovery_cards(data: DiscoverRequest) -> DiscoverResponse:
-    prompt_text = (
-        f"You are a Filipino educational guide. The user scanned a '{data.scanned_object}' "
-        f"and is in the '{data.grade_level.value}' academic stage. Generate 4 culturally-relevant "
-        "'Teaser Doors' representing the STEM, ABM, HUMSS, and TVL academic strands "
-        f"based on this object, tailored specifically to a {data.grade_level.value} student."
-    )
-    result = await structured_llm.ainvoke(prompt_text)
-    return result
+    try:
+        prompt_text = (
+            f"You are a Filipino educational guide. The user scanned a '{data.scanned_object}' "
+            f"and is in the '{data.grade_level.value}' academic stage. Generate 4 culturally-relevant "
+            "'Teaser Doors' representing the STEM, ABM, HUMSS, and TVL academic strands "
+            f"based on this object, tailored specifically to a {data.grade_level.value} student."
+        )
+        return await structured_discover.ainvoke(prompt_text)
+    except Exception as e:
+        # Raise native python error; Router handles HTTP formatting
+        raise RuntimeError(f"Text Discovery Generation Failed: {str(e)}")
 
 
 async def generate_discovery_from_image(image_bytes: bytes, grade_level: str) -> DiscoverResponse:
     try:
-        # 1. Encode the image bytes to base64 so LangChain can securely transport it
+        # Encode the image bytes to base64 for secure transport to Gemini
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
-        # 2. Craft the Multimodal prompt
         prompt_text = (
             f"You are a Filipino educational guide. The user is in the '{grade_level}' academic stage. "
             "Look at the uploaded image and identify the primary object. Then, generate 4 culturally-relevant "
@@ -45,7 +52,6 @@ async def generate_discovery_from_image(image_bytes: bytes, grade_level: str) ->
             "Accurately fill in the 'scanned_object' field with the name of the object you identified."
         )
 
-        # 3. Assemble the HumanMessage with both text and image
         message = HumanMessage(
             content=[
                 {"type": "text", "text": prompt_text},
@@ -56,18 +62,13 @@ async def generate_discovery_from_image(image_bytes: bytes, grade_level: str) ->
             ]
         )
 
-        # 4. Invoke the model and force the structured JSON output
-        result = await structured_llm.ainvoke([message])
-        return result
+        return await structured_discover.ainvoke([message])
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"AI Vision Processing Failed: {str(e)}")
+        raise RuntimeError(f"AI Vision Processing Failed: {str(e)}")
 
 
 async def generate_holistic_pathfinder(xp_distribution: dict, top_skills: dict) -> PathfinderResponse:
     try:
-        structured_pathfinder = llm.with_structured_output(PathfinderResponse)
-
         prompt_text = (
             "You are a visionary Filipino Career Guidance Counselor. "
             "A student has been building an RPG-style academic Skill Tree. Here is their entire profile:\n"
@@ -83,18 +84,13 @@ async def generate_holistic_pathfinder(xp_distribution: dict, top_skills: dict) 
             "In your descriptions, explicitly mention HOW the combination of their different skills makes them perfect for this role."
         )
 
-        result = await structured_pathfinder.ainvoke(prompt_text)
-        return result
+        return await structured_pathfinder.ainvoke(prompt_text)
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Pathfinder AI Failed: {str(e)}")
+        raise RuntimeError(f"Pathfinder AI Failed: {str(e)}")
 
 
 async def generate_learning_deck(object_name: str, strand: str, grade_level: str, existing_skills: list[str]) -> LearningDeckResponse:
     try:
-        structured_deck = llm.with_structured_output(LearningDeckResponse)
-
-        # The Semantic Net Prompt
         prompt_text = (
             f"You are a Filipino educational guide writing for a {grade_level} student. "
             f"The user scanned a '{object_name}' and selected the '{strand}' academic strand. "
@@ -106,8 +102,6 @@ async def generate_learning_deck(object_name: str, strand: str, grade_level: str
             "Only invent a new skill name if it is fundamentally different."
         )
 
-        result = await structured_deck.ainvoke(prompt_text)
-        return result
+        return await structured_deck.ainvoke(prompt_text)
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Learning Deck AI Failed: {str(e)}")
+        raise RuntimeError(f"Learning Deck AI Failed: {str(e)}")

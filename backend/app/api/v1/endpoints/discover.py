@@ -29,7 +29,9 @@ async def discover_from_vision(
     # Flutter will send these as multipart form data
     grade_level: GradeLevel = Form(...,
                                    description="The user's academic stage"),
-    file: UploadFile = File(..., description="The photo taken by the user")
+    file: UploadFile = File(..., description="The photo taken by the user"),
+    # SECURE THE ROUTE: Require a valid JWT token
+    db_data: tuple[Client, str] = Depends(get_user_db_client)
 ):
     # Security: Ensure it's actually an image to prevent malicious file uploads
     if not file.content_type.startswith("image/"):

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // <--- THIS is what fixes the error!
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Import your new Splash Screen
-import 'features/onboarding/splash_screen.dart';
+import 'features/auth/presentation/widgets/auth_gate.dart';
 
 Future<void> main() async {
   // 1. Ensure Flutter bindings are initialized before calling native code
@@ -37,7 +36,7 @@ class TuklascopeApp extends ConsumerWidget {
         useMaterial3: true,
       ),
       // App strictly starts at the Splash Screen now
-      home: const SplashScreen(), 
+      home: const AuthGate(),
     );
   }
 }
