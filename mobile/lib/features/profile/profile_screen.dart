@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; 
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
@@ -552,14 +553,15 @@ class _SkillTreeGraphPainter extends CustomPainter {
 // NEW SCREEN: EDIT PROFILE SCREEN (WITH REFERENCE DATA)
 // =============================================================================
 
-class EditProfileScreen extends StatefulWidget {
+// CHANGED: Now a ConsumerStatefulWidget to listen to your appUserProvider
+class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> with SingleTickerProviderStateMixin {
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   static const Color _navy = Color(0xFF0D3B66);
 
@@ -573,6 +575,68 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  // 🚀 NEW FUNCTION: Opens a dialog and updates Supabase
+  Future<void> _showEditNameDialog(String currentName) async {
+    final TextEditingController nameController = TextEditingController(text: currentName);
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Full Name', style: TextStyle(color: _navy)),
+          content: TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              hintText: 'Enter your new name',
+              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.orange)),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              onPressed: () async {
+                final newName = nameController.text.trim();
+                if (newName.isNotEmpty && newName != currentName) {
+                  try {
+                    final userId = Supabase.instance.client.auth.currentUser?.id;
+                    if (userId != null) {
+                      // 1. Send to Supabase
+                      await Supabase.instance.client
+                          .from('profiles')
+                          .update({'full_name': newName})
+                          .eq('id', userId);
+                      
+                      // 2. Tell Riverpod to refresh the data so the UI updates instantly!
+                      ref.invalidate(appUserProvider);
+                      
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: Colors.green),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error updating profile: $e'), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -636,74 +700,90 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
   // TAB 1: PROFILE
   // ---------------------------------------------------------------------------
   Widget _buildProfileTab() {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      physics: const BouncingScrollPhysics(),
-      children: [
-        // Avatar Section
-        Center(
-          child: Stack(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.orange, width: 3),
-                ),
-                child: CircleAvatar(
-                  radius: 65,
-                  backgroundColor: Colors.grey[200],
-                  child: Icon(Icons.person, size: 70, color: Colors.grey[500]),
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+    // 🚀 Watch the provider to get REAL data instead of hardcoded text
+    final appUserState = ref.watch(appUserProvider);
+
+    return appUserState.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => const Center(child: Text('Error loading profile')),
+      data: (appUser) {
+        if (appUser == null) return const Center(child: Text('Not logged in'));
+
+        final profile = appUser.profile;
+        final currentName = profile.fullName ?? 'Explorer';
+        final email = Supabase.instance.client.auth.currentUser?.email ?? 'No email';
+
+        return ListView(
+          padding: const EdgeInsets.all(20),
+          physics: const BouncingScrollPhysics(),
+          children: [
+            // Avatar Section
+            Center(
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.orange, width: 3),
+                    ),
+                    child: CircleAvatar(
+                      radius: 65,
+                      backgroundColor: Colors.grey[200],
+                      child: Icon(Icons.person, size: 70, color: Colors.grey[500]),
+                    ),
                   ),
-                  child: IconButton(
-                    icon: const Icon(Icons.camera_alt, color: Colors.orange, size: 22),
-                    onPressed: () {}, // Placeholder
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.camera_alt, color: Colors.orange, size: 22),
+                        onPressed: () {}, // Image picker logic goes here later
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
+            ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
 
-        const SizedBox(height: 30),
+            const SizedBox(height: 30),
 
-        // Edit Info Card
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.black12),
-          ),
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.person_outline, color: _navy),
-                title: const Text('Username', style: TextStyle(color: Colors.black54, fontSize: 12)),
-                subtitle: const Text('JohnDelaCruz_01', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                trailing: const Icon(Icons.edit, color: Colors.orange, size: 20),
-                onTap: () {}, // Placeholder
+            // Edit Info Card
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Colors.black12),
               ),
-              const Divider(height: 1),
-              const ListTile(
-                leading: Icon(Icons.email_outlined, color: _navy),
-                title: Text('Email', style: TextStyle(color: Colors.black54, fontSize: 12)),
-                subtitle: Text('johndelacruz@example.com', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.person_outline, color: _navy),
+                    title: const Text('Full Name', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    subtitle: Text(currentName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    trailing: const Icon(Icons.edit, color: Colors.orange, size: 20),
+                    // 🚀 Calls our new edit function
+                    onTap: () => _showEditNameDialog(currentName),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.email_outlined, color: _navy),
+                    title: const Text('Email', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    subtitle: Text(email, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ).animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1),
+            ).animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1),
 
-        const SizedBox(height: 30),
-      ],
+            const SizedBox(height: 30),
+          ],
+        );
+      }
     );
   }
 
@@ -726,7 +806,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
               SwitchListTile(
                 secondary: const Icon(Icons.dark_mode, color: Colors.orange),
                 title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.bold)),
-                value: false, // Placeholder
+                value: false, 
                 activeColor: Colors.orange,
                 onChanged: (bool value) {},
               ),
@@ -734,7 +814,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
               SwitchListTile(
                 secondary: const Icon(Icons.vibration, color: Colors.orange),
                 title: const Text('Vibration', style: TextStyle(fontWeight: FontWeight.bold)),
-                value: true, // Placeholder
+                value: true, 
                 activeColor: Colors.orange,
                 onChanged: (bool value) {},
               ),
@@ -742,8 +822,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
           ),
         ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
         // Account Actions
-        const Text('Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navy)),
-        const SizedBox(height: 10),
+        const Padding(
+          padding: EdgeInsets.only(top: 20, bottom: 10),
+          child: Text('Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navy)),
+        ),
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -759,15 +841,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
               ),
               const Divider(height: 1),
               ListTile(
-                title: const Text('Exit App', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber)),
-                trailing: const Icon(Icons.cancel_outlined, color: Colors.amber),
-                onTap: () {},
-              ),
-              const Divider(height: 1),
-              ListTile(
                 title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                 trailing: const Icon(Icons.logout, color: Colors.red),
-                onTap: () {},
+                onTap: () async {
+                  await Supabase.instance.client.auth.signOut();
+                  if(context.mounted) {
+                     Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  }
+                },
               ),
             ],
           ),
@@ -823,69 +904,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> with SingleTicker
               ListTile(
                 leading: const Icon(Icons.code, color: Colors.orange),
                 title: const Text('John Michael A. Nave', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
-                onTap: () {},
               ),
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.code, color: Colors.orange),
                 title: const Text('James Andrew S. Ologuin', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
-                onTap: () {},
               ),
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.code, color: Colors.orange),
                 title: const Text('John Peter D. Pestaño', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
-                onTap: () {},
               ),
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.code, color: Colors.orange),
                 title: const Text('Jordan A. Cabandon', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
-                onTap: () {},
               ),
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.code, color: Colors.orange),
                 title: const Text('John Zachary N. Gillana', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
-                onTap: () {},
               ),
             ],
           ),
         ).animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1),
-
-        const SizedBox(height: 20),
-
-        // Credits
-        const Text('Credits:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _navy)),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.black12),
-          ),
-          child: Column(
-            children: [
-              ListTile(
-                title: const Text('chuchuchu', style: TextStyle(fontSize: 12, color: Colors.black54)),
-                subtitle: const Text('chuchuchu', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
-                onTap: () {},
-              ),
-              const Divider(height: 1),
-              ListTile(
-                title: const Text('chuchuchu', style: TextStyle(fontSize: 12, color: Colors.black54)),
-                subtitle: const Text('chuchuchu', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
-                onTap: () {},
-              ),
-              const Divider(height: 1),
-              ListTile(
-                title: const Text('chuchuchu', style: TextStyle(fontSize: 12, color: Colors.black54)),
-                subtitle: const Text('chuchuchu', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
-                onTap: () {},
-              ),
-            ],
-          ),
-        ).animate().fade(duration: 400.ms, delay: 200.ms).slideY(begin: 0.1),
       ],
     );
   }

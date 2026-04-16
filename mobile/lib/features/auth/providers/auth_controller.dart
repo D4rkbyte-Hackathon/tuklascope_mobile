@@ -118,15 +118,18 @@ final appUserProvider = StreamProvider<AppUser?>((ref) async* {
       );
 
   // Combine them into our AppUser master object
-  yield* Rx.combineLatest2<UserProfile?, SkillTree?, AppUser?>(
-    profileStream,
-    skillTreeStream,
-    (profile, skillTree) {
-      // Guard against race conditions where the DB trigger hasn't fired yet.
-      // We return null here, which is filtered out below.
-      if (profile == null || skillTree == null) return null;
-
-      return AppUser(auth: user, profile: profile, skillTree: skillTree);
-    },
-  ).where((user) => user != null); // Prevents emitting until triggers complete
+ yield* Rx.combineLatest2<UserProfile?, SkillTree?, AppUser?>(
+  profileStream,
+  skillTreeStream,
+  (profile, skillTree) {
+    if (profile == null || skillTree == null) return null;
+    return AppUser(auth: user, profile: profile, skillTree: skillTree);
+  },
+).where((user) => user != null).timeout(
+  const Duration(seconds: 5),
+  onTimeout: (sink) {
+    // If timeout occurs, close the stream gracefully
+    sink.close();
+  },
+);
 });
