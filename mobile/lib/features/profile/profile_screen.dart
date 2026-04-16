@@ -1,147 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Added Riverpod
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
+import '../auth/providers/auth_controller.dart'; // Added our new controller
 import 'pathfinder_blueprint_sheet.dart';
 
-class ProfileScreen extends StatefulWidget {
+// Changed from StatefulWidget to ConsumerWidget for Riverpod integration
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
   static const Color _navy = Color(0xFF0D3B66);
   static const Color _cream = Color(0xFFF9F6F0);
   static const Color _linkBlue = Color(0xFF42A5F5);
   static const Color _avgLevel = Color(0xFFE65100);
 
-  String _fullName = 'Loading...';
-  String _educationLevel = '...';
-  String _location = '';
-  int _streak = 0;
-  bool _isLoading = true;
-
   @override
-  void initState() {
-    super.initState();
-    _fetchUserProfile();
-  }
-
-  Future<void> _fetchUserProfile() async {
-    try {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) {
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      final data = await Supabase.instance.client
-          .from('profiles')
-          .select()
-          .eq('id', user.id)
-          .single();
-
-      if (mounted) {
-        setState(() {
-          _fullName = data['full_name'] ?? 'New Explorer';
-          _educationLevel = data['education_level'] ?? 'Curious Mind';
-          _streak = data['current_streak'] ?? 0;
-
-          final city = data['city'] ?? '';
-          final country = data['country'] ?? '';
-          if (city.isNotEmpty && country.isNotEmpty) {
-            _location = '$city, $country';
-          } else {
-            _location = city + country;
-          }
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching profile: $e');
-      if (mounted) {
-        setState(() {
-          _fullName = 'Explorer';
-          _educationLevel = 'Ready to learn';
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // 1. Grouping all UI elements into a list for lazy rendering
-    // We use Padding instead of SizedBoxes so the animation cascades cleanly
-    final List<Widget> profileItems = [
-      _ProfileHeaderCard(
-        navy: _navy,
-        linkBlue: _linkBlue,
-        fullName: _fullName,
-        educationLevel: _educationLevel,
-        location: _location,
-        streak: _streak,
-      ),
-      Padding(
-        padding: const EdgeInsets.only(top: 28, bottom: 12),
-        child: RichText(
-          textAlign: TextAlign.center,
-          text: TextSpan(
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              height: 1.15,
-            ),
-            children: [
-              TextSpan(text: 'Your ', style: TextStyle(color: _navy)),
-              const TextSpan(text: 'Skill Tree', style: TextStyle(color: Colors.orange)),
-            ],
-          ),
-        ),
-      ),
-      const Padding(
-        padding: EdgeInsets.only(bottom: 28),
-        child: Text(
-          'Watch your knowledge grow! Every discovery adds to your personal skill network and unlocks new learning pathways.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16, color: Colors.black87, height: 1.35),
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.only(bottom: 20),
-        child: _StatsGridCard(navy: _navy, avgLevelColor: _avgLevel),
-      ),
-      Padding(
-        padding: const EdgeInsets.only(bottom: 20),
-        child: _SkillTreePlaceholderCard(),
-      ),
-      Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: _ProfilePromoCard(
-          borderColor: Colors.orange,
-          title: 'Open Your Blueprint',
-          description: 'From core principles to career path.',
-          buttonLabel: 'Open Pathfinder →',
-          buttonColor: _navy,
-          onPressed: () => showPathfinderBlueprintSheet(
-            context,
-            onNavigateToScan: () => MainNavScope.maybeOf(context)?.goToTab(1),
-          ),
-        ),
-      ),
-      _ProfilePromoCard(
-        borderColor: _navy.withValues(alpha: 0.35),
-        title: 'Ready to expand your network?',
-        description: 'Upload a photo of any object around you and discover the concepts behind it!',
-        buttonLabel: 'Start Discovery →',
-        buttonColor: Colors.orange,
-        onPressed: () => MainNavScope.maybeOf(context)?.goToTab(1),
-      ),
-    ];
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 1. Watch our master real-time state!
+    final appUserState = ref.watch(appUserProvider);
 
     return GradientScaffold(
       appBar: AppBar(
@@ -150,30 +28,130 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: ColoredBox(
         color: _cream,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : ListView.builder(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  8,
-                  20,
-                  MediaQuery.paddingOf(context).bottom + 88,
-                ),
-                itemCount: profileItems.length,
-                itemBuilder: (context, index) {
-                  // 2. Applying the staggered animation to each lazily-loaded list item
-                  return profileItems[index]
-                      .animate()
-                      .fade(duration: 600.ms, delay: (100 * index).ms)
-                      .slideY(
-                        begin: 0.1,
-                        end: 0,
-                        duration: 600.ms,
-                        curve: Curves.easeOutCubic,
-                        delay: (100 * index).ms,
-                      );
-                },
+        // 2. Handle Loading, Error, and Data states reactively
+        child: appUserState.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Error: $err')),
+          data: (appUser) {
+            // Failsafe if user is null (logged out)
+            if (appUser == null) {
+              return const Center(child: Text('Please log in.'));
+            }
+
+            final profile = appUser.profile;
+
+            // Safely format the location string
+            String location = '';
+            final city = profile.city ?? '';
+            final country = profile.country ?? '';
+            if (city.isNotEmpty && country.isNotEmpty) {
+              location = '$city, $country';
+            } else {
+              location = city + country;
+            }
+
+            // 3. UI logic remains completely untouched!
+            final List<Widget> profileItems = [
+              _ProfileHeaderCard(
+                navy: _navy,
+                linkBlue: _linkBlue,
+                fullName: profile.fullName ?? 'New Explorer',
+                educationLevel: profile.educationLevel ?? 'Curious Mind',
+                location: location,
+                streak: profile.currentStreak,
               ),
+              Padding(
+                padding: const EdgeInsets.only(top: 28, bottom: 12),
+                child: RichText(
+                  textAlign: TextAlign.center,
+                  text: const TextSpan(
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      height: 1.15,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'Your ',
+                        style: TextStyle(color: _navy),
+                      ),
+                      TextSpan(
+                        text: 'Skill Tree',
+                        style: TextStyle(color: Colors.orange),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 28),
+                child: Text(
+                  'Watch your knowledge grow! Every discovery adds to your personal skill network and unlocks new learning pathways.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 20),
+                child: _StatsGridCard(navy: _navy, avgLevelColor: _avgLevel),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: _SkillTreePlaceholderCard(),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _ProfilePromoCard(
+                  borderColor: Colors.orange,
+                  title: 'Open Your Blueprint',
+                  description: 'From core principles to career path.',
+                  buttonLabel: 'Open Pathfinder →',
+                  buttonColor: _navy,
+                  onPressed: () => showPathfinderBlueprintSheet(
+                    context,
+                    onNavigateToScan: () =>
+                        MainNavScope.maybeOf(context)?.goToTab(1),
+                  ),
+                ),
+              ),
+              _ProfilePromoCard(
+                borderColor: _navy.withValues(alpha: 0.35),
+                title: 'Ready to expand your network?',
+                description:
+                    'Upload a photo of any object around you and discover the concepts behind it!',
+                buttonLabel: 'Start Discovery →',
+                buttonColor: Colors.orange,
+                onPressed: () => MainNavScope.maybeOf(context)?.goToTab(1),
+              ),
+            ];
+
+            return ListView.builder(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                8,
+                20,
+                MediaQuery.paddingOf(context).bottom + 88,
+              ),
+              itemCount: profileItems.length,
+              itemBuilder: (context, index) {
+                return profileItems[index]
+                    .animate()
+                    .fade(duration: 600.ms, delay: (100 * index).ms)
+                    .slideY(
+                      begin: 0.1,
+                      end: 0,
+                      duration: 600.ms,
+                      curve: Curves.easeOutCubic,
+                      delay: (100 * index).ms,
+                    );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -262,7 +240,7 @@ class _ProfileHeaderCard extends StatelessWidget {
   final int streak;
 
   const _ProfileHeaderCard({
-    required this.navy, 
+    required this.navy,
     required this.linkBlue,
     required this.fullName,
     required this.educationLevel,
@@ -312,7 +290,9 @@ class _ProfileHeaderCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      location.isNotEmpty ? '$educationLevel • $location' : educationLevel,
+                      location.isNotEmpty
+                          ? '$educationLevel • $location'
+                          : educationLevel,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -384,7 +364,7 @@ class _StatsGridCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
+              const Expanded(
                 child: _StatCell(
                   value: '67%',
                   label: 'Total Progress',
@@ -403,7 +383,7 @@ class _StatsGridCard extends StatelessWidget {
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(
+              const Expanded(
                 child: _StatCell(
                   value: '33',
                   label: 'Concepts Mastered',

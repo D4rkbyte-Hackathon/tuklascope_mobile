@@ -31,24 +31,22 @@ class SupabaseAuthService {
   Future<AuthResponse?> signInWithGoogle() async {
     try {
       final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'];
-      
+
       if (webClientId == null || webClientId.isEmpty) {
         throw Exception('GOOGLE_WEB_CLIENT_ID is missing from the .env file');
       }
 
       final GoogleSignIn googleSignIn = GoogleSignIn.instance;
 
-      await googleSignIn.initialize(
-        serverClientId: webClientId,
-      );
+      await googleSignIn.initialize(serverClientId: webClientId);
 
       // Trigger the native popup
       final GoogleSignInAccount googleUser = await googleSignIn.authenticate();
 
       // Extract the authentication data
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-      
-      // 🚀 V7 FIX: We ONLY grab the idToken. 
+
+      // 🚀 V7 FIX: We ONLY grab the idToken.
       // accessToken was removed in v7, but Supabase doesn't need it anyway!
       final String? idToken = googleAuth.idToken;
 
@@ -59,13 +57,12 @@ class SupabaseAuthService {
       // Hand the token over to Supabase
       return await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
-        idToken: idToken, 
+        idToken: idToken,
         // 🚀 V7 FIX: We completely removed the accessToken parameter here.
       );
-      
     } catch (e) {
       print('Google Sign-In Exception: $e');
-      rethrow; 
+      rethrow;
     }
   }
 
