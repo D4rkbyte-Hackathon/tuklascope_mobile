@@ -4,9 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../onboarding/compass_questions_screen.dart';
-import 'signup_screen.dart'; 
+import 'signup_screen.dart';
 
-import '../../providers/auth_provider.dart';
+import '../../providers/auth_controller.dart';
 import '../../../../core/widgets/gradient_scaffold.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -19,9 +19,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   bool _isLoading = false;
-  bool _obscurePassword = true; // Added state variable for password toggle
+  bool _obscurePassword = true;
 
   Future<void> _signIn() async {
     setState(() {
@@ -29,7 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     try {
       await ref
-          .read(authServiceProvider)
+          .read(authControllerProvider.notifier)
           .signInWithEmailPassword(
             _emailController.text.trim(),
             _passwordController.text.trim(),
@@ -38,12 +38,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const CompassQuestionsScreen()),
+          MaterialPageRoute(
+            builder: (context) => const CompassQuestionsScreen(),
+          ),
         );
       }
     } on AuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (e) {
       if (mounted) {
@@ -61,7 +65,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-    final currentUser = ref.read(authServiceProvider).currentUser;
+    // Read the current state directly from Riverpod
+    final currentUser = ref.read(authStateProvider).value;
     if (currentUser != null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -79,7 +84,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     try {
       final authResponse = await ref
-          .read(authServiceProvider)
+          .read(authControllerProvider.notifier)
           .signInWithGoogle();
 
       if (authResponse != null) {
@@ -92,7 +97,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const CompassQuestionsScreen()),
+            MaterialPageRoute(
+              builder: (context) => const CompassQuestionsScreen(),
+            ),
           );
         }
       }
@@ -109,13 +116,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         String errorMessage = 'Failed to sign in with Google';
         if (e.toString().contains('MISSING_EMAIL')) {
-          errorMessage = 'Google account has no email. Please use another account.';
+          errorMessage =
+              'Google account has no email. Please use another account.';
         } else if (e.toString().contains('PlatformException')) {
-          errorMessage = 'Google Sign In was cancelled or failed. Please try again.';
+          errorMessage =
+              'Google Sign In was cancelled or failed. Please try again.';
         } else if (e.toString().contains('GOOGLE_WEB_CLIENT_ID is missing')) {
-          errorMessage = 'Google configuration is missing. Please contact support.';
+          errorMessage =
+              'Google configuration is missing. Please contact support.';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -151,166 +161,225 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // --- TITLE ANIMATION ---
                 const Text(
-                  'Login',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF0B3C6A), 
-                  ),
-                )
-                .animate()
-                .fade(duration: 600.ms, delay: 100.ms)
-                .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 100.ms),
-                
+                      'Login',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0B3C6A),
+                      ),
+                    )
+                    .animate()
+                    .fade(duration: 600.ms, delay: 100.ms)
+                    .slideY(
+                      begin: -0.3,
+                      end: 0,
+                      duration: 600.ms,
+                      curve: Curves.easeOutCubic,
+                      delay: 100.ms,
+                    ),
+
                 const SizedBox(height: 48),
 
-                // --- EMAIL FIELD ANIMATION ---
                 _buildCustomTextField(
-                  controller: _emailController,
-                  label: 'Email',
-                  icon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                )
-                .animate()
-                .fade(duration: 600.ms, delay: 200.ms)
-                .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 200.ms),
-                
+                      controller: _emailController,
+                      label: 'Email',
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                    )
+                    .animate()
+                    .fade(duration: 600.ms, delay: 200.ms)
+                    .slideY(
+                      begin: -0.3,
+                      end: 0,
+                      duration: 600.ms,
+                      curve: Curves.easeOutCubic,
+                      delay: 200.ms,
+                    ),
+
                 const SizedBox(height: 20),
 
-                // --- PASSWORD FIELD ANIMATION ---
                 _buildCustomTextField(
-                  controller: _passwordController,
-                  label: 'Password',
-                  icon: Icons.lock_outline,
-                  obscureText: _obscurePassword, // Dynamic obscureText
-                  suffixIcon: IconButton(        // Added suffix toggle button
-                    icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.grey[600],
+                      controller: _passwordController,
+                      label: 'Password',
+                      icon: Icons.lock_outline,
+                      obscureText: _obscurePassword,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.grey[600],
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    )
+                    .animate()
+                    .fade(duration: 600.ms, delay: 300.ms)
+                    .slideY(
+                      begin: -0.3,
+                      end: 0,
+                      duration: 600.ms,
+                      curve: Curves.easeOutCubic,
+                      delay: 300.ms,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
-                )
-                .animate()
-                .fade(duration: 600.ms, delay: 300.ms)
-                .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 300.ms),
-                
+
                 const SizedBox(height: 32),
 
-                // --- LOGIN BUTTON / SPINNER ANIMATION ---
                 if (_isLoading)
-                  const Center(child: CircularProgressIndicator(color: Color(0xFF64B5F6)))
+                  const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF64B5F6)),
+                  )
                 else
                   Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      ElevatedButton(
-                        onPressed: _signIn,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF64B5F6),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(32),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Login',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // --- DIVIDER ANIMATION ---
-                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(child: Divider(color: Colors.grey[400])),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'Or sign in with',
-                              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                          ElevatedButton(
+                            onPressed: _signIn,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF64B5F6),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(32),
+                              ),
+                              elevation: 0,
                             ),
-                          ),
-                          Expanded(child: Divider(color: Colors.grey[400])),
-                        ],
-                      )
-                      .animate()
-                      .fade(duration: 600.ms, delay: 500.ms)
-                      .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 500.ms),
-                      
-                      const SizedBox(height: 24),
-
-                      // --- GOOGLE BUTTON ANIMATION ---
-                      _buildSocialButton(
-                        imagePath: 'assets/images/google.png',
-                        label: 'Google',
-                        onPressed: _signInWithGoogle,
-                      )
-                      .animate()
-                      .fade(duration: 600.ms, delay: 600.ms)
-                      .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 600.ms),
-                      
-                      const SizedBox(height: 16),
-
-                      // --- FACEBOOK BUTTON ANIMATION ---
-                      _buildSocialButton(
-                        imagePath: 'assets/images/facebook.png',
-                        label: 'Facebook',
-                        onPressed: () {},
-                      )
-                      .animate()
-                      .fade(duration: 600.ms, delay: 700.ms)
-                      .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 700.ms),
-                      
-                      const SizedBox(height: 32),
-
-                      // --- FOOTER TEXT ANIMATION ---
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Don't have an account? ",
-                            style: TextStyle(
-                              color: Colors.grey[700], 
-                              fontSize: 15,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const SignupScreen()),
-                              );
-                            },
                             child: const Text(
-                              'Create Account',
+                              'Login',
                               style: TextStyle(
-                                color: Color(0xFFFF6B2C), 
-                                fontSize: 15,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
+
+                          const SizedBox(height: 24),
+
+                          Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(color: Colors.grey[400]),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    child: Text(
+                                      'Or sign in with',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(color: Colors.grey[400]),
+                                  ),
+                                ],
+                              )
+                              .animate()
+                              .fade(duration: 600.ms, delay: 500.ms)
+                              .slideY(
+                                begin: -0.3,
+                                end: 0,
+                                duration: 600.ms,
+                                curve: Curves.easeOutCubic,
+                                delay: 500.ms,
+                              ),
+
+                          const SizedBox(height: 24),
+
+                          _buildSocialButton(
+                                imagePath: 'assets/images/google.png',
+                                label: 'Google',
+                                onPressed: _signInWithGoogle,
+                              )
+                              .animate()
+                              .fade(duration: 600.ms, delay: 600.ms)
+                              .slideY(
+                                begin: -0.3,
+                                end: 0,
+                                duration: 600.ms,
+                                curve: Curves.easeOutCubic,
+                                delay: 600.ms,
+                              ),
+
+                          const SizedBox(height: 16),
+
+                          _buildSocialButton(
+                                imagePath: 'assets/images/facebook.png',
+                                label: 'Facebook',
+                                onPressed: () {},
+                              )
+                              .animate()
+                              .fade(duration: 600.ms, delay: 700.ms)
+                              .slideY(
+                                begin: -0.3,
+                                end: 0,
+                                duration: 600.ms,
+                                curve: Curves.easeOutCubic,
+                                delay: 700.ms,
+                              ),
+
+                          const SizedBox(height: 32),
+
+                          Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Don't have an account? ",
+                                    style: TextStyle(
+                                      color: Colors.grey[700],
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const SignupScreen(),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text(
+                                      'Create Account',
+                                      style: TextStyle(
+                                        color: Color(0xFFFF6B2C),
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                              .animate()
+                              .fade(duration: 600.ms, delay: 800.ms)
+                              .slideY(
+                                begin: -0.3,
+                                end: 0,
+                                duration: 600.ms,
+                                curve: Curves.easeOutCubic,
+                                delay: 800.ms,
+                              ),
                         ],
                       )
                       .animate()
-                      .fade(duration: 600.ms, delay: 800.ms)
-                      .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 800.ms),
-                    ],
-                  )
-                  .animate()
-                  .fade(duration: 600.ms, delay: 400.ms)
-                  .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 400.ms),
+                      .fade(duration: 600.ms, delay: 400.ms)
+                      .slideY(
+                        begin: -0.3,
+                        end: 0,
+                        duration: 600.ms,
+                        curve: Curves.easeOutCubic,
+                        delay: 400.ms,
+                      ),
               ],
             ),
           ),
@@ -325,7 +394,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     required IconData icon,
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
-    Widget? suffixIcon, // Added parameter
+    Widget? suffixIcon,
   }) {
     return TextField(
       controller: controller,
@@ -335,17 +404,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey[600]),
-        prefixIcon: Icon(icon, color: const Color(0xFF64B5F6)), 
-        suffixIcon: suffixIcon, // Apply parameter
+        prefixIcon: Icon(icon, color: const Color(0xFF64B5F6)),
+        suffixIcon: suffixIcon,
         filled: true,
-        fillColor: Colors.white.withOpacity(0.8), 
+        fillColor: Colors.white.withValues(alpha: 0.8), // Fixed deprecation
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 1.5), 
+          borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(32),
-          borderSide: const BorderSide(color: Color(0xFFFF6B2C), width: 2.5), 
+          borderSide: const BorderSide(color: Color(0xFFFF6B2C), width: 2.5),
         ),
       ),
     );
@@ -373,7 +442,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(32),
-          side: BorderSide(color: Colors.grey[300]!, width: 1), 
+          side: BorderSide(color: Colors.grey[300]!, width: 1),
         ),
         elevation: 0,
       ),
