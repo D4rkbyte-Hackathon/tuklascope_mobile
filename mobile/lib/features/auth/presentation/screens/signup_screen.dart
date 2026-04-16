@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../onboarding/compass_questions_screen.dart';
+import '../../../onboarding/splash_screen.dart';
 import 'login_screen.dart';
 import '../../providers/auth_controller.dart';
 import '../../../../core/widgets/gradient_scaffold.dart';
@@ -35,10 +36,27 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   bool _obscurePassword = true;
 
   Future<void> _signUp() async {
+    // Validate name
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your name')),
+      );
+      return;
+    }
+
+    // Validate email and password
     if (_emailController.text.trim().isEmpty ||
         _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter an email and password')),
+      );
+      return;
+    }
+
+    // Validate password length
+    if (_passwordController.text.trim().length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password must be at least 6 characters')),
       );
       return;
     }
@@ -83,18 +101,34 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               backgroundColor: Colors.green,
             ),
           );
+          // Navigate to SplashScreen so it checks compass status
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => const CompassQuestionsScreen(),
+              builder: (context) => const SplashScreen(),
             ),
           );
         }
       }
     } on AuthException catch (e) {
       if (mounted) {
+        String errorMessage = e.message;
+        
+        // Check if email already exists
+        if (errorMessage.toLowerCase().contains('user') || 
+            errorMessage.toLowerCase().contains('already') ||
+            errorMessage.toLowerCase().contains('email')) {
+          // Clear the email field for user convenience
+          _emailController.clear();
+          errorMessage = 'This email is already registered. Please use a different email or try logging in.';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     } catch (e) {
