@@ -96,7 +96,7 @@ final appUserProvider = StreamProvider<AppUser?>((ref) async* {
   final supabase = ref.watch(supabaseClientProvider);
 
   if (user == null) {
-    yield null; // User is logged out
+    yield null; // User is definitively logged out
     return;
   }
 
@@ -122,10 +122,11 @@ final appUserProvider = StreamProvider<AppUser?>((ref) async* {
     profileStream,
     skillTreeStream,
     (profile, skillTree) {
-      // Guard against race conditions where the DB trigger hasn't fired yet
+      // Guard against race conditions where the DB trigger hasn't fired yet.
+      // We return null here, which is filtered out below.
       if (profile == null || skillTree == null) return null;
 
       return AppUser(auth: user, profile: profile, skillTree: skillTree);
     },
-  );
+  ).where((user) => user != null); // Prevents emitting until triggers complete
 });

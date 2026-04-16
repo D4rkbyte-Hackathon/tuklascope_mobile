@@ -1,12 +1,15 @@
 // mobile/lib/core/config/api_config.dart
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiConfig {
-  // Use the local IP if you are testing the backend locally (e.g., 192.168.x.x:8000)
-  // Currently, it is pointing directly to our live Render staging environment.
-  static const String baseUrl = 'https://tuklascope-api.onrender.com/api/v1';
+  // Fetch the base URL from the .env file.
+  // We provide a fallback to localhost (10.0.2.2 for Android Emulator)
+  // to prevent hard crashes if the .env variable is missing.
+  static String get baseUrl =>
+      dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000/api/v1';
 
   // Specific Endpoint Routes
-  static const String discoverVision = '$baseUrl/discover/vision';
-  static const String generateLearnDeck = '$baseUrl/learn/generate-deck';
-  static const String pathfinderAnalyze = '$baseUrl/pathfinder/analyze';
+  static String get discoverVision => '$baseUrl/discover/vision';
+  static String get generateLearnDeck => '$baseUrl/learn/generate-deck';
+  static String get pathfinderAnalyze => '$baseUrl/pathfinder/analyze';
 }
