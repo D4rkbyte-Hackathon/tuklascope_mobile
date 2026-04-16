@@ -1,4 +1,8 @@
+import 'dart:async'; 
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart'; 
+
 import 'core/navigation/main_nav_scope.dart';
 import 'features/home/home_screen.dart';
 import 'features/scanner/live_feed_screen.dart';
@@ -15,8 +19,13 @@ class MainNavigation extends StatefulWidget {
 
 class MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
+  late PageController _pageController;
 
-  // Wrap each screen in our custom TabWrapper
+  // --- STATE VARIABLES ---
+  Timer? _inactivityTimer;
+  bool _isNavBarVisible = true;
+  bool _isProgrammaticScroll = false; // 1. Added anti-glitch lock
+
   final List<Widget> _screens = [
     const TabWrapper(rootScreen: HomeScreen()),
     const TabWrapper(rootScreen: LiveFeedScreen()),
@@ -25,78 +34,182 @@ class MainNavigationState extends State<MainNavigation> {
     const TabWrapper(rootScreen: ExploreScreen()),
   ];
 
-  /// Switches the bottom navigation tab (`0` home, `1` scan, `2` pathways, `3` profile, `4` explore).
-  void goToTab(int index) {
-    if (index >= 0 && index < _screens.length) {
-      setState(() => _currentIndex = index);
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
+    _startInactivityTimer();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _inactivityTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startInactivityTimer() {
+    if (!_isNavBarVisible) {
+      setState(() => _isNavBarVisible = true);
+    }
+    
+    _inactivityTimer?.cancel();
+    
+    _inactivityTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() => _isNavBarVisible = false);
+      }
+    });
+  }
+
+  // 2. REFACTORED GOTOTAB LOGIC
+  void goToTab(int index) async {
+    if (index >= 0 && index < _screens.length && _currentIndex != index) {
+      _startInactivityTimer(); 
+      
+      setState(() {
+        _currentIndex = index;
+        _isProgrammaticScroll = true; // Lock the physical swipe listener
+      });
+      
+      // Wait for the page slide animation to completely finish
+      await _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+      
+      // Unlock the listener so physical swiping works again
+      if (mounted) {
+        _isProgrammaticScroll = false; 
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+
     return MainNavScope(
       goToTab: goToTab,
       child: Scaffold(
-        // CRITICAL: This allows the background of your screens to flow behind the rounded corners of the nav bar
         extendBody: true,
         backgroundColor: Colors.transparent,
-        body: IndexedStack(index: _currentIndex, children: _screens),
-        bottomNavigationBar: Container(
-          decoration: const BoxDecoration(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF0B3C6A), Color(0xFF0A233B)],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black38,
-                blurRadius: 10,
-                offset: Offset(0, -3),
+        
+        body: Listener(
+          onPointerDown: (_) => _startInactivityTimer(),
+          onPointerMove: (_) => _startInactivityTimer(),
+          onPointerUp: (_) => _startInactivityTimer(),
+          child: Stack(
+            children: [
+              PageView(
+                controller: _pageController,
+                physics: const BouncingScrollPhysics(),
+                onPageChanged: (index) {
+                  // 3. IGNORE INTERMEDIATE SCREENS DURING ANIMATION
+                  if (!_isProgrammaticScroll) {
+                    setState(() => _currentIndex = index);
+                  }
+                },
+                children: _screens,
+              ),
+              
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 2000),
+                curve: Curves.easeOutQuint,
+                bottom: _isNavBarVisible ? (16 + bottomPadding) : -120,
+                left: 20,
+                right: 20,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 400),
+                  opacity: _isNavBarVisible ? 1.0 : 0.0,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(35),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                      child: Container(
+                        height: 70,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0A233B).withOpacity(0.75),
+                          borderRadius: BorderRadius.circular(35),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.15),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            _buildNavItem(Icons.home_rounded, 'Home', 0),
+                            _buildNavItem(Icons.camera_alt_rounded, 'Scan', 1),
+                            _buildNavItem(Icons.map_rounded, 'Pathways', 2),
+                            _buildNavItem(Icons.person_rounded, 'Pathfinder', 3),
+                            _buildNavItem(Icons.explore_rounded, 'Explore', 4),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(24.0),
-            ),
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              selectedItemColor: const Color(0xFFFF9800),
-              unselectedItemColor: const Color(0xFFE0E0E0),
-              items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.camera_alt),
-                  label: 'Scan',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.map),
-                  label: 'Pathways',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.person),
-                  label: 'Pathfinder',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.explore),
-                  label: 'Explore',
-                ),
-              ],
-            ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final isSelected = _currentIndex == index;
+    final activeColor = const Color(0xFFFF9800); 
+    final inactiveColor = const Color(0xFFE0E0E0).withOpacity(0.5);
+
+    Widget content = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          icon, 
+          color: isSelected ? activeColor : inactiveColor, 
+          size: isSelected ? 26 : 24,
+          shadows: isSelected 
+              ? [BoxShadow(color: activeColor.withOpacity(0.5), blurRadius: 8)] 
+              : null, 
+        ),
+        
+        if (isSelected) 
+          Padding(
+            padding: const EdgeInsets.only(top: 4.0),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: activeColor,
+                fontSize: 10, 
+                fontWeight: FontWeight.w700,
+              ),
+            ).animate().fade(duration: 200.ms).slideY(begin: -0.2, end: 0),
           ),
+      ],
+    );
+
+    if (isSelected) {
+      content = content.animate(key: ValueKey('nav_$index')) 
+          .scaleXY(begin: 0.9, end: 1.0, duration: 300.ms, curve: Curves.easeOutBack)
+          .shake(hz: 3, rotation: 0.04, offset: const Offset(0, 1.5), duration: 300.ms);
+    }
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => goToTab(index),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          color: Colors.transparent,
+          height: double.infinity,
+          child: content,
         ),
       ),
     );
   }
 }
 
-// THE MAGIC TRICK: Keeps the bottom nav visible during secondary screen pushes
 class TabWrapper extends StatelessWidget {
   final Widget rootScreen;
   const TabWrapper({required this.rootScreen, super.key});

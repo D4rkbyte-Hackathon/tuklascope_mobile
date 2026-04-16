@@ -111,7 +111,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               ListView.builder(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+                padding: EdgeInsets.fromLTRB(16.0, 20.0, 16.0, MediaQuery.paddingOf(context).bottom + 110),
                 itemCount: listItems.length,
                 itemBuilder: (context, index) {
                   final item = listItems[index];
