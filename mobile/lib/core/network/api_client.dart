@@ -72,4 +72,32 @@ class ApiClient {
       throw Exception('Network request failed: $e');
     }
   }
+
+  /// Centralized Multipart request wrapper (For Image Uploads)
+  static Future<http.Response> multipartPost(
+    String url, {
+    required Map<String, String> fields,
+    required http.MultipartFile file,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final finalHeaders = await _getAuthHeaders(headers);
+
+      var request = http.MultipartRequest('POST', Uri.parse(url));
+
+      // Attach our secure headers (including the JWT token!)
+      request.headers.addAll(finalHeaders);
+
+      // Attach the form fields (like grade_level)
+      request.fields.addAll(fields);
+
+      // Attach the image
+      request.files.add(file);
+
+      var streamedResponse = await request.send();
+      return await http.Response.fromStream(streamedResponse);
+    } catch (e) {
+      throw Exception('Multipart network request failed: $e');
+    }
+  }
 }

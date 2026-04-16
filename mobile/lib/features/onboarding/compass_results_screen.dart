@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../../main_navigation.dart';
-import 'compass_questions_screen.dart'; // To access the Affinity enum
+import 'compass_questions_screen.dart';
 
 class CompassResultsScreen extends StatelessWidget {
   final Affinity topAffinity;
@@ -29,10 +30,14 @@ class CompassResultsScreen extends StatelessWidget {
 
   String _getAffinityName(Affinity affinity) {
     switch (affinity) {
-      case Affinity.stem: return 'STEM';
-      case Affinity.abm: return 'ABM';
-      case Affinity.humss: return 'HUMSS';
-      case Affinity.tvl: return 'TVL';
+      case Affinity.stem:
+        return 'STEM';
+      case Affinity.abm:
+        return 'ABM';
+      case Affinity.humss:
+        return 'HUMSS';
+      case Affinity.tvl:
+        return 'TVL';
     }
   }
 
@@ -44,14 +49,15 @@ class CompassResultsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false, 
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         // 1. ADDED: LayoutBuilder & ScrollView to prevent overflow!
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(), // Nice bouncy scroll effect
+              physics:
+                  const BouncingScrollPhysics(), // Nice bouncy scroll effect
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: IntrinsicHeight(
@@ -64,141 +70,223 @@ class CompassResultsScreen extends StatelessWidget {
 
                         // --- HEADING ANIMATION ---
                         RichText(
-                          textAlign: TextAlign.center,
-                          text: const TextSpan(
-                            style: TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.w900,
-                              height: 1.2,
-                              fontFamily: 'Roboto', 
+                              textAlign: TextAlign.center,
+                              text: const TextSpan(
+                                style: TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.2,
+                                  fontFamily: 'Roboto',
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: 'Your Journey\n',
+                                    style: TextStyle(color: Color(0xFF0B3C6A)),
+                                  ),
+                                  TextSpan(
+                                    text: 'Begins',
+                                    style: TextStyle(color: Color(0xFFFF6B2C)),
+                                  ),
+                                ],
+                              ),
+                            )
+                            .animate()
+                            .fade(duration: 600.ms)
+                            .slideY(
+                              begin: -0.2,
+                              end: 0,
+                              duration: 600.ms,
+                              curve: Curves.easeOutCubic,
                             ),
-                            children: [
-                              TextSpan(
-                                text: 'Your Journey\n',
-                                style: TextStyle(color: Color(0xFF0B3C6A)), 
-                              ),
-                              TextSpan(
-                                text: 'Begins',
-                                style: TextStyle(color: Color(0xFFFF6B2C)), 
-                              ),
-                            ],
-                          ),
-                        )
-                        .animate()
-                        .fade(duration: 600.ms)
-                        .slideY(begin: -0.2, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
 
                         const SizedBox(height: 40),
 
                         // --- RESULT CARD ANIMATION ---
                         Expanded(
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(32),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(32),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                )
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFF6B2C).withOpacity(0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    persona['icon'], 
-                                    size: 64,
-                                    color: const Color(0xFFFF6B2C), 
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
+                          child:
+                              Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(32),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(32),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 10),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(20),
+                                          decoration: BoxDecoration(
+                                            color: const Color(
+                                              0xFFFF6B2C,
+                                            ).withValues(alpha: 0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            persona['icon'],
+                                            size: 64,
+                                            color: const Color(0xFFFF6B2C),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
 
-                                Text(
-                                  persona['title'], 
-                                  style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0B3C6A), 
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${_getAffinityName(topAffinity)} Affinity', 
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey[500],
-                                    letterSpacing: 1.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 32),
-                                
-                                const Divider(thickness: 1.5),
-                                const SizedBox(height: 24),
+                                        Text(
+                                          persona['title'],
+                                          style: const TextStyle(
+                                            fontSize: 28,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF0B3C6A),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          '${_getAffinityName(topAffinity)} Affinity',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey[500],
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 32),
 
-                                // --- REAL DYNAMIC STATS ---
-                                _buildStatRow('STEM (Science & Tech)', affinityScores[Affinity.stem]!),
-                                const SizedBox(height: 16),
-                                _buildStatRow('ABM (Business & Mgt)', affinityScores[Affinity.abm]!),
-                                const SizedBox(height: 16),
-                                _buildStatRow('HUMSS (Humanities)', affinityScores[Affinity.humss]!),
-                                const SizedBox(height: 16),
-                                _buildStatRow('TVL (Tech & Voc)', affinityScores[Affinity.tvl]!),
-                              ],
-                            ),
-                          )
-                          .animate()
-                          .fade(duration: 600.ms, delay: 200.ms)
-                          .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 200.ms),
+                                        const Divider(thickness: 1.5),
+                                        const SizedBox(height: 24),
+
+                                        // --- REAL DYNAMIC STATS ---
+                                        _buildStatRow(
+                                          'STEM (Science & Tech)',
+                                          affinityScores[Affinity.stem]!,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildStatRow(
+                                          'ABM (Business & Mgt)',
+                                          affinityScores[Affinity.abm]!,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildStatRow(
+                                          'HUMSS (Humanities)',
+                                          affinityScores[Affinity.humss]!,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildStatRow(
+                                          'TVL (Tech & Voc)',
+                                          affinityScores[Affinity.tvl]!,
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                  .animate()
+                                  .fade(duration: 600.ms, delay: 200.ms)
+                                  .slideY(
+                                    begin: 0.1,
+                                    end: 0,
+                                    duration: 600.ms,
+                                    curve: Curves.easeOutCubic,
+                                    delay: 200.ms,
+                                  ),
                         ),
-                        
+
                         const SizedBox(height: 30),
 
                         // --- BUTTON ANIMATION ---
                         SizedBox(
-                          width: double.infinity,
-                          height: 60,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (context) => const MainNavigation()),
-                                (route) => false,
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF6B2C), 
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 8,
-                              shadowColor: const Color(0xFFFF6B2C).withOpacity(0.5),
-                            ),
-                            child: const Text(
-                              'Start Your Discovery Journey',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        )
-                        .animate()
-                        .fade(duration: 600.ms, delay: 400.ms)
-                        .slideY(begin: 0.2, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 400.ms),
+                              width: double.infinity,
+                              height: 60,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  // 1. SAVE TO DATABASE BEFORE NAVIGATING
+                                  try {
+                                    final userId = Supabase
+                                        .instance
+                                        .client
+                                        .auth
+                                        .currentUser
+                                        ?.id;
+                                    if (userId != null) {
+                                      await Supabase.instance.client
+                                          .from('compass_results')
+                                          .upsert({
+                                            'user_id': userId,
+                                            'stem_affinity':
+                                                (affinityScores[Affinity
+                                                            .stem]! *
+                                                        100)
+                                                    .toInt(),
+                                            'abm_affinity':
+                                                (affinityScores[Affinity.abm]! *
+                                                        100)
+                                                    .toInt(),
+                                            'humss_affinity':
+                                                (affinityScores[Affinity
+                                                            .humss]! *
+                                                        100)
+                                                    .toInt(),
+                                            'tvl_affinity':
+                                                (affinityScores[Affinity.tvl]! *
+                                                        100)
+                                                    .toInt(),
+                                          });
+                                    }
+                                  } catch (e) {
+                                    debugPrint(
+                                      'Failed to save compass results: $e',
+                                    );
+                                  }
 
-                        const SizedBox(height: 40), 
+                                  // 2. NAVIGATE TO MAIN APP
+                                  if (context.mounted) {
+                                    Navigator.pushAndRemoveUntil(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const MainNavigation(),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFF6B2C),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  elevation: 8,
+                                  shadowColor: const Color(
+                                    0xFFFF6B2C,
+                                  ).withValues(alpha: 0.5),
+                                ),
+                                child: const Text(
+                                  'Start Your Discovery Journey',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            )
+                            .animate()
+                            .fade(duration: 600.ms, delay: 400.ms)
+                            .slideY(
+                              begin: 0.2,
+                              end: 0,
+                              duration: 600.ms,
+                              curve: Curves.easeOutCubic,
+                              delay: 400.ms,
+                            ),
+
+                        const SizedBox(height: 40),
                       ],
                     ),
                   ),
@@ -247,9 +335,11 @@ class CompassResultsScreen extends StatelessWidget {
             builder: (context, value, _) {
               return LinearProgressIndicator(
                 value: value,
-                minHeight: 6, 
+                minHeight: 6,
                 backgroundColor: Colors.grey[200],
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF6B2C)),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  Color(0xFFFF6B2C),
+                ),
               );
             },
           ),

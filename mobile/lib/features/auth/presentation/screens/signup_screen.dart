@@ -64,15 +64,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       final user = authResponse.user;
 
       if (user != null) {
-        // 2. The DB Trigger created the raw profile. Now we update it with the extra info!
-        await Supabase.instance.client.from('profiles').upsert({
-          'id': user.id,
-          'email': user.email,
-          'full_name': _nameController.text.trim(),
-          'city': _cityController.text.trim(),
-          'country': _countryController.text.trim(),
-          'education_level': _selectedEducationLevel,
-        });
+        // 2. The DB Trigger created the raw profile. Now we UPDATE it with the extra info!
+        // We use .update().eq() instead of .upsert() to respect the strict Row Level Security policies.
+        await Supabase.instance.client
+            .from('profiles')
+            .update({
+              'full_name': _nameController.text.trim(),
+              'city': _cityController.text.trim(),
+              'country': _countryController.text.trim(),
+              'education_level': _selectedEducationLevel,
+            })
+            .eq('id', user.id);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
