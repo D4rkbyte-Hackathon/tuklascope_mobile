@@ -11,8 +11,16 @@ class SaveScanRequest(BaseModel):
                            description="The public Supabase Storage URL for the history tab")
     learning_deck: dict[str, Any] = Field(...,
                                           description="The completed deck JSON payload")
+
+    # We keep this for backward compatibility with the frontend, but the backend will ignore it for security.
     xp_awarded: int = Field(...,
-                            description="The exact XP to be awarded for this action")
+                            description="Client requested XP (Will be overridden by backend)")
+
+    # ADD THIS FIELD:
+    is_aligned_with_compass: bool = Field(
+        default=False,
+        description="Whether this strand matches their top compass affinity"
+    )
 
 
 class SaveScanResponse(BaseModel):
