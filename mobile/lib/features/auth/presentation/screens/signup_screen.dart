@@ -38,9 +38,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Future<void> _signUp() async {
     // Validate name
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your name')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter your name')));
       return;
     }
 
@@ -101,11 +101,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          // Navigate to SplashScreen so it checks compass status
+          // 🚀 TECH LEAD FIX: We MUST route new users to the Compass Quiz!
+          // If we send them to the AuthGate/SplashScreen, it will skip onboarding.
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => const SplashScreen(),
+              builder: (context) => const CompassQuestionsScreen(),
             ),
           );
         }
@@ -113,16 +114,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     } on AuthException catch (e) {
       if (mounted) {
         String errorMessage = e.message;
-        
+
         // Check if email already exists
-        if (errorMessage.toLowerCase().contains('user') || 
+        if (errorMessage.toLowerCase().contains('user') ||
             errorMessage.toLowerCase().contains('already') ||
             errorMessage.toLowerCase().contains('email')) {
           // Clear the email field for user convenience
           _emailController.clear();
-          errorMessage = 'This email is already registered. Please use a different email or try logging in.';
+          errorMessage =
+              'This email is already registered. Please use a different email or try logging in.';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
