@@ -1,4 +1,5 @@
 import base64
+import asyncio
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from app.core.config import settings
@@ -15,10 +16,12 @@ llm = ChatGoogleGenerativeAI(
     temperature=0.7
 )
 
-# Bind Pydantic models globally to prevent latency/overhead on every API call
 structured_discover = llm.with_structured_output(DiscoverResponse)
 structured_pathfinder = llm.with_structured_output(PathfinderResponse)
 structured_deck = llm.with_structured_output(LearningDeckResponse)
+
+# SECURITY: The maximum time we will wait for Gemini before cutting the cord (15 seconds)
+LLM_TIMEOUT = 15.0
 
 # ==========================================
 # 2. SERVICE FUNCTIONS
@@ -33,15 +36,17 @@ async def generate_discovery_cards(data: DiscoverRequest) -> DiscoverResponse:
             "'Teaser Doors' representing the STEM, ABM, HUMSS, and TVL academic strands "
             f"based on this object, tailored specifically to a {data.grade_level.value} student."
         )
-        return await structured_discover.ainvoke(prompt_text)
+        # Wrap the call in an asyncio timeout
+        return await asyncio.wait_for(structured_discover.ainvoke(prompt_text), timeout=LLM_TIMEOUT)
+    except asyncio.TimeoutError:
+        raise RuntimeError(
+            "AI Service timed out. The server might be overloaded. Please try again.")
     except Exception as e:
-        # Raise native python error; Router handles HTTP formatting
         raise RuntimeError(f"Text Discovery Generation Failed: {str(e)}")
 
 
 async def generate_discovery_from_image(image_bytes: bytes, grade_level: str) -> DiscoverResponse:
     try:
-        # Encode the image bytes to base64 for secure transport to Gemini
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
         prompt_text = (
@@ -62,7 +67,10 @@ async def generate_discovery_from_image(image_bytes: bytes, grade_level: str) ->
             ]
         )
 
-        return await structured_discover.ainvoke([message])
+        return await asyncio.wait_for(structured_discover.ainvoke([message]), timeout=LLM_TIMEOUT)
+    except asyncio.TimeoutError:
+        raise RuntimeError(
+            "Vision AI timed out while analyzing the image. Please try again.")
     except Exception as e:
         raise RuntimeError(f"AI Vision Processing Failed: {str(e)}")
 
@@ -84,7 +92,9 @@ async def generate_holistic_pathfinder(xp_distribution: dict, top_skills: dict) 
             "In your descriptions, explicitly mention HOW the combination of their different skills makes them perfect for this role."
         )
 
-        return await structured_pathfinder.ainvoke(prompt_text)
+        return await asyncio.wait_for(structured_pathfinder.ainvoke(prompt_text), timeout=LLM_TIMEOUT)
+    except asyncio.TimeoutError:
+        raise RuntimeError("Pathfinder AI timed out. Please try again.")
     except Exception as e:
         raise RuntimeError(f"Pathfinder AI Failed: {str(e)}")
 
@@ -102,6 +112,9 @@ async def generate_learning_deck(object_name: str, strand: str, grade_level: str
             "Only invent a new skill name if it is fundamentally different."
         )
 
-        return await structured_deck.ainvoke(prompt_text)
+        return await asyncio.wait_for(structured_deck.ainvoke(prompt_text), timeout=LLM_TIMEOUT)
+    except asyncio.TimeoutError:
+        raise RuntimeError(
+            "Learning Deck AI timed out generating the lesson. Please try again.")
     except Exception as e:
         raise RuntimeError(f"Learning Deck AI Failed: {str(e)}")
