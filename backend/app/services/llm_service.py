@@ -21,7 +21,7 @@ structured_pathfinder = llm.with_structured_output(PathfinderResponse)
 structured_deck = llm.with_structured_output(LearningDeckResponse)
 
 # SECURITY: The maximum time we will wait for Gemini before cutting the cord (15 seconds)
-LLM_TIMEOUT = 15.0
+LLM_TIMEOUT = 45.0
 
 # ==========================================
 # 2. SERVICE FUNCTIONS
