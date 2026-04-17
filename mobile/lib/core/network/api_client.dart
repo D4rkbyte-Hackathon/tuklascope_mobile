@@ -83,6 +83,9 @@ class ApiClient {
     try {
       final finalHeaders = await _getAuthHeaders(headers);
 
+      // 🚀 CRITICAL FIX: Remove the JSON content-type because this is an image upload!
+      finalHeaders.remove('Content-Type');
+
       var request = http.MultipartRequest('POST', Uri.parse(url));
 
       // Attach our secure headers (including the JWT token!)

@@ -1,47 +1,39 @@
 # backend/app/core/security.py
-import jwt
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from supabase import create_client, Client
 from app.core.config import settings
+import logging
 
+logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 
 def get_user_db_client(credentials: HTTPAuthorizationCredentials = Security(security)) -> tuple[Client, str]:
     token = credentials.credentials
 
-    if not settings.SUPABASE_JWT_SECRET:
-        raise HTTPException(
-            status_code=500, detail="JWT Secret not configured.")
-
     try:
-        # Cryptographically verify the token locally (Zero Latency)
-        payload = jwt.decode(
-            token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated"
-        )
-
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(
-                status_code=401, detail="Invalid token payload.")
-
-        # Inject the token into the Supabase client for Row Level Security
+        # 1. Initialize a blank Supabase client
         client = create_client(settings.SUPABASE_URL,
                                settings.SUPABASE_ANON_KEY)
+
+        # 2. 🚀 The Magic Bullet: Let Supabase natively verify the token
+        # This automatically handles ALL algorithms, expirations, and security checks.
+        auth_response = client.auth.get_user(token)
+
+        if not auth_response or not auth_response.user:
+            raise HTTPException(
+                status_code=401, detail="User not found or token invalid.")
+
+        user_id = auth_response.user.id
+
+        # 3. Inject the token into the client so Row Level Security (RLS) works for database saves
         client.postgrest.auth(token)
 
         return client, user_id
 
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=401, detail="Authentication token has expired")
-    except jwt.InvalidTokenError as e:
-        raise HTTPException(
-            status_code=401, detail=f"Invalid authentication token: {str(e)}")
     except Exception as e:
+        logger.error(f"Authentication failed: {str(e)}")
         raise HTTPException(
-            status_code=401, detail=f"Authentication failed: {str(e)}")
+            status_code=401, detail="Invalid or expired authentication token."
+        )
