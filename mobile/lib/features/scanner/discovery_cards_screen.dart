@@ -52,6 +52,7 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
     if (!mounted) return;
 
     if (data != null) {
+      debugPrint('🎯 AI DECK RESPONSE: $data');
       setState(() {
         _deckData = data;
         _isLoading = false;
@@ -325,191 +326,196 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                 borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
               ),
               child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // CRITICAL FIX: Removed const from Center, added it to BoxDecoration
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 5,
-                        decoration: const BoxDecoration(
-                          color: Colors.grey,
-                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                // 🚀 CRITICAL FIX: Wrapped the Column in a SingleChildScrollView
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Colors.grey,
+                            borderRadius: BorderRadius.all(Radius.circular(10)),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'TUKLAS CHALLENGE',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFFFF9800),
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
+                      const SizedBox(height: 24),
+                      const Text(
+                        'TUKLAS CHALLENGE',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFFFF9800),
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      question,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0B3C6A),
+                      const SizedBox(height: 16),
+                      Text(
+                        question,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0B3C6A),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    ...options.map((option) {
-                      // CRITICAL FIX: Made local variables final
-                      final bool isThisSelected = selectedOption == option;
-                      final bool isThisCorrect = option == correctAnswer;
+                      ...options.map((option) {
+                        final bool isThisSelected = selectedOption == option;
+                        final bool isThisCorrect = option == correctAnswer;
 
-                      Color buttonColor = Colors.white;
-                      Color textColor = const Color(0xFF0B3C6A);
-                      Color borderColor = Colors.grey[300]!;
+                        Color buttonColor = Colors.white;
+                        Color textColor = const Color(0xFF0B3C6A);
+                        Color borderColor = Colors.grey[300]!;
 
-                      if (hasAnswered) {
-                        if (isThisCorrect) {
-                          buttonColor = Colors.green[100]!;
-                          borderColor = Colors.green;
-                          textColor = Colors.green[800]!;
-                        } else if (isThisSelected && !isThisCorrect) {
-                          buttonColor = Colors.red[100]!;
-                          borderColor = Colors.red;
-                          textColor = Colors.red[800]!;
+                        if (hasAnswered) {
+                          if (isThisCorrect) {
+                            buttonColor = Colors.green[100]!;
+                            borderColor = Colors.green;
+                            textColor = Colors.green[800]!;
+                          } else if (isThisSelected && !isThisCorrect) {
+                            buttonColor = Colors.red[100]!;
+                            borderColor = Colors.red;
+                            textColor = Colors.red[800]!;
+                          }
+                        } else if (isThisSelected) {
+                          buttonColor = Colors.blue[50]!;
+                          borderColor = const Color(0xFF0B3C6A);
                         }
-                      } else if (isThisSelected) {
-                        buttonColor = Colors.blue[50]!;
-                        borderColor = const Color(0xFF0B3C6A);
-                      }
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
-                        child: InkWell(
-                          onTap: hasAnswered
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: InkWell(
+                            onTap: hasAnswered
+                                ? null
+                                : () {
+                                    setModalState(() {
+                                      selectedOption = option;
+                                    });
+                                  },
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: buttonColor,
+                                border: Border.all(
+                                  color: borderColor,
+                                  width: 2,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      option,
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  if (hasAnswered && isThisCorrect)
+                                    const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                    ),
+                                  if (hasAnswered &&
+                                      isThisSelected &&
+                                      !isThisCorrect)
+                                    const Icon(Icons.cancel, color: Colors.red),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+
+                      const SizedBox(height: 16),
+
+                      if (!hasAnswered)
+                        ElevatedButton(
+                          onPressed: selectedOption == null
                               ? null
                               : () {
                                   setModalState(() {
-                                    selectedOption = option;
+                                    hasAnswered = true;
+                                    isCorrect =
+                                        (selectedOption == correctAnswer);
                                   });
+                                  if (isCorrect) {
+                                    _saveProgressToBackend();
+                                  }
                                 },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: buttonColor,
-                              border: Border.all(color: borderColor, width: 2),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0B3C6A),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    option,
-                                    style: TextStyle(
-                                      color: textColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                if (hasAnswered && isThisCorrect)
-                                  const Icon(
-                                    Icons.check_circle,
-                                    color: Colors.green,
-                                  ),
-                                if (hasAnswered &&
-                                    isThisSelected &&
-                                    !isThisCorrect)
-                                  const Icon(Icons.cancel, color: Colors.red),
-                              ],
+                          ),
+                          child: const Text(
+                            'SUBMIT ANSWER',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ),
-                      );
-                    }),
-
-                    const SizedBox(height: 16),
-
-                    if (!hasAnswered)
-                      ElevatedButton(
-                        onPressed: selectedOption == null
-                            ? null
-                            : () {
-                                setModalState(() {
-                                  hasAnswered = true;
-                                  isCorrect = (selectedOption == correctAnswer);
-                                });
-                                if (isCorrect) {
-                                  _saveProgressToBackend();
-                                }
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0B3C6A),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
-                          'SUBMIT ANSWER',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      )
-                    else
-                      Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: isCorrect
-                                  ? Colors.green[50]
-                                  : Colors.red[50],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              isCorrect
-                                  ? "🎉 Correct! $explanation"
-                                  : "Not quite! $explanation",
-                              style: TextStyle(
+                        )
+                      else
+                        Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
                                 color: isCorrect
-                                    ? Colors.green[800]
-                                    : Colors.red[800],
-                                height: 1.5,
+                                    ? Colors.green[50]
+                                    : Colors.red[50],
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          if (isCorrect)
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                Navigator.pop(context);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF9800),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                  horizontal: 32,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: const Text(
-                                'CLAIM XP & CONTINUE',
+                              child: Text(
+                                isCorrect
+                                    ? "🎉 Correct! $explanation"
+                                    : "Not quite! $explanation",
                                 style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                                  color: isCorrect
+                                      ? Colors.green[800]
+                                      : Colors.red[800],
+                                  height: 1.5,
                                 ),
                               ),
                             ),
-                        ],
-                      ),
-                  ],
+                            const SizedBox(height: 16),
+                            if (isCorrect)
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  Navigator.pop(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFF9800),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                    horizontal: 32,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'CLAIM XP & CONTINUE',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
                 ),
               ),
             );
