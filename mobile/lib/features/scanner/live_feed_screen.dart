@@ -83,8 +83,8 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
       if (!mounted) return;
       showDialog(
         context: context,
-        // This darkens the camera feed behind the dialog to make it POP!
-        barrierColor: Colors.black.withOpacity(0.7),
+        // 🚀 FIX: Used withValues for opacity
+        barrierColor: Colors.black.withValues(alpha: 0.7),
         barrierDismissible:
             false, // Prevents them from tapping outside to cancel
         builder: (context) => ScanningModal(imageFile: imageFile),
@@ -148,7 +148,8 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                     left: 20,
                     right: 20,
                   ),
-                  color: Colors.black.withOpacity(0.4), // Darkens the blur
+                  // 🚀 FIX: Used withValues for opacity
+                  color: Colors.black.withValues(alpha: 0.4),
                   child: Row(
                     children: [
                       const Icon(
@@ -197,7 +198,8 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                     left: 40,
                     right: 40,
                   ),
-                  color: Colors.black.withOpacity(0.5),
+                  // 🚀 FIX: Used withValues for opacity
+                  color: Colors.black.withValues(alpha: 0.5),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -286,11 +288,14 @@ class _ScanningModalState extends State<ScanningModal> {
       // Print the JSON so we can see it in VS Code Debug Console
       debugPrint("🎯 AI RESPONSE: $aiResult");
 
-      // Go to the Teaser Doors and pass the JSON data!
+      // Go to the Teaser Doors and pass the JSON data AND the image path!
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => TeaserDoorsScreen(aiData: aiResult),
+          builder: (context) => TeaserDoorsScreen(
+            aiData: aiResult, // 🚀 FIX: Passed aiResult instead of 'result'
+            imagePath: widget.imageFile.path, // 🚀 FIX: Used widget.imageFile
+          ),
         ),
       );
     } else {
@@ -324,7 +329,8 @@ class _ScanningModalState extends State<ScanningModal> {
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              // 🚀 FIX: Used withValues for opacity
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 20,
               spreadRadius: 5,
             ),
@@ -350,7 +356,8 @@ class _ScanningModalState extends State<ScanningModal> {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0B3C6A).withOpacity(0.1),
+                    // 🚀 FIX: Used withValues for opacity
+                    color: const Color(0xFF0B3C6A).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(

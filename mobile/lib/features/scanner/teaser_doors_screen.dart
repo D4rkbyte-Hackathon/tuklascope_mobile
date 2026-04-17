@@ -5,15 +5,20 @@ import 'discovery_cards_screen.dart';
 
 class TeaserDoorsScreen extends StatefulWidget {
   final Map<String, dynamic> aiData;
+  final String
+  imagePath; // 🚀 NEW: We need to receive this from the Camera/LiveFeed
 
-  const TeaserDoorsScreen({super.key, required this.aiData});
+  const TeaserDoorsScreen({
+    super.key,
+    required this.aiData,
+    required this.imagePath, // 🚀 NEW
+  });
 
   @override
   State<TeaserDoorsScreen> createState() => _TeaserDoorsScreenState();
 }
 
 class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
-  // PageController with viewportFraction creates the "peek" effect for side doors
   late PageController _pageController;
 
   @override
@@ -31,7 +36,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
   List<dynamic> get _teaserDoors => widget.aiData['teaser_doors'] ?? [];
   String get _objectName => widget.aiData['scanned_object'] ?? 'Unknown Object';
 
-  // Helper method for Icons
   IconData _getIconForStrand(String lens) {
     switch (lens.toUpperCase()) {
       case 'STEM':
@@ -47,17 +51,16 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
     }
   }
 
-  // Helper method for dynamic magical glow colors
   Color _getColorForStrand(String lens) {
     switch (lens.toUpperCase()) {
       case 'STEM':
-        return const Color(0xFFE91E63); // Pink/Red
+        return const Color(0xFFE91E63);
       case 'ABM':
-        return const Color(0xFF4CAF50); // Green
+        return const Color(0xFF4CAF50);
       case 'HUMSS':
-        return const Color(0xFFFF9800); // Orange
+        return const Color(0xFFFF9800);
       case 'TVL':
-        return const Color(0xFF9C27B0); // Purple
+        return const Color(0xFF9C27B0);
       default:
         return const Color(0xFF0B3C6A);
     }
@@ -74,7 +77,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
 
     return GradientScaffold(
       appBar: AppBar(
-        // 1. REPLACED: AppBar title is now the dynamic object name
         title: Text(
           _objectName,
           style: const TextStyle(
@@ -90,8 +92,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-
-            // Header Text
             RichText(
               text: const TextSpan(
                 style: TextStyle(
@@ -125,8 +125,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
               ),
             ),
             const SizedBox(height: 30),
-
-            // 2. THE MAGICAL CAROUSEL
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -136,16 +134,20 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                   return AnimatedBuilder(
                     animation: _pageController,
                     builder: (context, child) {
-                      // Math to calculate how far the door is from the center
-                      double page = _pageController.position.haveDimensions
+                      // 🚀 FIX: Added 'final' to these local variables
+                      final double page =
+                          _pageController.position.haveDimensions
                           ? _pageController.page!
                           : 0.0;
-                      double difference = (page - index).abs();
-
-                      // Scale down the doors that are on the sides to create 3D depth
-                      double scale = (1 - (difference * 0.15)).clamp(0.85, 1.0);
-                      // Fade out the side doors slightly
-                      double opacity = (1 - (difference * 0.4)).clamp(0.4, 1.0);
+                      final double difference = (page - index).abs();
+                      final double scale = (1 - (difference * 0.15)).clamp(
+                        0.85,
+                        1.0,
+                      );
+                      final double opacity = (1 - (difference * 0.4)).clamp(
+                        0.4,
+                        1.0,
+                      );
 
                       return Transform.scale(
                         scale: scale,
@@ -159,7 +161,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                 },
               ),
             ),
-            const SizedBox(height: 40), // Bottom breathing room
+            const SizedBox(height: 40),
           ],
         ),
       ),
@@ -180,12 +182,12 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(40), // Arched door feel
-        border: Border.all(color: strandColor.withOpacity(0.3), width: 2),
-        // The magical glow
+        borderRadius: BorderRadius.circular(40),
+        // 🚀 FIX: Used withValues(alpha: X)
+        border: Border.all(color: strandColor.withValues(alpha: 0.3), width: 2),
         boxShadow: [
           BoxShadow(
-            color: strandColor.withOpacity(0.15),
+            color: strandColor.withValues(alpha: 0.15),
             blurRadius: 30,
             spreadRadius: 5,
             offset: const Offset(0, 10),
@@ -196,7 +198,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            // TOP ROW: Icon & XP Badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,19 +205,19 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: strandColor.withOpacity(0.1),
+                    // 🚀 FIX: Used withValues(alpha: X)
+                    color: strandColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, color: strandColor, size: 32),
                 ),
-                // The XP Badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0B3C6A), // Dark blue pill
+                    color: const Color(0xFF0B3C6A),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -241,8 +242,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
               ],
             ),
             const SizedBox(height: 24),
-
-            // STRAND NAME
             Text(
               lens.toUpperCase(),
               style: TextStyle(
@@ -253,8 +252,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-
-            // AI TITLE
             Text(
               title,
               textAlign: TextAlign.center,
@@ -270,8 +267,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
             const SizedBox(height: 16),
             const Divider(color: Color(0xFFEEEEEE), thickness: 2),
             const SizedBox(height: 16),
-
-            // 3. SCROLLABLE TEASER TEXT (No more cut-offs!)
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -286,10 +281,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // OPEN DOOR BUTTON
             SizedBox(
               width: double.infinity,
               height: 55,
@@ -310,6 +302,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                         objectName: _objectName,
                         gradeLevel: widget.aiData['grade_level'] ?? '',
                         selectedLens: lens,
+                        imagePath: widget
+                            .imagePath, // 🚀 FIX: Passed the path through!
                       ),
                     ),
                   );
