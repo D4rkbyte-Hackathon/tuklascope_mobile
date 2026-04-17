@@ -66,6 +66,23 @@ class SupabaseAuthService {
     }
   }
 
+  // Check if the current user is a Google sign-in user
+  bool isGoogleUser() {
+    final user = currentUser;
+    if (user == null) return false;
+    
+    // Check if 'google' is in the list of providers for this user
+    final providers = user.appMetadata?['providers'] as List?;
+    return providers?.contains('google') ?? false;
+  }
+
+  // Change user password (only for email/password users)
+  Future<void> changePassword(String newPassword) async {
+    await _supabase.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
+  }
+
   Future<void> signOut() async {
     await GoogleSignIn.instance.disconnect();
     await _supabase.auth.signOut();
