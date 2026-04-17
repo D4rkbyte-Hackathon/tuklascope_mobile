@@ -1,7 +1,10 @@
 // mobile/lib/features/scanner/discovery_cards_screen.dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/config/api_config.dart';
 import 'package:flutter/material.dart';
 import '../../core/widgets/gradient_scaffold.dart';
-// NEW: Import the service we just made
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
 
 class DiscoveryCardsScreen extends StatefulWidget {
@@ -23,7 +26,7 @@ class DiscoveryCardsScreen extends StatefulWidget {
 class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
   int _selectedIndex = 0;
 
-  // NEW: State variables for network handling
+  // State variables for network handling
   bool _isLoading = true;
   String? _error;
   Map<String, dynamic>? _deckData;
@@ -31,11 +34,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
   @override
   void initState() {
     super.initState();
-    // NEW: Fetch the data the moment the screen opens
     _fetchLearningDeck();
   }
 
-  // NEW: The network call
   Future<void> _fetchLearningDeck() async {
     setState(() {
       _isLoading = true;
@@ -79,7 +80,6 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
           IconButton(icon: const Icon(Icons.share), onPressed: () {}),
         ],
       ),
-      // NEW: Handle Loading and Error States gracefully
       body: _isLoading
           ? const Center(
               child: Column(
@@ -124,139 +124,438 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                 ),
               ),
             )
-          : _buildContent(), // Show your UI if successful!
+          : _buildContent(),
     );
   }
 
-  // YOUR EXACT ORIGINAL UI LAYOUT
   Widget _buildContent() {
-    // Safely extract data with fallbacks
     final xpReward = _deckData?['xp_reward']?.toString() ?? '50';
-    // Fallback to a generic abstract learning image if the AI doesn't provide a specific URL
     final imageUrl =
         _deckData?['image_url'] ??
         'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?q=80&w=1000&auto=format&fit=crop';
 
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // --- 1. HERO IMAGE WITH LIGHT FADE ---
-          SizedBox(
-            height: 350,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  // Handle broken image links gracefully
-                  errorBuilder: (context, error, stackTrace) =>
-                      Container(color: Colors.grey[300]),
-                ),
-                Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black45,
-                        Colors.transparent,
-                        Color(0xFFFFFDF4),
-                      ],
-                      stops: [0.0, 0.4, 1.0],
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 100),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 350,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Container(color: Colors.grey[300]),
                     ),
-                  ),
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black45,
+                            Colors.transparent,
+                            Color(0xFFFFFDF4),
+                          ],
+                          stops: [0.0, 0.4, 1.0],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-
-          // --- 2. CONTENT AREA ---
-          Transform.translate(
-            offset: const Offset(0, -20),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // TITLE ROW
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              ),
+              Transform.translate(
+                offset: const Offset(0, -20),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          '${widget.selectedLens.toUpperCase()}: ${widget.objectName}',
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0B3C6A),
-                            height: 1.1,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF9800),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '+$xpReward XP', // NEW: Dynamic XP!
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${widget.selectedLens.toUpperCase()}: ${widget.objectName}',
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0B3C6A),
+                                height: 1.1,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF9800),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.star,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '+$xpReward XP',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 32),
+                      Row(
+                        children: [
+                          _buildTabButton(0, 'Quick Fact', Icons.bolt),
+                          const SizedBox(width: 8),
+                          _buildTabButton(
+                            1,
+                            'Concepts',
+                            Icons.lightbulb_outline,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildTabButton(
+                            2,
+                            'Hands-on',
+                            Icons.build_circle_outlined,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _buildActiveCard(),
+                      const SizedBox(height: 40),
                     ],
                   ),
-                  const SizedBox(height: 32),
-
-                  // --- 3. THE 3 INTERACTIVE TABS ---
-                  Row(
-                    children: [
-                      _buildTabButton(0, 'Quick Fact', Icons.bolt),
-                      const SizedBox(width: 8),
-                      _buildTabButton(1, 'Concepts', Icons.lightbulb_outline),
-                      const SizedBox(width: 8),
-                      _buildTabButton(
-                        2,
-                        'Hands-on',
-                        Icons.build_circle_outlined,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // --- 4. THE DYNAMIC CONTENT CARD ---
-                  _buildActiveCard(),
-
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
-            ),
+            ],
+          ),
+        ),
+        Positioned(
+          bottom: 24,
+          left: 24,
+          right: 24,
+          child: _buildChallengeButton(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChallengeButton() {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF9800).withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
+      ),
+      child: ElevatedButton(
+        onPressed: _showChallengeModal,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFF9800),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.sports_esports, size: 24),
+            SizedBox(width: 12),
+            Text(
+              'TAKE CHALLENGE TO EARN XP',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  void _showChallengeModal() {
+    final challengeCard =
+        _deckData?['challenge_card'] as Map<String, dynamic>? ?? {};
+    final question =
+        challengeCard['question'] ?? "Are you ready to test your knowledge?";
+    final options = List<String>.from(challengeCard['options'] ?? []);
+    final correctAnswer = challengeCard['correct_answer'] ?? "";
+    final explanation = challengeCard['explanation'] ?? "";
+
+    String? selectedOption;
+    bool hasAnswered = false;
+    bool isCorrect = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // CRITICAL FIX: Removed const from Center, added it to BoxDecoration
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 5,
+                        decoration: const BoxDecoration(
+                          color: Colors.grey,
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'TUKLAS CHALLENGE',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFFFF9800),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      question,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0B3C6A),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    ...options.map((option) {
+                      // CRITICAL FIX: Made local variables final
+                      final bool isThisSelected = selectedOption == option;
+                      final bool isThisCorrect = option == correctAnswer;
+
+                      Color buttonColor = Colors.white;
+                      Color textColor = const Color(0xFF0B3C6A);
+                      Color borderColor = Colors.grey[300]!;
+
+                      if (hasAnswered) {
+                        if (isThisCorrect) {
+                          buttonColor = Colors.green[100]!;
+                          borderColor = Colors.green;
+                          textColor = Colors.green[800]!;
+                        } else if (isThisSelected && !isThisCorrect) {
+                          buttonColor = Colors.red[100]!;
+                          borderColor = Colors.red;
+                          textColor = Colors.red[800]!;
+                        }
+                      } else if (isThisSelected) {
+                        buttonColor = Colors.blue[50]!;
+                        borderColor = const Color(0xFF0B3C6A);
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: InkWell(
+                          onTap: hasAnswered
+                              ? null
+                              : () {
+                                  setModalState(() {
+                                    selectedOption = option;
+                                  });
+                                },
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: buttonColor,
+                              border: Border.all(color: borderColor, width: 2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    option,
+                                    style: TextStyle(
+                                      color: textColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                if (hasAnswered && isThisCorrect)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  ),
+                                if (hasAnswered &&
+                                    isThisSelected &&
+                                    !isThisCorrect)
+                                  const Icon(Icons.cancel, color: Colors.red),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+
+                    const SizedBox(height: 16),
+
+                    if (!hasAnswered)
+                      ElevatedButton(
+                        onPressed: selectedOption == null
+                            ? null
+                            : () {
+                                setModalState(() {
+                                  hasAnswered = true;
+                                  isCorrect = (selectedOption == correctAnswer);
+                                });
+                                if (isCorrect) {
+                                  _saveProgressToBackend();
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0B3C6A),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'SUBMIT ANSWER',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
+                    else
+                      Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: isCorrect
+                                  ? Colors.green[50]
+                                  : Colors.red[50],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              isCorrect
+                                  ? "🎉 Correct! $explanation"
+                                  : "Not quite! $explanation",
+                              style: TextStyle(
+                                color: isCorrect
+                                    ? Colors.green[800]
+                                    : Colors.red[800],
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (isCorrect)
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                Navigator.pop(context);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFF9800),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                  horizontal: 32,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'CLAIM XP & CONTINUE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _saveProgressToBackend() async {
+    try {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session == null) return;
+
+      // CRITICAL FIX: Made dummy string a const declaration
+      const dummyImageUrl = "https://example.com/placeholder.jpg";
+
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/discover/save'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${session.accessToken}',
+        },
+        body: jsonEncode({
+          "object_name": widget.objectName,
+          "chosen_lens": widget.selectedLens,
+          "image_url": dummyImageUrl,
+          "learning_deck": _deckData,
+          "xp_awarded": 50,
+          "is_aligned_with_compass": false,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint("✅ Progress successfully saved to Supabase!");
+      } else {
+        debugPrint("🚨 Failed to save progress: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("🚨 Error saving progress: $e");
+    }
+  }
+
   Widget _buildTabButton(int index, String label, IconData icon) {
-    bool isSelected = _selectedIndex == index;
+    // CRITICAL FIX: Made local variable final
+    final bool isSelected = _selectedIndex == index;
 
     return Expanded(
       child: GestureDetector(
@@ -272,9 +571,10 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
             color: isSelected ? const Color(0xFFFF9800) : Colors.transparent,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
+              // CRITICAL FIX: Replaced withOpacity with withValues
               color: isSelected
                   ? const Color(0xFFFF9800)
-                  : const Color(0xFF0B3C6A).withOpacity(0.2),
+                  : const Color(0xFF0B3C6A).withValues(alpha: 0.2),
               width: 1.5,
             ),
           ),
@@ -303,15 +603,21 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
   }
 
   Widget _buildActiveCard() {
-    // NEW: Safely grab the AI generated text for each section
+    final conceptCard =
+        _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
+    final realWorldCard =
+        _deckData?['real_world_card'] as Map<String, dynamic>? ?? {};
+
     final quickFact =
-        _deckData?['quick_fact'] ??
+        realWorldCard['fun_fact'] ??
         "A fascinating fact about this artifact is currently hidden.";
+
     final concept =
-        _deckData?['core_concept'] ??
+        conceptCard['lesson_text'] ??
         "The underlying principles are still waiting to be discovered.";
+
     final handsOn =
-        _deckData?['practical_application'] ??
+        realWorldCard['application_text'] ??
         "Try finding a way to apply this in your local community!";
 
     switch (_selectedIndex) {
@@ -331,12 +637,14 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.6),
+        // CRITICAL FIX: Replaced withOpacity with withValues
+        color: Colors.white.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white, width: 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            // CRITICAL FIX: Replaced withOpacity with withValues
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
