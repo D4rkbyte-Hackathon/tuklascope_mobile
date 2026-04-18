@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart'; 
+import 'package:supabase_flutter/supabase_flutter.dart'; // 🚀 1. ADDED SUPABASE IMPORT
 import '../../core/widgets/gradient_scaffold.dart';
 
 /// Placeholder model until user uploads / API are wired.
@@ -22,7 +23,6 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-// 1. ADDED TickerProviderStateMixin for the multiple TabControllers
 class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateMixin {
   static const Color _orangeAccent = Color(0xFFFF6B2C);
   static const Color _tabBorder = Color(0xFF8FA8BC);
@@ -31,9 +31,13 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   static const Color _boardToggleBorder = Color(0xFF9BC4E2);
   static const Color _boardToggleSelected = Color(0xFF5F717D);
 
-  // 2. REPLACED INT SEGMENTS WITH TAB CONTROLLERS
   late TabController _mainTabController;
   late TabController _filterTabController;
+
+  // 🚀 2. ADDED REAL LEADERBOARD STATE VARIABLES
+  List<Map<String, dynamic>> _leaderboardData = [];
+  bool _isLoadingLeaderboard = true;
+  int _currentFilterIndex = 0; // 0 = Grade Level, 1 = All Users
 
   static const List<_ExploreNotePlaceholder> _placeholders = [
     _ExploreNotePlaceholder(title: 'Notebooks', subtitle: 'blahblah', tag: 'STEM'),
@@ -48,10 +52,72 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     _mainTabController = TabController(length: 2, vsync: this);
     _filterTabController = TabController(length: 2, vsync: this);
     
-    // Add listener to filter tab so we can rebuild the list if necessary in the future
+    // 🚀 3. FETCH DATA WHEN SCREEN LOADS
+    _fetchLeaderboard();
+
+    // 🚀 4. RE-FETCH WHEN FILTER TAB CHANGES
     _filterTabController.addListener(() {
-      if (mounted) setState(() {});
+      if (_filterTabController.index != _currentFilterIndex) {
+        _currentFilterIndex = _filterTabController.index;
+        _fetchLeaderboard();
+      }
     });
+  }
+
+  // 🚀 5. THE FUNCTION TO GET REAL SCORES FROM SUPABASE
+  Future<void> _fetchLeaderboard() async {
+    setState(() => _isLoadingLeaderboard = true);
+    
+    try {
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      
+      // Start building the query
+      var query = Supabase.instance.client
+          .from('profiles')
+          .select('id, full_name, total_xp, education_level')
+          .order('total_xp', ascending: false) // Highest XP first
+          .limit(50); // Top 50
+
+      // If they clicked "By Grade Level", filter the query!
+      if (_currentFilterIndex == 0 && currentUser != null) {
+        final myProfile = await Supabase.instance.client
+            .from('profiles')
+            .select('education_level')
+            .eq('id', currentUser.id)
+            .maybeSingle();
+
+        final myGrade = myProfile?['education_level'];
+        
+        if (myGrade != null && myGrade.isNotEmpty) {
+          query = Supabase.instance.client
+              .from('profiles')
+              .select('id, full_name, total_xp, education_level')
+              .eq('education_level', myGrade) // FILTER APPLIED HERE
+              .order('total_xp', ascending: false)
+              .limit(50);
+        }
+      }
+
+      final response = await query;
+      
+      if (mounted) {
+        setState(() {
+          _leaderboardData = List<Map<String, dynamic>>.from(response);
+          _isLoadingLeaderboard = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching leaderboard: $e');
+      if (mounted) setState(() => _isLoadingLeaderboard = false);
+    }
+  }
+
+  // 🚀 6. HELPER TO COLOR TROPHIES GOLD, SILVER, BRONZE
+  Color _getTrophyColor(int index) {
+    if (index == 0) return Colors.amber; // 1st Place
+    if (index == 1) return Colors.blueGrey[300]!; // 2nd Place
+    if (index == 2) return Colors.brown[400]!; // 3rd Place
+    return Colors.grey.shade400; // Everyone else
   }
 
   @override
@@ -76,7 +142,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               child: _buildMainSegmentTabs(),
             ),
             
-            // 3. ADDED TABBARVIEW FOR SWIPEABLE MAIN SCREENS
             Expanded(
               child: TabBarView(
                 controller: _mainTabController,
@@ -214,6 +279,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   Widget _buildLeaderboardsPanel(double bottomInset) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -239,63 +306,60 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           child: _buildLeaderboardFilterToggle(),
         ),
         const SizedBox(height: 18),
+        
+        // 🚀 7. REPLACED DUMMY LIST WITH REAL DATA BUILDER
         Expanded(
-          child: ListView.separated(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset),
-            physics: const BouncingScrollPhysics(),
-            itemCount: _discovererPlaceholders.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final row = _discovererPlaceholders[index];
-              return _DiscovererRowCard(
-                name: row.name,
-                xpLabel: row.xpLabel,
-                orangeBorder: _orangeAccent,
-                trophyColor: _navyTitle,
-              )
-              // Added key so animations replay when filter tab is switched
-              .animate(key: ValueKey('leaderboard_${_filterTabController.index}_$index'))
-              .fade(duration: 600.ms, delay: (50 * index).ms)
-              .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (50 * index).ms);
-            },
-          ),
+          child: _isLoadingLeaderboard
+            ? const Center(child: CircularProgressIndicator(color: _orangeAccent))
+            : _leaderboardData.isEmpty
+              ? Center(child: Text('No explorers found.', style: TextStyle(color: Colors.grey.shade600)))
+              : ListView.separated(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset),
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: _leaderboardData.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final user = _leaderboardData[index];
+                    final isMe = user['id'] == currentUserId;
+                    
+                    // Format data safely
+                    final name = user['full_name'] ?? 'Anonymous Explorer';
+                    final xp = user['total_xp'] ?? 0;
+                    final displayName = isMe ? '$name (You)' : name;
+
+                    return _DiscovererRowCard(
+                      name: displayName,
+                      xpLabel: '$xp XP',
+                      orangeBorder: isMe ? _orangeAccent : Colors.grey.shade300, // Highlight current user!
+                      trophyColor: _getTrophyColor(index),
+                      rank: index + 1,
+                    )
+                    .animate(key: ValueKey('leaderboard_${_filterTabController.index}_$index'))
+                    .fade(duration: 600.ms, delay: (50 * index).ms)
+                    .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (50 * index).ms);
+                  },
+                ),
         ),
       ],
     );
   }
-
-  static const List<_DiscovererPlaceholder> _discovererPlaceholders = [
-    _DiscovererPlaceholder(name: 'Juan Dela Cruz', xpLabel: '67, 420 XP'),
-    _DiscovererPlaceholder(name: 'Juan Dela Cruz', xpLabel: '67, 420 XP'),
-    _DiscovererPlaceholder(name: 'Juan Dela Cruz', xpLabel: '67, 420 XP'),
-    _DiscovererPlaceholder(name: 'Juan Dela Cruz', xpLabel: '67, 420 XP'),
-    _DiscovererPlaceholder(name: 'Juan Dela Cruz', xpLabel: '67, 420 XP'),
-    _DiscovererPlaceholder(name: 'Juan Dela Cruz', xpLabel: '67, 420 XP'),
-  ];
 }
 
-class _DiscovererPlaceholder {
-  const _DiscovererPlaceholder({
-    required this.name,
-    required this.xpLabel,
-  });
-
-  final String name;
-  final String xpLabel;
-}
-
+// 🚀 8. UPDATED CARD TO SHOW RANK NUMBERS AND DYNAMIC TROPHIES
 class _DiscovererRowCard extends StatelessWidget {
   const _DiscovererRowCard({
     required this.name,
     required this.xpLabel,
     required this.orangeBorder,
     required this.trophyColor,
+    required this.rank,
   });
 
   final String name;
   final String xpLabel;
   final Color orangeBorder;
   final Color trophyColor;
+  final int rank;
 
   @override
   Widget build(BuildContext context) {
@@ -311,9 +375,15 @@ class _DiscovererRowCard extends StatelessWidget {
         child: Row(
           children: [
             CircleAvatar(
-              radius: 28,
-              backgroundColor: const Color(0xFFE0E0E0),
-              child: Icon(Icons.person, size: 32, color: Colors.grey.shade600),
+              radius: 20, // Slightly smaller to fit rank text nicely
+              backgroundColor: trophyColor.withValues(alpha: 0.15),
+              child: Text(
+                '#$rank',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: trophyColor,
+                ),
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -333,13 +403,15 @@ class _DiscovererRowCard extends StatelessWidget {
                     xpLabel,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange.shade700,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.emoji_events_outlined, size: 30, color: trophyColor),
+            if (rank <= 3) // Only show the trophy icon for the top 3!
+              Icon(Icons.emoji_events, size: 30, color: trophyColor),
           ],
         ),
       ),
