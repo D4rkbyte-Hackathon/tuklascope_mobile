@@ -1,11 +1,68 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../core/widgets/gradient_scaffold.dart'; //this contains the bg color
+import '../../core/widgets/gradient_scaffold.dart';
 import '../../core/navigation/main_nav_scope.dart';
 import '../scanner/tuklas_tutor_screen.dart';
-import '../auth/presentation/screens/login_screen.dart';
+
+// =========================================================================
+// STATE MANAGEMENT: HOME STATS PROVIDER
+// =========================================================================
+
+class HomeStats {
+  final int dailyStreak;
+  final int totalPoints;
+  final int todayScansCount;
+
+  HomeStats({
+    required this.dailyStreak,
+    required this.totalPoints,
+    required this.todayScansCount,
+  });
+}
+
+// TECH LEAD: This provider fetches real data from Supabase for the current user.
+final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
+  final client = Supabase.instance.client;
+  final userId = client.auth.currentUser?.id;
+
+  if (userId == null) {
+    return HomeStats(dailyStreak: 0, totalPoints: 0, todayScansCount: 0);
+  }
+
+  // 1. Fetch Profile Data (Streak & Total XP)
+  final profileData = await client
+      .from('profiles')
+      .select('current_streak, total_xp')
+      .eq('id', userId)
+      .maybeSingle();
+
+  // 2. Fetch Today's Scans Count for the Daily Quest (0/3)
+  final today = DateTime.now();
+  final startOfDay = DateTime(
+    today.year,
+    today.month,
+    today.day,
+  ).toIso8601String();
+
+  final scansData = await client
+      .from('scans')
+      .select('id')
+      .eq('user_id', userId)
+      .gte('created_at', startOfDay);
+
+  return HomeStats(
+    dailyStreak: profileData?['current_streak'] ?? 0,
+    totalPoints: profileData?['total_xp'] ?? 0,
+    todayScansCount: (scansData as List).length,
+  );
+});
+
+// =========================================================================
+// UI SCREEN
+// =========================================================================
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -26,8 +83,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // TECH LEAD: Watch the provider to get real-time stats
+    final statsAsync = ref.watch(homeStatsProvider);
+
     final List<Widget> listItems = [
-      _buildDailyQuestCard(),
+      _buildDailyQuestCard(statsAsync), // Passed the async data here
       const SizedBox(height: 32),
 
       _buildHeroHeading('Discover', 'Everything'),
@@ -126,37 +186,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ];
 
     return GradientScaffold(
-      body: Container(
-        child: SafeArea(
-          child: Stack(
-            children: [
-              ListView.builder(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(
-                  16.0,
-                  20.0,
-                  16.0,
-                  MediaQuery.paddingOf(context).bottom,
-                ),
-                itemCount: listItems.length,
-                itemBuilder: (context, index) {
-                  final item = listItems[index];
-                  if (item is SizedBox) return item;
-
-                  return item
-                      .animate()
-                      .fade(duration: 600.ms, delay: (50 * (index % 10)).ms)
-                      .slideY(
-                        begin: 0.1,
-                        end: 0,
-                        duration: 600.ms,
-                        curve: Curves.easeOutCubic,
-                        delay: (50 * (index % 10)).ms,
-                      );
-                },
+      // TECH LEAD: Removed unnecessary Container wrapper around SafeArea
+      body: SafeArea(
+        child: Stack(
+          children: [
+            ListView.builder(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                16.0,
+                20.0,
+                16.0,
+                MediaQuery.paddingOf(context).bottom,
               ),
-            ],
-          ),
+              itemCount: listItems.length,
+              itemBuilder: (context, index) {
+                final item = listItems[index];
+                if (item is SizedBox) return item;
+
+                return item
+                    .animate()
+                    .fade(duration: 600.ms, delay: (50 * (index % 10)).ms)
+                    .slideY(
+                      begin: 0.1,
+                      end: 0,
+                      duration: 600.ms,
+                      curve: Curves.easeOutCubic,
+                      delay: (50 * (index % 10)).ms,
+                    );
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -166,7 +225,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // HELPER WIDGETS
   // =========================================================================
 
-  Widget _buildDailyQuestCard() {
+  Widget _buildDailyQuestCard(AsyncValue<HomeStats> statsAsync) {
+    // TECH LEAD: Extracting data, handling loading/error states gracefully
+    final streak = statsAsync.value?.dailyStreak ?? 0;
+    final points = statsAsync.value?.totalPoints ?? 0;
+    final scansCount = statsAsync.value?.todayScansCount ?? 0;
+    final isLoading = statsAsync.isLoading;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: BoxDecoration(
@@ -174,7 +239,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            // TECH LEAD: Replaced deprecated withOpacity
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -198,19 +264,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               color: textLight,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Stack(
+            child: Stack(
               alignment: Alignment.center,
               children: [
                 Align(
                   alignment: Alignment.center,
-                  child: Text(
-                    '0/3 Discovered',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontSize: 14,
-                    ),
-                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 12,
+                          width: 12,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          '$scansCount/3 Discovered',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
                 ),
               ],
             ),
@@ -224,14 +299,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Expanded(
                 child: Column(
                   children: [
-                    Text(
-                      '69',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: accentOrange,
-                      ),
-                    ),
+                    isLoading
+                        ? SizedBox(
+                            height: 33,
+                            child: CircularProgressIndicator(
+                              color: accentOrange,
+                            ),
+                          )
+                        : Text(
+                            '$streak',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              color: accentOrange,
+                            ),
+                          ),
                     const SizedBox(height: 4),
                     Text(
                       'Daily Streak',
@@ -248,14 +330,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Expanded(
                 child: Column(
                   children: [
-                    Text(
-                      '420',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: primaryBlue,
-                      ),
-                    ),
+                    isLoading
+                        ? SizedBox(
+                            height: 33,
+                            child: CircularProgressIndicator(
+                              color: primaryBlue,
+                            ),
+                          )
+                        : Text(
+                            '$points',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              color: primaryBlue,
+                            ),
+                          ),
                     const SizedBox(height: 4),
                     Text(
                       'Total Points',
@@ -358,7 +447,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       decoration: BoxDecoration(
         color: bgLight,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: primaryBlue.withOpacity(0.5), width: 1.5),
+        // TECH LEAD: Replaced deprecated withOpacity
+        border: Border.all(
+          color: primaryBlue.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -473,7 +566,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         borderRadius: BorderRadius.circular(50),
         boxShadow: [
           BoxShadow(
-            color: gradientColors.last.withOpacity(0.4),
+            // TECH LEAD: Replaced deprecated withOpacity
+            color: gradientColors.last.withValues(alpha: 0.4),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
