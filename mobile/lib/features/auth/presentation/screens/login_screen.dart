@@ -25,9 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
 
   Future<void> _signIn() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
     try {
       await ref
           .read(authControllerProvider.notifier)
@@ -37,7 +35,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
 
       if (mounted) {
-        // RESET the entire navigation stack and let AuthGate handle routing
         Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const AuthGate()),
           (route) => false,
@@ -45,9 +42,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } on AuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (e) {
       if (mounted) {
@@ -56,16 +51,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _signInWithGoogle() async {
-    // Read the current state directly from Riverpod
     final currentUser = ref.read(authStateProvider).value;
     if (currentUser != null) {
       if (mounted) {
@@ -79,67 +69,61 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
     try {
-      final authResponse = await ref
-          .read(authControllerProvider.notifier)
-          .signInWithGoogle();
+      final authResponse = await ref.read(authControllerProvider.notifier).signInWithGoogle();
 
-      if (authResponse != null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Successfully signed in with Google!'),
-              backgroundColor: Color(0xFF64B5F6),
-            ),
-          );
-          // RESET the entire navigation stack and let AuthGate handle routing
-          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const AuthGate()),
-            (route) => false,
-          );
-        }
+      if (authResponse != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Successfully signed in with Google!'),
+            backgroundColor: Color(0xFF64B5F6),
+          ),
+        );
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+          (route) => false,
+        );
       }
     } on AuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Authentication Error: ${e.message}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Authentication Error: ${e.message}'), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       if (mounted) {
         String errorMessage = 'Failed to sign in with Google';
         if (e.toString().contains('MISSING_EMAIL')) {
-          errorMessage =
-              'Google account has no email. Please use another account.';
-        } else if (e.toString().contains('PlatformException')) {
-          errorMessage =
-              'Google Sign In was cancelled or failed. Please try again.';
-        } else if (e.toString().contains('GOOGLE_WEB_CLIENT_ID is missing')) {
-          errorMessage =
-              'Google configuration is missing. Please contact support.';
+          errorMessage = 'Google account has no email. Please use another account.';
         }
-
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red, duration: const Duration(seconds: 4)),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // --- CUSTOM PAGE TRANSITION ---
+  Route _createAnimatedRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(1.0, 0.0);
+        const end = Offset.zero;
+        const curve = Curves.easeOutExpo;
+        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        var fadeTween = Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeIn));
+
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: FadeTransition(opacity: animation.drive(fadeTween), child: child),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 600),
+    );
   }
 
   @override
@@ -161,224 +145,107 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                      'Login',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0B3C6A),
-                      ),
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 100.ms)
-                    .slideY(
-                      begin: -0.3,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
-                      delay: 100.ms,
-                    ),
+                  'Login',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0B3C6A),
+                    shadows: [Shadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
+                  ),
+                ).animate().fade(duration: 600.ms, delay: 100.ms).slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
 
                 const SizedBox(height: 48),
 
-                _buildCustomTextField(
-                      controller: _emailController,
-                      label: 'Email',
-                      icon: Icons.email_outlined,
-                      keyboardType: TextInputType.emailAddress,
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 200.ms)
-                    .slideY(
-                      begin: -0.3,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
-                      delay: 200.ms,
-                    ),
+                NeonTextField(
+                  controller: _emailController,
+                  label: 'Email',
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                  neonColor: const Color(0xFF64B5F6),
+                ).animate().fade(duration: 600.ms, delay: 200.ms).slideX(begin: -0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
 
                 const SizedBox(height: 20),
 
-                _buildCustomTextField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      icon: Icons.lock_outline,
-                      obscureText: _obscurePassword,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: Colors.grey[600],
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 300.ms)
-                    .slideY(
-                      begin: -0.3,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
-                      delay: 300.ms,
-                    ),
+                NeonTextField(
+                  controller: _passwordController,
+                  label: 'Password',
+                  icon: Icons.lock_outline,
+                  obscureText: _obscurePassword,
+                  neonColor: const Color(0xFF64B5F6),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey[600]),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ).animate().fade(duration: 600.ms, delay: 300.ms).slideX(begin: -0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
 
                 const SizedBox(height: 32),
 
                 if (_isLoading)
-                  const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF64B5F6)),
-                  )
+                  const Center(child: CircularProgressIndicator(color: Color(0xFF64B5F6)))
                 else
                   Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          ElevatedButton(
-                            onPressed: _signIn,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF64B5F6),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(32),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: const Text(
-                              'Login',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // --- NEON GLOW BUTTON ---
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(32),
+                          boxShadow: [
+                            BoxShadow(color: const Color(0xFF64B5F6).withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5)),
+                          ],
+                          gradient: const LinearGradient(colors: [Color(0xFF64B5F6), Color(0xFF42A5F5)]),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _signIn,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
                           ),
-
-                          const SizedBox(height: 24),
-
-                          Row(
-                                children: [
-                                  Expanded(
-                                    child: Divider(color: Colors.grey[400]),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
-                                    child: Text(
-                                      'Or sign in with',
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Divider(color: Colors.grey[400]),
-                                  ),
-                                ],
-                              )
-                              .animate()
-                              .fade(duration: 600.ms, delay: 500.ms)
-                              .slideY(
-                                begin: -0.3,
-                                end: 0,
-                                duration: 600.ms,
-                                curve: Curves.easeOutCubic,
-                                delay: 500.ms,
-                              ),
-
-                          const SizedBox(height: 24),
-
-                          _buildSocialButton(
-                                imagePath: 'assets/images/google.png',
-                                label: 'Google',
-                                onPressed: _signInWithGoogle,
-                              )
-                              .animate()
-                              .fade(duration: 600.ms, delay: 600.ms)
-                              .slideY(
-                                begin: -0.3,
-                                end: 0,
-                                duration: 600.ms,
-                                curve: Curves.easeOutCubic,
-                                delay: 600.ms,
-                              ),
-
-                          const SizedBox(height: 16),
-
-                          _buildSocialButton(
-                                imagePath: 'assets/images/facebook.png',
-                                label: 'Facebook',
-                                onPressed: () {},
-                              )
-                              .animate()
-                              .fade(duration: 600.ms, delay: 700.ms)
-                              .slideY(
-                                begin: -0.3,
-                                end: 0,
-                                duration: 600.ms,
-                                curve: Curves.easeOutCubic,
-                                delay: 700.ms,
-                              ),
-
-                          const SizedBox(height: 32),
-
-                          Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    "Don't have an account? ",
-                                    style: TextStyle(
-                                      color: Colors.grey[700],
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const SignupScreen(),
-                                        ),
-                                      );
-                                    },
-                                    child: const Text(
-                                      'Create Account',
-                                      style: TextStyle(
-                                        color: Color(0xFFFF6B2C),
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                              .animate()
-                              .fade(duration: 600.ms, delay: 800.ms)
-                              .slideY(
-                                begin: -0.3,
-                                end: 0,
-                                duration: 600.ms,
-                                curve: Curves.easeOutCubic,
-                                delay: 800.ms,
-                              ),
-                        ],
-                      )
-                      .animate()
-                      .fade(duration: 600.ms, delay: 400.ms)
-                      .slideY(
-                        begin: -0.3,
-                        end: 0,
-                        duration: 600.ms,
-                        curve: Curves.easeOutCubic,
-                        delay: 400.ms,
+                          child: const Text('Login', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                        ),
                       ),
+
+                      const SizedBox(height: 24),
+
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: Colors.grey[400])),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text('Or sign in with', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                          ),
+                          Expanded(child: Divider(color: Colors.grey[400])),
+                        ],
+                      ).animate().fade(duration: 600.ms, delay: 500.ms),
+
+                      const SizedBox(height: 24),
+
+                      _buildSocialButton(imagePath: 'assets/images/google.png', label: 'Google', onPressed: _signInWithGoogle)
+                          .animate().fade(duration: 600.ms, delay: 600.ms),
+
+                      const SizedBox(height: 16),
+
+                      _buildSocialButton(imagePath: 'assets/images/facebook.png', label: 'Facebook', onPressed: () {})
+                          .animate().fade(duration: 600.ms, delay: 700.ms),
+
+                      const SizedBox(height: 32),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text("Don't have an account? ", style: TextStyle(color: Colors.grey[700], fontSize: 15)),
+                          GestureDetector(
+                            onTap: () => Navigator.pushReplacement(context, _createAnimatedRoute(const SignupScreen())),
+                            child: const Text('Create Account', style: TextStyle(color: Color(0xFFFF6B2C), fontSize: 15, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ).animate().fade(duration: 600.ms, delay: 800.ms),
+                    ],
+                  ).animate().fade(duration: 600.ms, delay: 400.ms),
               ],
             ),
           ),
@@ -387,63 +254,95 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildCustomTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool obscureText = false,
-    TextInputType keyboardType = TextInputType.text,
-    Widget? suffixIcon,
-  }) {
-    return TextField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      style: const TextStyle(color: Color(0xFF0B3C6A)),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: Colors.grey[600]),
-        prefixIcon: Icon(icon, color: const Color(0xFF64B5F6)),
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.8), // Fixed deprecation
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 1.5),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(32),
-          borderSide: const BorderSide(color: Color(0xFFFF6B2C), width: 2.5),
+  Widget _buildSocialButton({required String imagePath, required String label, required VoidCallback onPressed}) {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Image.asset(imagePath, width: 24, height: 24),
+        label: Text(label, style: const TextStyle(color: Color(0xFF0B3C6A), fontSize: 16, fontWeight: FontWeight.w600)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF0B3C6A),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32), side: BorderSide(color: Colors.grey[200]!, width: 1)),
+          elevation: 0,
         ),
       ),
     );
   }
+}
 
-  Widget _buildSocialButton({
-    required String imagePath,
-    required String label,
-    required VoidCallback onPressed,
-  }) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Image.asset(imagePath, width: 24, height: 24),
-      label: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFF0B3C6A),
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
+// --- DYNAMIC NEON INPUT WIDGET ---
+class NeonTextField extends StatefulWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final bool obscureText;
+  final Widget? suffixIcon;
+  final TextInputType keyboardType;
+  final Color neonColor;
+
+  const NeonTextField({
+    super.key,
+    required this.controller,
+    required this.label,
+    required this.icon,
+    this.obscureText = false,
+    this.suffixIcon,
+    this.keyboardType = TextInputType.text,
+    required this.neonColor,
+  });
+
+  @override
+  State<NeonTextField> createState() => _NeonTextFieldState();
+}
+
+class _NeonTextFieldState extends State<NeonTextField> {
+  final FocusNode _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() => setState(() => _isFocused = _focusNode.hasFocus));
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutQuart,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: _isFocused
+            ? [BoxShadow(color: widget.neonColor.withValues(alpha: 0.4), blurRadius: 15, spreadRadius: 2, offset: const Offset(0, 4))]
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFFFFDF4),
-        foregroundColor: const Color(0xFF0B3C6A),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(32),
-          side: BorderSide(color: Colors.grey[300]!, width: 1),
+      child: TextField(
+        controller: widget.controller,
+        focusNode: _focusNode,
+        obscureText: widget.obscureText,
+        keyboardType: widget.keyboardType,
+        style: const TextStyle(color: Color(0xFF0B3C6A)),
+        decoration: InputDecoration(
+          labelText: widget.label,
+          labelStyle: TextStyle(color: _isFocused ? widget.neonColor : Colors.grey[600]),
+          prefixIcon: Icon(widget.icon, color: _isFocused ? widget.neonColor : Colors.grey[400]),
+          suffixIcon: widget.suffixIcon,
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: 0.9),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.transparent)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: widget.neonColor, width: 2)),
         ),
-        elevation: 0,
       ),
     );
   }

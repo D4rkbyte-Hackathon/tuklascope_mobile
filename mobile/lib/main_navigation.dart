@@ -89,9 +89,11 @@ class MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
+    final activeNeonColor = const Color(0xFFFF9800); // Your signature color
 
     return MainNavScope(
       goToTab: goToTab,
+      isNavBarVisible: _isNavBarVisible, // <-- ADD THIS LINE HERE
       child: Scaffold(
         extendBody: true,
         backgroundColor: Colors.transparent,
@@ -126,16 +128,24 @@ class MainNavigationState extends State<MainNavigation> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(35),
                     child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                       child: Container(
                         height: 70,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0A233B).withOpacity(0.75),
+                          color: const Color(0xFF051325).withOpacity(0.85), 
                           borderRadius: BorderRadius.circular(35),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.15),
+                            color: Colors.white.withOpacity(0.08), 
                             width: 1,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: activeNeonColor.withOpacity(0.15),
+                              blurRadius: 30,
+                              spreadRadius: -5,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
@@ -161,7 +171,8 @@ class MainNavigationState extends State<MainNavigation> {
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isSelected = _currentIndex == index;
     final activeColor = const Color(0xFFFF9800); 
-    final inactiveColor = const Color(0xFFE0E0E0).withOpacity(0.5);
+    final activeTextColor = const Color(0xFFFFFDF4); // The new text color
+    final inactiveColor = const Color(0xFFE0E0E0).withOpacity(0.4); 
 
     Widget content = Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -171,7 +182,7 @@ class MainNavigationState extends State<MainNavigation> {
           color: isSelected ? activeColor : inactiveColor, 
           size: isSelected ? 26 : 24,
           shadows: isSelected 
-              ? [BoxShadow(color: activeColor.withOpacity(0.5), blurRadius: 8)] 
+              ? [BoxShadow(color: activeColor.withOpacity(0.8), blurRadius: 12)] 
               : null, 
         ),
         
@@ -181,11 +192,14 @@ class MainNavigationState extends State<MainNavigation> {
             child: Text(
               label,
               style: TextStyle(
-                color: activeColor,
+                color: activeTextColor, // Applied new text color
                 fontSize: 10, 
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(color: activeTextColor.withOpacity(0.6), blurRadius: 6) // Glowing with the new text color
+                ]
               ),
-            ).animate().fade(duration: 200.ms).slideY(begin: -0.2, end: 0),
+            ).animate().fade(duration: 200.ms).slideY(begin: 0.2, end: 0),
           ),
       ],
     );
@@ -203,7 +217,57 @@ class MainNavigationState extends State<MainNavigation> {
         child: Container(
           color: Colors.transparent,
           height: double.infinity,
-          child: content,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              // --- THE GLOWING ORB BACKDROP ---
+              if (isSelected)
+                Container(
+                  width: 35,
+                  height: 35,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: activeColor.withOpacity(0.2),
+                        blurRadius: 15,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                ).animate().scale(duration: 400.ms, curve: Curves.easeOutCubic),
+
+              // --- THE NEON BOTTOM BORDER INDICATOR ---
+              if (isSelected)
+                Positioned(
+                  bottom: 5, // Moved to the bottom
+                  child: Container(
+                    width: 30,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: activeColor,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(5), // Curves on top now
+                        topRight: Radius.circular(5),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: activeColor,
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ).animate()
+                   .slideY(begin: 1, end: 0, duration: 250.ms, curve: Curves.easeOut) // Slides up from bottom
+                   .fadeIn(),
+                ),
+
+              // The actual icon and text content
+              content,
+            ],
+          ),
         ),
       ),
     );

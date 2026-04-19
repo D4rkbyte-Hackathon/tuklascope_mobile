@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../onboarding/compass_questions_screen.dart';
-import '../../../onboarding/splash_screen.dart';
 import 'login_screen.dart';
 import '../../providers/auth_controller.dart';
 import '../../../../core/widgets/gradient_scaffold.dart';
@@ -20,61 +19,42 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _nameController = TextEditingController();
   final _cityController = TextEditingController();
   final _countryController = TextEditingController();
-
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   String? _selectedEducationLevel;
-  final List<String> _educationLevels = [
-    'Elementary',
-    'High School',
-    'Senior High School',
-    'Others',
-  ];
+  final List<String> _educationLevels = ['Elementary', 'High School', 'Senior High School', 'Others'];
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+  
+  // 🚀 Added this state variable to track when the modal is actively open
+  bool _isDropdownOpen = false; 
+
+  final Color primaryNeon = const Color(0xFFFF6B2C); // Using the orange theme for Signup to contrast Login
 
   Future<void> _signUp() async {
-    // Validate name
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter your name')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter your name')));
       return;
     }
-
-    // Validate email and password
-    if (_emailController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an email and password')),
-      );
+    if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter an email and password')));
       return;
     }
-
-    // Validate password length
     if (_passwordController.text.trim().length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be at least 6 characters')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password must be at least 6 characters')));
       return;
     }
-
     if (_selectedEducationLevel == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select your educational level')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select your educational level')));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      // 1. Delegate signup to the AuthController
-      final authResponse = await ref
-          .read(authControllerProvider.notifier)
-          .signUpWithEmailPassword(
+      final authResponse = await ref.read(authControllerProvider.notifier).signUpWithEmailPassword(
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
@@ -82,72 +62,136 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       final user = authResponse.user;
 
       if (user != null) {
-        // 2. The DB Trigger created the raw profile. Now we UPDATE it with the extra info!
-        // We use .update().eq() instead of .upsert() to respect the strict Row Level Security policies.
-        await Supabase.instance.client
-            .from('profiles')
-            .update({
-              'full_name': _nameController.text.trim(),
-              'city': _cityController.text.trim(),
-              'country': _countryController.text.trim(),
-              'education_level': _selectedEducationLevel,
-            })
-            .eq('id', user.id);
+        await Supabase.instance.client.from('profiles').update({
+          'full_name': _nameController.text.trim(),
+          'city': _cityController.text.trim(),
+          'country': _countryController.text.trim(),
+          'education_level': _selectedEducationLevel,
+        }).eq('id', user.id);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account created successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          // 🚀 TECH LEAD FIX: We MUST route new users to the Compass Quiz!
-          // If we send them to the AuthGate/SplashScreen, it will skip onboarding.
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const CompassQuestionsScreen(),
-            ),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created successfully!'), backgroundColor: Colors.green));
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const CompassQuestionsScreen()));
         }
       }
     } on AuthException catch (e) {
       if (mounted) {
         String errorMessage = e.message;
-
-        // Check if email already exists
-        if (errorMessage.toLowerCase().contains('user') ||
-            errorMessage.toLowerCase().contains('already') ||
-            errorMessage.toLowerCase().contains('email')) {
-          // Clear the email field for user convenience
+        if (errorMessage.toLowerCase().contains('user') || errorMessage.toLowerCase().contains('already') || errorMessage.toLowerCase().contains('email')) {
           _emailController.clear();
-          errorMessage =
-              'This email is already registered. Please use a different email or try logging in.';
+          errorMessage = 'This email is already registered. Please try logging in.';
         }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage), backgroundColor: Colors.red));
       }
     } catch (e) {
-      debugPrint("🚨 SIGNUP ERROR: $e"); // Fixed print warning
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red));
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Route _createAnimatedRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(-1.0, 0.0); 
+        const end = Offset.zero;
+        const curve = Curves.easeOutExpo;
+        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        var fadeTween = Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeIn));
+
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: FadeTransition(opacity: animation.drive(fadeTween), child: child),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 600),
+    );
+  }
+
+  // --- 🚀 UPDATED: Now tracks open/close state via await ---
+  void _showEducationLevelPicker() async {
+    // 1. Turn on the glow
+    setState(() => _isDropdownOpen = true);
+
+    // 2. Wait for the modal to close
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent, 
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFFFFDF4), 
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const Text(
+                    'Select Educational Level',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0B3C6A),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  ..._educationLevels.map((level) {
+                    final isSelected = _selectedEducationLevel == level;
+                    return ListTile(
+                      onTap: () {
+                        setState(() {
+                          _selectedEducationLevel = level;
+                        });
+                        Navigator.pop(context); 
+                      },
+                      title: Text(
+                        level,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                          color: isSelected ? primaryNeon : const Color(0xFF0B3C6A),
+                        ),
+                      ).animate(target: isSelected ? 1 : 0).scaleXY(end: 1.05, duration: 200.ms),
+                      
+                      trailing: isSelected
+                          ? Icon(Icons.check_circle_rounded, color: primaryNeon)
+                              .animate().scale(curve: Curves.easeOutBack, duration: 300.ms)
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+                    );
+                  }),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        ).animate().slideY(begin: 0.2, end: 0, duration: 300.ms, curve: Curves.easeOutCubic);
+      },
+    );
+
+    // 3. Turn off the glow when the modal is completely closed
+    if (mounted) {
+      setState(() => _isDropdownOpen = false);
     }
   }
 
@@ -167,236 +211,97 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 32.0,
-              vertical: 24.0,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                      'Create Account',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0B3C6A),
-                      ),
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 100.ms)
-                    .slideY(
-                      begin: -0.3,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
-                      delay: 100.ms,
-                    ),
+                  'Create Account',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0B3C6A),
+                    shadows: [Shadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
+                  ),
+                ).animate().fade(duration: 600.ms, delay: 100.ms).slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
 
                 const SizedBox(height: 32),
 
-                _buildCustomTextField(
-                      controller: _nameController,
-                      label: 'Name',
-                      icon: Icons.person_outline,
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 150.ms)
-                    .slideY(
-                      begin: -0.3,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
-                      delay: 150.ms,
-                    ),
-
+                NeonTextField(controller: _nameController, label: 'Name', icon: Icons.person_outline, neonColor: primaryNeon)
+                    .animate().fade(duration: 600.ms, delay: 150.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
                 const SizedBox(height: 16),
 
-                _buildCustomTextField(
-                      controller: _cityController,
-                      label: 'City (Optional)',
-                      icon: Icons.location_city_outlined,
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 200.ms)
-                    .slideY(
-                      begin: -0.3,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
-                      delay: 200.ms,
-                    ),
-
+                NeonTextField(controller: _cityController, label: 'City (Optional)', icon: Icons.location_city_outlined, neonColor: primaryNeon)
+                    .animate().fade(duration: 600.ms, delay: 200.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
                 const SizedBox(height: 16),
 
-                _buildCustomTextField(
-                      controller: _countryController,
-                      label: 'Country (Optional)',
-                      icon: Icons.public_outlined,
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 250.ms)
-                    .slideY(
-                      begin: -0.3,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
-                      delay: 250.ms,
-                    ),
-
+                NeonTextField(controller: _countryController, label: 'Country (Optional)', icon: Icons.public_outlined, neonColor: primaryNeon)
+                    .animate().fade(duration: 600.ms, delay: 250.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
                 const SizedBox(height: 16),
 
-                _buildCustomDropdown(
-                      label: 'Educational Level',
-                      icon: Icons.school_outlined,
-                      value: _selectedEducationLevel,
-                      items: _educationLevels,
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedEducationLevel = newValue;
-                        });
-                      },
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 300.ms)
-                    .slideY(
-                      begin: -0.3,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
-                      delay: 300.ms,
-                    ),
-
+                _buildNeonEducationSelector()
+                    .animate().fade(duration: 600.ms, delay: 300.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
                 const SizedBox(height: 16),
 
-                _buildCustomTextField(
-                      controller: _emailController,
-                      label: 'Email',
-                      icon: Icons.email_outlined,
-                      keyboardType: TextInputType.emailAddress,
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 350.ms)
-                    .slideY(
-                      begin: -0.3,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
-                      delay: 350.ms,
-                    ),
-
+                NeonTextField(controller: _emailController, label: 'Email', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress, neonColor: primaryNeon)
+                    .animate().fade(duration: 600.ms, delay: 350.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
                 const SizedBox(height: 16),
 
-                _buildCustomTextField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      icon: Icons.lock_outline,
-                      obscureText: _obscurePassword,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: Colors.grey[600],
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 400.ms)
-                    .slideY(
-                      begin: -0.3,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
-                      delay: 400.ms,
-                    ),
+                NeonTextField(
+                  controller: _passwordController,
+                  label: 'Password',
+                  icon: Icons.lock_outline,
+                  obscureText: _obscurePassword,
+                  neonColor: primaryNeon,
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey[600]),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ).animate().fade(duration: 600.ms, delay: 400.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
 
                 const SizedBox(height: 32),
 
                 if (_isLoading)
-                  const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF64B5F6)),
-                  )
+                  Center(child: CircularProgressIndicator(color: primaryNeon))
                 else
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      ElevatedButton(
-                            onPressed: _signUp,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF64B5F6),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(32),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: const Text(
-                              'Sign Up',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                          .animate()
-                          .fade(duration: 600.ms, delay: 450.ms)
-                          .slideY(
-                            begin: -0.3,
-                            end: 0,
-                            duration: 600.ms,
-                            curve: Curves.easeOutCubic,
-                            delay: 450.ms,
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(32),
+                          boxShadow: [
+                            BoxShadow(color: primaryNeon.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5)),
+                          ],
+                          gradient: const LinearGradient(colors: [Color(0xFFFF9800), Color(0xFFFF6B2C)]),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _signUp,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
                           ),
+                          child: const Text('Sign Up', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                        ),
+                      ).animate().fade(duration: 600.ms, delay: 450.ms),
 
                       const SizedBox(height: 24),
 
                       Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "Already have an account? ",
-                                style: TextStyle(
-                                  color: Colors.grey[700],
-                                  fontSize: 15,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const LoginScreen(),
-                                    ),
-                                  );
-                                },
-                                child: const Text(
-                                  'Log In',
-                                  style: TextStyle(
-                                    color: Color(0xFFFF6B2C),
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                          .animate()
-                          .fade(duration: 600.ms, delay: 550.ms)
-                          .slideY(
-                            begin: -0.3,
-                            end: 0,
-                            duration: 600.ms,
-                            curve: Curves.easeOutCubic,
-                            delay: 550.ms,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text("Already have an account? ", style: TextStyle(color: Colors.grey[700], fontSize: 15)),
+                          GestureDetector(
+                            onTap: () => Navigator.pushReplacement(context, _createAnimatedRoute(const LoginScreen())),
+                            child: const Text('Log In', style: TextStyle(color: Color(0xFF64B5F6), fontSize: 15, fontWeight: FontWeight.bold)),
                           ),
+                        ],
+                      ).animate().fade(duration: 600.ms, delay: 550.ms),
                     ],
                   ),
               ],
@@ -407,68 +312,44 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
-  Widget _buildCustomTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool obscureText = false,
-    TextInputType keyboardType = TextInputType.text,
-    Widget? suffixIcon,
-  }) {
-    return TextField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      style: const TextStyle(color: Color(0xFF0B3C6A)),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: Colors.grey[600]),
-        prefixIcon: Icon(icon, color: const Color(0xFF64B5F6)),
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.8), // Fixed deprecation
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 1.5),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(32),
-          borderSide: const BorderSide(color: Color(0xFFFF6B2C), width: 2.5),
-        ),
-      ),
-    );
-  }
+  // --- 🚀 UPDATED: Logic separated for "populated" vs "focused" ---
+  Widget _buildNeonEducationSelector() {
+    bool isPopulated = _selectedEducationLevel != null;
+    bool isFocused = _isDropdownOpen; // Now exclusively tied to the modal being open
 
-  Widget _buildCustomDropdown({
-    required String label,
-    required IconData icon,
-    required String? value,
-    required List<String> items,
-    required void Function(String?) onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      items: items.map((String item) {
-        return DropdownMenuItem<String>(
-          value: item,
-          child: Text(item, style: const TextStyle(color: Color(0xFF0B3C6A))),
-        );
-      }).toList(),
-      onChanged: onChanged,
-      icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF64B5F6)),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: Colors.grey[600]),
-        prefixIcon: Icon(icon, color: const Color(0xFF64B5F6)),
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.8), // Fixed deprecation
-        enabledBorder: OutlineInputBorder(
+    return GestureDetector(
+      onTap: _showEducationLevelPicker,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18), 
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF64B5F6), width: 1.5),
+          // Glow/Border is only active when isFocused is TRUE
+          border: Border.all(
+            color: isFocused ? primaryNeon : Colors.transparent,
+            width: isFocused ? 2.0 : 0.0,
+          ),
+          boxShadow: isFocused
+              ? [BoxShadow(color: primaryNeon.withValues(alpha: 0.2), blurRadius: 15, offset: const Offset(0, 4))]
+              : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(32),
-          borderSide: const BorderSide(color: Color(0xFFFF6B2C), width: 2.5),
+        child: Row(
+          children: [
+            // Icon stays orange when focused, otherwise goes grey
+            Icon(Icons.school_outlined, color: isFocused ? primaryNeon : Colors.grey[400]),
+            const SizedBox(width: 12),
+            Text(
+              _selectedEducationLevel ?? 'Educational Level',
+              style: TextStyle(
+                fontSize: 16,
+                // Text stays Dark Blue if they made a selection, Grey if empty
+                color: isPopulated ? const Color(0xFF0B3C6A) : Colors.grey[600],
+              ),
+            ),
+            const Spacer(),
+            Icon(Icons.arrow_drop_down_rounded, color: isFocused ? primaryNeon : Colors.grey[400], size: 28),
+          ],
         ),
       ),
     );
