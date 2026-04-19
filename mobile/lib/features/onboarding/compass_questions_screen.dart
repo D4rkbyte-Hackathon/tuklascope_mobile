@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/widgets/gradient_scaffold.dart';
@@ -171,37 +172,33 @@ class CompassQuestionsScreen extends StatefulWidget {
 }
 
 class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
-  // TODO: Replace this with the user's actual education level from Riverpod/Supabase
   final String _userEducationLevel = 'Others'; 
-  
   late final List<CompassQuestion> _activeQuestions;
   final Map<int, CompassOption> _selectedAnswers = {};
+
+  final Color _neonOrange = const Color(0xFFFF6B2C);
+  final Color _neonBlue = const Color(0xFF64B5F6);
+  final Color _darkBlue = const Color(0xFF0B3C6A);
 
   @override
   void initState() {
     super.initState();
-    // Default to 'Others' if the specific level isn't found or is Senior High School (which shares 'Others')
     _activeQuestions = _questionBanks[_userEducationLevel] ?? _questionBanks['Others']!;
   }
 
   bool get _isAllAnswered => _selectedAnswers.length == _activeQuestions.length;
+  double get _progress => _selectedAnswers.length / _activeQuestions.length;
 
   void _submitAnswers() {
     if (_isAllAnswered) {
-      // 1. Initialize scores
       Map<Affinity, int> scores = {
-        Affinity.stem: 0,
-        Affinity.abm: 0,
-        Affinity.humss: 0,
-        Affinity.tvl: 0,
+        Affinity.stem: 0, Affinity.abm: 0, Affinity.humss: 0, Affinity.tvl: 0,
       };
 
-      // 2. Tally points
       for (var option in _selectedAnswers.values) {
         scores[option.affinity] = (scores[option.affinity] ?? 0) + 1;
       }
 
-      // 3. Convert to percentages (0.0 to 1.0)
       int totalQuestions = _activeQuestions.length;
       Map<Affinity, double> percentages = {
         Affinity.stem: scores[Affinity.stem]! / totalQuestions,
@@ -210,7 +207,6 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
         Affinity.tvl: scores[Affinity.tvl]! / totalQuestions,
       };
 
-      // 4. Find the top affinity
       Affinity topAffinity = Affinity.stem;
       double highestScore = -1;
       percentages.forEach((affinity, score) {
@@ -220,14 +216,17 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
         }
       });
 
-      // 5. Navigate and pass data
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => CompassResultsScreen(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => CompassResultsScreen(
             topAffinity: topAffinity,
             affinityScores: percentages,
           ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 800),
         ),
       );
     }
@@ -239,80 +238,112 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false, // REMOVED BACK BUTTON
-        centerTitle: true, // CENTRALIZED TITLE
+        automaticallyImplyLeading: false, 
+        centerTitle: true, 
         title: RichText(
           text: const TextSpan(
-            style: TextStyle(
-              fontSize: 24, // SLIGHTLY BIGGER
-              fontWeight: FontWeight.w900,
-              fontFamily: 'Roboto',
-            ),
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, fontFamily: 'Roboto'),
             children: [
               TextSpan(text: 'Tuklascope ', style: TextStyle(color: Color(0xFF0B3C6A))),
               TextSpan(text: 'Compass', style: TextStyle(color: Color(0xFFFF6B2C))),
             ],
           ),
-        )
-        .animate()
-        .fade(duration: 600.ms)
-        .slideY(begin: -0.2, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(24.0),
-              physics: const BouncingScrollPhysics(),
-              itemCount: _activeQuestions.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 32),
-              itemBuilder: (context, questionIndex) {
-                return _buildQuestionCard(questionIndex)
-                    .animate()
-                    .fade(duration: 600.ms, delay: (100 * questionIndex).ms) // STAGGERED ANIMATION
-                    .slideY(begin: -0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (100 * questionIndex).ms);
-              },
-            ),
+        ).animate().fade(duration: 600.ms).slideY(begin: -0.2, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
+        
+        // --- UX PROGRESS BAR (Now gradients from Blue to Orange) ---
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(6.0),
+          child: Stack(
+            children: [
+              Container(height: 4, width: double.infinity, color: Colors.white.withValues(alpha: 0.2)),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeOutCubic,
+                height: 4,
+                width: MediaQuery.of(context).size.width * _progress,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [_neonBlue, _neonOrange],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: _neonBlue.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 1),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
+        ),
+      ),
+      body: Stack(
+        children: [
+          // MAIN LIST OF QUESTIONS
+          ListView.separated(
+            // 🚀 FIX: Made padding dynamic and increased clearance to 160
+            padding: EdgeInsets.only(
+              top: 24.0, 
+              left: 24.0, 
+              right: 24.0, 
+              bottom: MediaQuery.paddingOf(context).bottom + 120.0, 
             ),
-            child: SafeArea(
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isAllAnswered ? _submitAnswers : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF9800),
-                    disabledBackgroundColor: Colors.grey[300],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: _isAllAnswered ? 4 : 0,
+            physics: const BouncingScrollPhysics(),
+            itemCount: _activeQuestions.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 32),
+            itemBuilder: (context, questionIndex) {
+              return _buildQuestionCard(questionIndex)
+                  .animate()
+                  .fade(duration: 600.ms, delay: (100 * questionIndex).ms) 
+                  .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (100 * questionIndex).ms);
+            },
+          ),
+          
+          // --- UI: FLOATING GLASSMORPHIC SUBMIT BAR (Kept this as glass since it's static and doesn't lag) ---
+          Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Container(
+                  padding: EdgeInsets.only(
+                    left: 24.0, right: 24.0, top: 20.0,
+                    bottom: MediaQuery.of(context).padding.bottom + 20.0,
                   ),
-                  child: Text(
-                    _isAllAnswered ? 'Discover Your Path' : 'Answer all to proceed',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: _isAllAnswered ? Colors.white : Colors.grey[500],
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.3))),
+                  ),
+                  child: SizedBox(
+                    height: 56,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: _isAllAnswered ? [
+                          BoxShadow(color: _neonOrange.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5))
+                        ] : [],
+                        gradient: LinearGradient(
+                          colors: _isAllAnswered 
+                              ? [const Color(0xFFFF9800), _neonOrange]
+                              : [Colors.grey[400]!, Colors.grey[500]!],
+                        ),
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _isAllAnswered ? _submitAnswers : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: Text(
+                          _isAllAnswered ? 'Discover Your Path' : 'Answer ${_activeQuestions.length - _selectedAnswers.length} more to proceed',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.1),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              )
-              .animate()
-              .fade(duration: 600.ms, delay: 500.ms)
-              .slideY(begin: 0.5, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: 500.ms),
+                ).animate().fade(duration: 600.ms, delay: 500.ms).slideY(begin: 0.5, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
+              ),
             ),
           ),
         ],
@@ -320,41 +351,64 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
     );
   }
 
+  // --- UI: PERFORMANCE-FRIENDLY QUESTION CARD ---
+  // Removed BackdropFilter to completely eliminate scroll lag!
   Widget _buildQuestionCard(int questionIndex) {
     final questionData = _activeQuestions[questionIndex];
+    final bool isAnswered = _selectedAnswers.containsKey(questionIndex);
+    
+    // Cards glow blue when answered to balance the color palette
+    final Color borderColor = isAnswered ? _neonBlue : Colors.white.withValues(alpha: 0.5);
+    final double blurIntensity = isAnswered ? 15.0 : 5.0;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withValues(alpha: 0.95), // Solid highly-opaque white instead of blur
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: borderColor,
+          width: isAnswered ? 2.0 : 1.0,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: isAnswered ? _neonBlue.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.05),
+            blurRadius: blurIntensity,
+            spreadRadius: isAnswered ? 2 : 0,
+            offset: const Offset(0, 4),
           )
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'QUESTION ${questionIndex + 1} OF ${_activeQuestions.length}',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFFF9800),
-              letterSpacing: 1.2,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'QUESTION ${questionIndex + 1} OF ${_activeQuestions.length}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  // Kept Orange here for contrast against the dark blue title
+                  color: isAnswered ? _neonOrange : _darkBlue.withValues(alpha: 0.6),
+                  letterSpacing: 1.2,
+                ),
+              ),
+              if (isAnswered)
+                Icon(Icons.check_circle_rounded, color: _neonOrange, size: 20)
+                    .animate().scale(curve: Curves.easeOutBack),
+            ],
           ),
           const SizedBox(height: 12),
           Text(
             questionData.question,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF0B3C6A),
+              color: _darkBlue,
               height: 1.3,
             ),
           ),
@@ -367,8 +421,8 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
     );
   }
 
+  // --- UI: SLEEK OPTION BUTTON (Now Neon Blue) ---
   Widget _buildOptionButton(int questionIndex, CompassOption option, int optionIndex) {
-    // Check if the currently selected option for this question matches this option exactly
     final bool isSelected = _selectedAnswers[questionIndex] == option;
     final String optionLetter = String.fromCharCode(65 + optionIndex);
 
@@ -377,33 +431,37 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
       child: InkWell(
         onTap: () {
           setState(() {
-            _selectedAnswers[questionIndex] = option; // Save the actual option object!
+            _selectedAnswers[questionIndex] = option; 
           });
         },
         borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 300),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFFF9800).withOpacity(0.1) : Colors.transparent,
+            color: isSelected ? _neonBlue.withValues(alpha: 0.1) : Colors.transparent,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? const Color(0xFFFF9800) : Colors.grey[300]!,
+              color: isSelected ? _neonBlue : Colors.grey[300]!,
               width: isSelected ? 2 : 1.5,
             ),
           ),
           child: Row(
             children: [
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected ? const Color(0xFFFF9800) : Colors.transparent,
+                  color: isSelected ? _neonBlue : Colors.transparent,
                   border: Border.all(
-                    color: isSelected ? const Color(0xFFFF9800) : Colors.grey[400]!,
+                    color: isSelected ? _neonBlue : Colors.grey[400]!,
                     width: 1.5,
                   ),
+                  boxShadow: isSelected ? [
+                    BoxShadow(color: _neonBlue.withValues(alpha: 0.5), blurRadius: 8)
+                  ] : [],
                 ),
                 child: Center(
                   child: Text(
@@ -421,8 +479,8 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                   option.text,
                   style: TextStyle(
                     fontSize: 15,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? const Color(0xFF0B3C6A) : Colors.grey[800],
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? _darkBlue : Colors.grey[800],
                     height: 1.4,
                   ),
                 ),
