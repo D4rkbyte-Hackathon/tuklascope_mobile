@@ -654,6 +654,258 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     );
   }
 
+  // 🚀 NEW FUNCTION: Edit city dialog
+  Future<void> _showEditCityDialog(String currentCity) async {
+    final TextEditingController cityController = TextEditingController(
+      text: currentCity,
+    );
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit City', style: TextStyle(color: _navy)),
+          content: TextField(
+            controller: cityController,
+            decoration: const InputDecoration(
+              hintText: 'Enter your city',
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.orange),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              onPressed: () async {
+                final newCity = cityController.text.trim();
+                if (newCity != currentCity) {
+                  try {
+                    final userId =
+                        Supabase.instance.client.auth.currentUser?.id;
+                    if (userId != null) {
+                      await Supabase.instance.client
+                          .from('profiles')
+                          .update({'city': newCity})
+                          .eq('id', userId);
+
+                      ref.invalidate(appUserProvider);
+
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('City updated successfully!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error updating city: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                } else {
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 🚀 NEW FUNCTION: Edit country dialog
+  Future<void> _showEditCountryDialog(String currentCountry) async {
+    final TextEditingController countryController = TextEditingController(
+      text: currentCountry,
+    );
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Country', style: TextStyle(color: _navy)),
+          content: TextField(
+            controller: countryController,
+            decoration: const InputDecoration(
+              hintText: 'Enter your country',
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.orange),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              onPressed: () async {
+                final newCountry = countryController.text.trim();
+                if (newCountry != currentCountry) {
+                  try {
+                    final userId =
+                        Supabase.instance.client.auth.currentUser?.id;
+                    if (userId != null) {
+                      await Supabase.instance.client
+                          .from('profiles')
+                          .update({'country': newCountry})
+                          .eq('id', userId);
+
+                      ref.invalidate(appUserProvider);
+
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Country updated successfully!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error updating country: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                } else {
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 🚀 NEW FUNCTION: Edit education level dialog with better-styled dropdown
+  Future<void> _showEditEducationLevelDialog(String currentLevel) async {
+    final List<String> educationLevels = [
+      'Elementary',
+      'High School',
+      'Senior High School',
+    ];
+    String? selectedLevel = currentLevel.isNotEmpty && educationLevels.contains(currentLevel)
+        ? currentLevel
+        : null;
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Education Level', style: TextStyle(color: _navy)),
+              content: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.orange, width: 2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    hint: const Text(
+                      'Select your education level',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    value: selectedLevel,
+                    icon: const Icon(Icons.arrow_drop_down, color: Colors.orange),
+                    items: educationLevels.map((String level) {
+                      return DropdownMenuItem<String>(
+                        value: level,
+                        child: Text(
+                          level,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: _navy,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedLevel = newValue;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+                  onPressed: selectedLevel != null && selectedLevel != currentLevel
+                      ? () async {
+                          try {
+                            final userId =
+                                Supabase.instance.client.auth.currentUser?.id;
+                            if (userId != null) {
+                              await Supabase.instance.client
+                                  .from('profiles')
+                                  .update({'education_level': selectedLevel})
+                                  .eq('id', userId);
+
+                              ref.invalidate(appUserProvider);
+
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Education level updated successfully!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error updating education level: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      : null,
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   // 🚀 NEW FUNCTION: Change password dialog
   Future<void> _showChangePasswordDialog() async {
     // Check if user is a Google sign-in user
@@ -985,11 +1237,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
         final profile = appUser.profile;
         final currentName = profile.fullName ?? 'Explorer';
+        final currentCity = profile.city ?? '';
+        final currentCountry = profile.country ?? '';
+        final currentEducationLevel = profile.educationLevel ?? 'Not set';
         final email =
             Supabase.instance.client.auth.currentUser?.email ?? 'No email';
 
         return ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
           physics: const BouncingScrollPhysics(),
           children: [
             // Avatar Section
@@ -1036,7 +1291,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
               ),
             ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 16),
 
             // Edit Info Card
             Container(
@@ -1083,6 +1338,69 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           ),
                         ),
                       ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.location_on_outlined, color: _navy),
+                        title: const Text(
+                          'City',
+                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                        ),
+                        subtitle: Text(
+                          currentCity.isNotEmpty ? currentCity : 'Not set',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.edit,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                        onTap: () => _showEditCityDialog(currentCity),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.public_outlined, color: _navy),
+                        title: const Text(
+                          'Country',
+                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                        ),
+                        subtitle: Text(
+                          currentCountry.isNotEmpty ? currentCountry : 'Not set',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.edit,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                        onTap: () => _showEditCountryDialog(currentCountry),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.school_outlined, color: _navy),
+                        title: const Text(
+                          'Education Level',
+                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                        ),
+                        subtitle: Text(
+                          currentEducationLevel,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.edit,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                        onTap: () => _showEditEducationLevelDialog(currentEducationLevel),
+                      ),
                     ],
                   ),
                 )
@@ -1090,7 +1408,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                 .fade(duration: 400.ms, delay: 100.ms)
                 .slideY(begin: 0.1),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 16),
           ],
         );
       },
