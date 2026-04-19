@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:tuklascope_mobile/core/services/discovery_service.dart';
+import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart'; // 🚀 Added to access navbar state
 import 'teaser_doors_screen.dart';
 
 class LiveFeedScreen extends StatefulWidget {
@@ -83,7 +84,6 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
       if (!mounted) return;
       showDialog(
         context: context,
-        // 🚀 FIX: Used withValues for opacity
         barrierColor: Colors.black.withValues(alpha: 0.7),
         barrierDismissible:
             false, // Prevents them from tapping outside to cancel
@@ -108,6 +108,13 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
         body: Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
+
+    // 🚀 1. Grab the visibility state from the inherited scope
+    final navScope = MainNavScope.maybeOf(context);
+    final isNavBarVisible = navScope?.isNavBarVisible ?? true; 
+    
+    // 🚀 2. Calculate dynamic padding (90 gives clearance for 70px navbar + padding)
+    final extraBottomPadding = isNavBarVisible ? 100.0 : 20.0;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -148,7 +155,6 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                     left: 20,
                     right: 20,
                   ),
-                  // 🚀 FIX: Used withValues for opacity
                   color: Colors.black.withValues(alpha: 0.4),
                   child: Row(
                     children: [
@@ -189,16 +195,17 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
             child: ClipRect(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                child: Container(
+                // 🚀 FIX: Swapped to AnimatedContainer to react to navbar
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 400), // Matches navbar speed
+                  curve: Curves.easeOutQuint, // Matches navbar curve
                   padding: EdgeInsets.only(
                     top: 20,
-                    bottom:
-                        MediaQuery.of(context).padding.bottom +
-                        30, // Safe area for bottom swipe bar
+                    // 🚀 FIX: Added dynamic extra padding here
+                    bottom: MediaQuery.of(context).padding.bottom + extraBottomPadding, 
                     left: 40,
                     right: 40,
                   ),
-                  // 🚀 FIX: Used withValues for opacity
                   color: Colors.black.withValues(alpha: 0.5),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -293,8 +300,8 @@ class _ScanningModalState extends State<ScanningModal> {
         context,
         MaterialPageRoute(
           builder: (context) => TeaserDoorsScreen(
-            aiData: aiResult, // 🚀 FIX: Passed aiResult instead of 'result'
-            imagePath: widget.imageFile.path, // 🚀 FIX: Used widget.imageFile
+            aiData: aiResult, 
+            imagePath: widget.imageFile.path, 
           ),
         ),
       );
@@ -329,7 +336,6 @@ class _ScanningModalState extends State<ScanningModal> {
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              // 🚀 FIX: Used withValues for opacity
               color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 20,
               spreadRadius: 5,
@@ -356,7 +362,6 @@ class _ScanningModalState extends State<ScanningModal> {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    // 🚀 FIX: Used withValues for opacity
                     color: const Color(0xFF0B3C6A).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
