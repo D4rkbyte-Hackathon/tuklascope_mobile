@@ -8,6 +8,7 @@ import '../../core/widgets/gradient_scaffold.dart';
 import '../auth/providers/auth_controller.dart';
 import '../auth/services/supabase_auth_service.dart';
 import 'pathfinder_blueprint_sheet.dart';
+import '../../core/theme/theme_provider.dart';
 
 import '../auth/presentation/widgets/auth_gate.dart';
 
@@ -1431,15 +1432,33 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
           ),
           child: Column(
             children: [
-              SwitchListTile(
-                secondary: const Icon(Icons.dark_mode, color: Colors.orange),
-                title: const Text(
-                  'Dark Mode',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                value: false,
-                activeColor: Colors.orange,
-                onChanged: (bool value) {},
+              ValueListenableBuilder<ThemeMode>(
+                valueListenable: appThemeNotifier,
+                builder: (context, currentMode, child) {
+                  // Check if the current mode is dark to determine if the switch is ON (true) or OFF (false)
+                  final isDarkMode = currentMode == ThemeMode.dark;
+
+                  return SwitchListTile(
+                    secondary: Icon(
+                      isDarkMode ? Icons.dark_mode : Icons.light_mode, // Swaps icon based on mode!
+                      color: Theme.of(context).colorScheme.primary, // Uses your theme's orange
+                    ),
+                    title: const Text(
+                      'Dark Mode',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    value: isDarkMode, // Binds the switch state to our global notifier
+                    activeThumbColor: Theme.of(context).colorScheme.primary,
+                    onChanged: (bool value) {
+                      // When toggled, update the global theme notifier
+                      if (value) {
+                        appThemeNotifier.value = ThemeMode.dark;
+                      } else {
+                        appThemeNotifier.value = ThemeMode.light;
+                      }
+                    },
+                  );
+                },
               ),
               const Divider(height: 1),
               SwitchListTile(
