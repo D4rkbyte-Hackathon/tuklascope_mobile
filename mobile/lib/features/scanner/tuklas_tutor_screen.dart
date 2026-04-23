@@ -21,14 +21,6 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // Core Theme Colors
-  final Color primaryBlue = const Color(0xFF0B3C6A);
-  final Color accentOrange = const Color(0xFFFF6B2C);
-  final Color darkGreen = const Color(0xFF2E7D32);
-  final Color textLight = const Color(0xFF4A4A4A);
-  final Color bgLight = const Color(0xFFFFFDF4);
-  final Color bgDark = const Color(0xFFD9D7CE);
-
   // --- 2. CHAT STATE & PLACEHOLDERS ---
   bool _isTyping = false;
   int _aiResponseIndex = 0;
@@ -40,7 +32,7 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
 
   // The queue of placeholder responses the AI will cycle through
   final List<String> _placeholderResponses = [
-    "Notebooks is a historic Christian cross planted by Ferdinand Magellan in 1521, marking the arrival of Christianity in the Philippines.",
+    "Magellan's Cross is a historic Christian cross planted by Ferdinand Magellan in 1521, marking the arrival of Christianity in the Philippines.",
     "You can take a taxi or Grab (~₱250–₱400) or ride a bus/jeepney toward Cebu City, then walk a few minutes to the plaza where the cross is located.",
     "That's a fascinating topic! The science behind it involves a mix of physics and material properties. Would you like to dive deeper?",
     "I can help you create a learning pathway for that. Should we add it to your Kaalaman Skill Tree?",
@@ -94,20 +86,28 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache theme
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Adaptive Background Gradient
+    final List<Color> bgGradient = isDark 
+        ? const [Color(0xFF121212), Color(0xFF050505)]
+        : const [Color(0xFFFFFDF4), Color(0xFFD9D7CE)];
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: primaryBlue),
+        iconTheme: IconThemeData(color: theme.colorScheme.primary), // Themed Icon
         centerTitle: true,
         title: RichText(
           text: TextSpan(
             style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, fontFamily: 'Roboto'),
             children: [
-              TextSpan(text: 'Tuklas ', style: TextStyle(color: primaryBlue)),
-              TextSpan(text: 'Tutor', style: TextStyle(color: accentOrange)),
+              TextSpan(text: 'Tuklas ', style: TextStyle(color: theme.colorScheme.primary)), // Themed Blue
+              TextSpan(text: 'Tutor', style: TextStyle(color: theme.colorScheme.secondary)), // Themed Orange
             ],
           ),
         ),
@@ -117,7 +117,7 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [bgLight, bgDark],
+            colors: bgGradient, // Themed Background Gradient
           ),
         ),
         child: SafeArea(
@@ -134,7 +134,7 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
                   itemBuilder: (context, index) {
                     // Render the typing indicator at the very bottom
                     if (index == _messages.length && _isTyping) {
-                      return _buildTypingIndicator()
+                      return _buildTypingIndicator(theme)
                           .animate()
                           .fade(duration: 300.ms)
                           .slideY(begin: 0.2, end: 0, duration: 300.ms, curve: Curves.easeOutCubic);
@@ -142,7 +142,7 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
 
                     // Render normal messages
                     final msg = _messages[index];
-                    return _buildChatBubble(msg)
+                    return _buildChatBubble(msg, theme, isDark)
                         .animate()
                         .fade(duration: 400.ms)
                         .slideY(begin: 0.2, end: 0, duration: 400.ms, curve: Curves.easeOutCubic);
@@ -151,7 +151,7 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
               ),
 
               // --- 5. BOTTOM INPUT AREA ---
-              _buildInputArea(),
+              _buildInputArea(theme, bgGradient),
             ],
           ),
         ),
@@ -163,8 +163,11 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
   // HELPER WIDGETS
   // =========================================================================
 
-  Widget _buildChatBubble(ChatMessage message) {
+  Widget _buildChatBubble(ChatMessage message, ThemeData theme, bool isDark) {
     final isAI = message.isAI;
+
+    // Green color for user bubble border, adapting for dark/light mode
+    final userBorderColor = isDark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D32);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
@@ -172,7 +175,7 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
         mainAxisAlignment: isAI ? MainAxisAlignment.start : MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (isAI) _buildAvatar(isAI: true),
+          if (isAI) _buildAvatar(isAI: true, theme: theme),
           if (isAI) const SizedBox(width: 12),
           
           Flexible(
@@ -183,10 +186,10 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
                     ? LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [primaryBlue, accentOrange],
+                        colors: [theme.colorScheme.primary, theme.colorScheme.secondary], // Themed AI Border
                       )
                     : null,
-                color: isAI ? null : darkGreen, 
+                color: isAI ? null : userBorderColor, // Themed User Border
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(24),
                   topRight: const Radius.circular(24),
@@ -197,7 +200,7 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.colorScheme.surface, // Themed Surface Background
                   borderRadius: BorderRadius.only(
                     topLeft: const Radius.circular(23),
                     topRight: const Radius.circular(23),
@@ -210,10 +213,11 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
                   children: [
                     ShaderMask(
                       blendMode: BlendMode.srcIn,
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [Color(0xFF2B0E0E), Color(0xFF571717)], 
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+                      shaderCallback: (bounds) => LinearGradient(
+                        // Replaced hardcoded dark red with a vibrant theme-based gradient
+                        colors: [theme.colorScheme.primary, theme.colorScheme.secondary], 
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ).createShader(bounds),
                       child: Text(
                         isAI ? 'Tuklas Tutor' : 'You',
@@ -228,7 +232,7 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
                       message.text,
                       style: TextStyle(
                         fontSize: 15,
-                        color: textLight,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.9), // Themed Text
                         height: 1.4,
                       ),
                     ),
@@ -239,33 +243,33 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
           ),
 
           if (!isAI) const SizedBox(width: 12),
-          if (!isAI) _buildAvatar(isAI: false),
+          if (!isAI) _buildAvatar(isAI: false, theme: theme),
         ],
       ),
     );
   }
 
   // Simulated "Typing..." bubble
-  Widget _buildTypingIndicator() {
+  Widget _buildTypingIndicator(ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          _buildAvatar(isAI: true),
+          _buildAvatar(isAI: true, theme: theme),
           const SizedBox(width: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface, // Themed Background
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(24),
                 topRight: Radius.circular(24),
                 bottomLeft: Radius.circular(4),
                 bottomRight: Radius.circular(24),
               ),
-              border: Border.all(color: primaryBlue.withOpacity(0.3)),
+              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)), // Themed Border
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -275,14 +279,14 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    color: accentOrange,
+                    color: theme.colorScheme.secondary, // Themed Loader
                   ),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   "Typing...",
                   style: TextStyle(
-                    color: textLight,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed text
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -295,31 +299,33 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
     );
   }
 
-  Widget _buildAvatar({required bool isAI}) {
+  Widget _buildAvatar({required bool isAI, required ThemeData theme}) {
+    final color = isAI ? theme.colorScheme.primary : theme.colorScheme.secondary;
+    
     return Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isAI ? primaryBlue.withOpacity(0.1) : accentOrange.withOpacity(0.1),
-        border: Border.all(color: isAI ? primaryBlue.withOpacity(0.3) : accentOrange.withOpacity(0.3)),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Icon(
         isAI ? Icons.auto_awesome : Icons.person,
-        color: isAI ? primaryBlue : accentOrange,
+        color: color,
         size: 20,
       ),
     );
   }
 
-  Widget _buildInputArea() {
+  Widget _buildInputArea(ThemeData theme, List<Color> bgGradient) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12).copyWith(bottom: 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [bgLight, bgDark],
+          colors: bgGradient, // Blends seamlessly into the scaffold background
         ),
       ),
       child: Row(
@@ -328,28 +334,27 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
             child: Container(
               padding: const EdgeInsets.all(1.5), 
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xFFFF6B2C), Color(0xFFAC402B)], 
+                  colors: [theme.colorScheme.tertiary, theme.colorScheme.secondary], // Themed Input Border
                 ),
                 borderRadius: BorderRadius.circular(25),
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: bgLight,
+                  color: theme.colorScheme.surface, // Themed Input Background
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: TextField(
                   controller: _textController,
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _sendMessage(),
-                  // Disable input slightly while AI is typing to prevent spamming
                   enabled: !_isTyping, 
-                  style: TextStyle(color: textLight),
+                  style: TextStyle(color: theme.colorScheme.onSurface), // Themed input text
                   decoration: InputDecoration(
                     hintText: _isTyping ? 'Tuklas Tutor is replying...' : 'Ask a question...',
-                    hintStyle: TextStyle(color: textLight.withOpacity(0.5)),
+                    hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)), // Themed hint
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   ),
@@ -367,10 +372,10 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                // Gray out the button if AI is typing
+                // Themed send button states
                 colors: _isTyping 
-                    ? [Colors.grey[400]!, Colors.grey[600]!] 
-                    : [const Color(0xFF64B5F6), const Color(0xFF3171A4)], 
+                    ? [theme.colorScheme.onSurface.withValues(alpha: 0.2), theme.colorScheme.onSurface.withValues(alpha: 0.4)] 
+                    : [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.7)], 
               ),
             ),
             child: IconButton(
