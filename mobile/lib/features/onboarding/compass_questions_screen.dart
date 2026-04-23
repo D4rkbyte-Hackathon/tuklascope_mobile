@@ -176,10 +176,6 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
   late final List<CompassQuestion> _activeQuestions;
   final Map<int, CompassOption> _selectedAnswers = {};
 
-  final Color _neonOrange = const Color(0xFFFF6B2C);
-  final Color _neonBlue = const Color(0xFF64B5F6);
-  final Color _darkBlue = const Color(0xFF0B3C6A);
-
   @override
   void initState() {
     super.initState();
@@ -234,6 +230,10 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache theme for easy access
+    final neonOrange = theme.colorScheme.secondary;
+    final primaryBlue = theme.colorScheme.primary;
+
     return GradientScaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -241,21 +241,21 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
         automaticallyImplyLeading: false, 
         centerTitle: true, 
         title: RichText(
-          text: const TextSpan(
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, fontFamily: 'Roboto'),
+          text: TextSpan(
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, fontFamily: 'Roboto'),
             children: [
-              TextSpan(text: 'Tuklascope ', style: TextStyle(color: Color(0xFF0B3C6A))),
-              TextSpan(text: 'Compass', style: TextStyle(color: Color(0xFFFF6B2C))),
+              TextSpan(text: 'Tuklascope ', style: TextStyle(color: theme.colorScheme.primary)), // Themed (Blue)
+              TextSpan(text: 'Compass', style: TextStyle(color: neonOrange)), // Themed (Orange)
             ],
           ),
         ).animate().fade(duration: 600.ms).slideY(begin: -0.2, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
         
-        // --- UX PROGRESS BAR (Now gradients from Blue to Orange) ---
+        // --- UX PROGRESS BAR ---
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(6.0),
           child: Stack(
             children: [
-              Container(height: 4, width: double.infinity, color: Colors.white.withValues(alpha: 0.2)),
+              Container(height: 4, width: double.infinity, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)), // Themed background track
               AnimatedContainer(
                 duration: const Duration(milliseconds: 500),
                 curve: Curves.easeOutCubic,
@@ -263,12 +263,12 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                 width: MediaQuery.of(context).size.width * _progress,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [_neonBlue, _neonOrange],
+                    colors: [primaryBlue, neonOrange], // Themed gradients
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
                   boxShadow: [
-                    BoxShadow(color: _neonBlue.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 1),
+                    BoxShadow(color: primaryBlue.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 1), // Themed shadow
                   ],
                 ),
               ),
@@ -280,7 +280,6 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
         children: [
           // MAIN LIST OF QUESTIONS
           ListView.separated(
-            // 🚀 FIX: Made padding dynamic and increased clearance to 160
             padding: EdgeInsets.only(
               top: 24.0, 
               left: 24.0, 
@@ -291,14 +290,14 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
             itemCount: _activeQuestions.length,
             separatorBuilder: (context, index) => const SizedBox(height: 32),
             itemBuilder: (context, questionIndex) {
-              return _buildQuestionCard(questionIndex)
+              return _buildQuestionCard(questionIndex, theme)
                   .animate()
                   .fade(duration: 600.ms, delay: (100 * questionIndex).ms) 
                   .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (100 * questionIndex).ms);
             },
           ),
           
-          // --- UI: FLOATING GLASSMORPHIC SUBMIT BAR (Kept this as glass since it's static and doesn't lag) ---
+          // --- UI: FLOATING GLASSMORPHIC SUBMIT BAR ---
           Positioned(
             bottom: 0, left: 0, right: 0,
             child: ClipRect(
@@ -310,8 +309,8 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                     bottom: MediaQuery.of(context).padding.bottom + 20.0,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.3))),
+                    color: theme.colorScheme.surface.withValues(alpha: 0.15), // Themed glass layer
+                    border: Border(top: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2))), // Themed border
                   ),
                   child: SizedBox(
                     height: 56,
@@ -320,12 +319,12 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: _isAllAnswered ? [
-                          BoxShadow(color: _neonOrange.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5))
+                          BoxShadow(color: neonOrange.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5))
                         ] : [],
                         gradient: LinearGradient(
                           colors: _isAllAnswered 
-                              ? [const Color(0xFFFF9800), _neonOrange]
-                              : [Colors.grey[400]!, Colors.grey[500]!],
+                              ? [theme.colorScheme.tertiary, neonOrange] // Themed Gradient
+                              : [theme.colorScheme.onSurface.withValues(alpha: 0.4), theme.colorScheme.onSurface.withValues(alpha: 0.5)], // Themed disabled grey
                         ),
                       ),
                       child: ElevatedButton(
@@ -337,13 +336,18 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                         ),
                         child: Text(
                           _isAllAnswered ? 'Discover Your Path' : 'Answer ${_activeQuestions.length - _selectedAnswers.length} more to proceed',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.1),
+                          style: TextStyle(
+                            fontSize: 18, 
+                            fontWeight: FontWeight.bold, 
+                            color: _isAllAnswered ? theme.colorScheme.onSecondary : theme.colorScheme.surface, // Adjust text color based on state
+                            letterSpacing: 1.1
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ).animate().fade(duration: 600.ms, delay: 500.ms).slideY(begin: 0.5, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
-              ),
+                ),
+              ).animate().fade(duration: 600.ms, delay: 500.ms).slideY(begin: 0.5, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
             ),
           ),
         ],
@@ -352,13 +356,12 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
   }
 
   // --- UI: PERFORMANCE-FRIENDLY QUESTION CARD ---
-  // Removed BackdropFilter to completely eliminate scroll lag!
-  Widget _buildQuestionCard(int questionIndex) {
+  Widget _buildQuestionCard(int questionIndex, ThemeData theme) {
     final questionData = _activeQuestions[questionIndex];
     final bool isAnswered = _selectedAnswers.containsKey(questionIndex);
     
-    // Cards glow blue when answered to balance the color palette
-    final Color borderColor = isAnswered ? _neonBlue : Colors.white.withValues(alpha: 0.5);
+    // Cards glow primary blue when answered to balance the color palette
+    final Color borderColor = isAnswered ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.1); // Themed border
     final double blurIntensity = isAnswered ? 15.0 : 5.0;
 
     return AnimatedContainer(
@@ -366,7 +369,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
       curve: Curves.easeOutCubic,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95), // Solid highly-opaque white instead of blur
+        color: theme.colorScheme.surface.withValues(alpha: 0.95), // Themed Adaptive Surface (White in light, Dark Grey in dark mode)
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: borderColor,
@@ -374,7 +377,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: isAnswered ? _neonBlue.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.05),
+            color: isAnswered ? theme.colorScheme.primary.withValues(alpha: 0.2) : theme.shadowColor.withValues(alpha: 0.05), // Themed shadows
             blurRadius: blurIntensity,
             spreadRadius: isAnswered ? 2 : 0,
             offset: const Offset(0, 4),
@@ -392,13 +395,13 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  // Kept Orange here for contrast against the dark blue title
-                  color: isAnswered ? _neonOrange : _darkBlue.withValues(alpha: 0.6),
+                  // Orange when answered, secondary text color when unanswered
+                  color: isAnswered ? theme.colorScheme.secondary : theme.colorScheme.onSurface.withValues(alpha: 0.6), 
                   letterSpacing: 1.2,
                 ),
               ),
               if (isAnswered)
-                Icon(Icons.check_circle_rounded, color: _neonOrange, size: 20)
+                Icon(Icons.check_circle_rounded, color: theme.colorScheme.secondary, size: 20)
                     .animate().scale(curve: Curves.easeOutBack),
             ],
           ),
@@ -408,21 +411,21 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w900,
-              color: _darkBlue,
+              color: theme.colorScheme.onSurface, // Themed Text Color (Dark Blue/Grey -> White)
               height: 1.3,
             ),
           ),
           const SizedBox(height: 24),
           ...List.generate(questionData.options.length, (optionIndex) {
-            return _buildOptionButton(questionIndex, questionData.options[optionIndex], optionIndex);
+            return _buildOptionButton(questionIndex, questionData.options[optionIndex], optionIndex, theme);
           }),
         ],
       ),
     );
   }
 
-  // --- UI: SLEEK OPTION BUTTON (Now Neon Blue) ---
-  Widget _buildOptionButton(int questionIndex, CompassOption option, int optionIndex) {
+  // --- UI: SLEEK OPTION BUTTON ---
+  Widget _buildOptionButton(int questionIndex, CompassOption option, int optionIndex, ThemeData theme) {
     final bool isSelected = _selectedAnswers[questionIndex] == option;
     final String optionLetter = String.fromCharCode(65 + optionIndex);
 
@@ -439,10 +442,10 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
           duration: const Duration(milliseconds: 300),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isSelected ? _neonBlue.withValues(alpha: 0.1) : Colors.transparent,
+            color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : Colors.transparent, // Themed Background
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? _neonBlue : Colors.grey[300]!,
+              color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.2), // Themed Border
               width: isSelected ? 2 : 1.5,
             ),
           ),
@@ -454,13 +457,13 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                 height: 32,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected ? _neonBlue : Colors.transparent,
+                  color: isSelected ? theme.colorScheme.primary : Colors.transparent,
                   border: Border.all(
-                    color: isSelected ? _neonBlue : Colors.grey[400]!,
+                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.3), // Themed circle border
                     width: 1.5,
                   ),
                   boxShadow: isSelected ? [
-                    BoxShadow(color: _neonBlue.withValues(alpha: 0.5), blurRadius: 8)
+                    BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.5), blurRadius: 8) // Themed circle shadow
                   ] : [],
                 ),
                 child: Center(
@@ -468,7 +471,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                     optionLetter,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.white : Colors.grey[600],
+                      color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withValues(alpha: 0.6), // Themed letter text
                     ),
                   ),
                 ),
@@ -480,7 +483,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected ? _darkBlue : Colors.grey[800],
+                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.8), // Themed Option Text
                     height: 1.4,
                   ),
                 ),
