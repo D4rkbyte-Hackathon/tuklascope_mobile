@@ -22,11 +22,9 @@ class PathfinderBlueprintSheet extends StatelessWidget {
 
   const PathfinderBlueprintSheet({super.key, required this.onNavigateToScan});
 
-  static const Color _navy = Color(0xFF0D3B66);
-  static const Color _cream = Color(0xFFF9F6F0);
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache theme
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return DraggableScrollableSheet(
@@ -47,7 +45,7 @@ class PathfinderBlueprintSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(bottom: 14),
               decoration: BoxDecoration(
-                color: Colors.black26,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.2), // Themed Handle
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -57,8 +55,8 @@ class PathfinderBlueprintSheet extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 16),
             child: RichText(
               textAlign: TextAlign.center,
-              text: const TextSpan(
-                style: TextStyle(
+              text: TextSpan(
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   height: 1.25,
@@ -66,25 +64,25 @@ class PathfinderBlueprintSheet extends StatelessWidget {
                 children: [
                   TextSpan(
                     text: 'Your Blueprint:\n',
-                    style: TextStyle(color: _navy),
+                    style: TextStyle(color: theme.colorScheme.primary), // Themed Primary
                   ),
                   TextSpan(
                     text: 'From Core Principles To Career Paths',
-                    style: TextStyle(color: Colors.orange),
+                    style: TextStyle(color: theme.colorScheme.secondary), // Themed Secondary
                   ),
                 ],
               ),
             ),
           ),
           // Intro Text
-          const Padding(
-            padding: EdgeInsets.only(bottom: 10),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
             child: Text(
               'Kamusta! Your skill tree shows how your interests connect across tracks—here are field strengths and program ideas tailored for you.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.black87,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.85), // Themed Subtitle
                 height: 1.4,
               ),
             ),
@@ -97,20 +95,20 @@ class PathfinderBlueprintSheet extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.black.withValues(alpha: 0.38),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4), // Themed Timestamp
               ),
             ),
           ),
           // Strongest Fields Card
-          Padding(
-            padding: const EdgeInsets.only(bottom: 20),
-            child: const _StrongestFieldsCard(navy: _navy),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 20),
+            child: _StrongestFieldsCard(),
           ),
           // Programs
           const Padding(
             padding: EdgeInsets.only(bottom: 20),
             child: _CollegeProgramCard(
-              borderColor: Colors.green,
+              borderColor: Color(0xFF4CAF50), // Safe Green
               title: 'BS Gwapo Engineering',
               subtitle: 'Blahblah [AI generated stuff]',
             ),
@@ -118,7 +116,7 @@ class PathfinderBlueprintSheet extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.only(bottom: 20),
             child: _CollegeProgramCard(
-              borderColor: Colors.orange,
+              borderColor: Color(0xFFFF9800), // Safe Orange
               title: 'BS Rizzler Engineering',
               subtitle: 'Blahblah [AI generated stuff]',
             ),
@@ -126,14 +124,13 @@ class PathfinderBlueprintSheet extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.only(bottom: 20),
             child: _CollegeProgramCard(
-              borderColor: Colors.orange,
+              borderColor: Color(0xFFFF9800), // Safe Orange
               title: 'BS Alpha Wolf Engineering',
               subtitle: 'Blahblah [AI generated stuff]',
             ),
           ),
           // CTA Bottom Card
           _BlueprintCtaCard(
-            navy: _navy,
             onStartDiscovery: () {
               Navigator.of(context).pop();
               onNavigateToScan();
@@ -144,8 +141,8 @@ class PathfinderBlueprintSheet extends StatelessWidget {
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           child: Material(
-            color: _cream,
-            child: ListView.builder( // 3. Swapped to ListView.builder
+            color: theme.colorScheme.surface, // Themed Surface Background
+            child: ListView.builder( 
               controller: scrollController, // Crucial for bottom sheet dragging
               padding: EdgeInsets.fromLTRB(20, 10, 20, bottomInset + 88),
               itemCount: sheetItems.length,
@@ -171,22 +168,22 @@ class PathfinderBlueprintSheet extends StatelessWidget {
 }
 
 // -----------------------------------------------------------------------------
-// HELPER WIDGETS BELOW (Unchanged)
+// HELPER WIDGETS BELOW 
 // -----------------------------------------------------------------------------
 
 class _StrongestFieldsCard extends StatelessWidget {
-  final Color navy;
-
-  const _StrongestFieldsCard({required this.navy});
+  const _StrongestFieldsCard();
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache Theme
+
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 20, 18, 22),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface, // Themed Card Surface
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: navy, width: 1),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3), width: 1), // Themed Border
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -197,32 +194,32 @@ class _StrongestFieldsCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: navy,
+              color: theme.colorScheme.primary, // Themed Primary
             ),
           ),
           const SizedBox(height: 18),
           const _FieldProgressRow(
             label: 'Agham at Math (STEM)',
             value: 0.4,
-            fillColor: Colors.green,
+            fillColor: Color(0xFF4CAF50), // Safe Green
           ),
           const SizedBox(height: 14),
-          const _FieldProgressRow(
+          _FieldProgressRow(
             label: 'Sining at Wika (HUMSS)',
             value: 0.3,
-            fillColor: Colors.orange,
+            fillColor: theme.colorScheme.secondary, // Themed Orange
           ),
           const SizedBox(height: 14),
-          const _FieldProgressRow(
+          _FieldProgressRow(
             label: 'Teknikal (TVL)',
             value: 0.2,
-            fillColor: Colors.orange,
+            fillColor: theme.colorScheme.secondary, // Themed Orange
           ),
           const SizedBox(height: 14),
-          const _FieldProgressRow(
+          _FieldProgressRow(
             label: 'Negosyo (ABM)',
             value: 0.1,
-            fillColor: Colors.orange,
+            fillColor: theme.colorScheme.secondary, // Themed Orange
           ),
         ],
       ),
@@ -243,7 +240,9 @@ class _FieldProgressRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache Theme
     final pct = (value * 100).round();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -252,19 +251,19 @@ class _FieldProgressRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: theme.colorScheme.onSurface, // Themed Label
                 ),
               ),
             ),
             Text(
               '$pct%',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: Colors.black54,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6), // Themed Percentage
               ),
             ),
           ],
@@ -277,7 +276,7 @@ class _FieldProgressRow extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                ColoredBox(color: Colors.grey[300]!),
+                ColoredBox(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)), // Themed Empty Track
                 FractionallySizedBox(
                   alignment: Alignment.centerLeft,
                   widthFactor: value.clamp(0.0, 1.0),
@@ -305,6 +304,8 @@ class _CollegeProgramCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache Theme
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -313,27 +314,27 @@ class _CollegeProgramCard extends StatelessWidget {
           margin: const EdgeInsets.only(top: 10),
           padding: const EdgeInsets.fromLTRB(18, 28, 18, 36),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.colorScheme.surface, // Themed Background
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: borderColor, width: 1.5),
+            border: Border.all(color: borderColor.withValues(alpha: 0.6), width: 1.5),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
-                  color: PathfinderBlueprintSheet._navy,
+                  color: theme.colorScheme.primary, // Themed Title
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 subtitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: Colors.black54,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed Subtitle
                   height: 1.35,
                 ),
               ),
@@ -346,18 +347,16 @@ class _CollegeProgramCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface, // Themed Badge BG
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: borderColor, width: 1),
+              border: Border.all(color: borderColor.withValues(alpha: 0.6), width: 1),
             ),
             child: Text(
               'College Program',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: borderColor == Colors.green
-                    ? Colors.green[800]!
-                    : Colors.orange[800]!,
+                color: borderColor, // Directly use the passed border color for highest adaptive visibility
               ),
             ),
           ),
@@ -368,19 +367,20 @@ class _CollegeProgramCard extends StatelessWidget {
 }
 
 class _BlueprintCtaCard extends StatelessWidget {
-  final Color navy;
   final VoidCallback onStartDiscovery;
 
-  const _BlueprintCtaCard({required this.navy, required this.onStartDiscovery});
+  const _BlueprintCtaCard({required this.onStartDiscovery});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache Theme
+
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface, // Themed Background
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: navy, width: 1),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3), width: 1), // Themed Border
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -391,21 +391,25 @@ class _BlueprintCtaCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: navy,
+              color: theme.colorScheme.primary, // Themed Title
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Upload a photo of any object around you and discover the concepts behind it!',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.35),
+            style: TextStyle(
+              fontSize: 14, 
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed Description
+              height: 1.35
+            ),
           ),
           const SizedBox(height: 18),
           FilledButton(
             onPressed: onStartDiscovery,
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
+              backgroundColor: theme.colorScheme.secondary, // Themed Orange
+              foregroundColor: theme.colorScheme.onSecondary, // Themed White
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: const StadiumBorder(),
             ),
