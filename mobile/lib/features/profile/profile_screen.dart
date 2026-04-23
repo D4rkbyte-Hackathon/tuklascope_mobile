@@ -1476,7 +1476,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
               ValueListenableBuilder<ThemeMode>(
                 valueListenable: appThemeNotifier,
                 builder: (context, currentMode, child) {
-                  final isDarkMode = currentMode == ThemeMode.dark;
+                  final isSystemDark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+                  final isDarkMode = currentMode == ThemeMode.dark|| 
+                                    (currentMode == ThemeMode.system && isSystemDark);
 
                   return SwitchListTile(
                     secondary: Icon(
