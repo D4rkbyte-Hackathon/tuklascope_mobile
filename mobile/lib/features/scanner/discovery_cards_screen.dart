@@ -71,6 +71,8 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache theme
+
     return GradientScaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -85,16 +87,16 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(color: Color(0xFF0B3C6A)),
-                  SizedBox(height: 16),
+                  CircularProgressIndicator(color: theme.colorScheme.primary), // Themed Loader
+                  const SizedBox(height: 16),
                   Text(
                     'Generating custom lesson...',
                     style: TextStyle(
-                      color: Color(0xFF0B3C6A),
+                      color: theme.colorScheme.primary, // Themed Loader Text
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -108,31 +110,35 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.error_outline,
-                      color: Colors.red,
+                      color: theme.colorScheme.error, // Themed Error
                       size: 48,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       _error!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(color: theme.colorScheme.error), // Themed Error
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _fetchLearningDeck,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary, // Themed Button
+                        foregroundColor: theme.colorScheme.onPrimary,
+                      ),
                       child: const Text('Try Again'),
                     ),
                   ],
                 ),
               ),
             )
-          : _buildContent(),
+          : _buildContent(theme),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(ThemeData theme) {
     final xpReward = _deckData?['xp_reward']?.toString() ?? '50';
     final imageUrl =
         _deckData?['image_url'] ??
@@ -153,19 +159,19 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                       imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) =>
-                          Container(color: Colors.grey[300]),
+                          Container(color: theme.colorScheme.surface.withValues(alpha: 0.5)),
                     ),
                     Container(
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black45,
+                            Colors.black.withValues(alpha: 0.45),
                             Colors.transparent,
-                            Color(0xFFFFFDF4),
+                            theme.scaffoldBackgroundColor, // Adaptive Fade to Background!
                           ],
-                          stops: [0.0, 0.4, 1.0],
+                          stops: const [0.0, 0.4, 1.0],
                         ),
                       ),
                     ),
@@ -186,10 +192,10 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                           Expanded(
                             child: Text(
                               '${widget.selectedLens.toUpperCase()}: ${widget.objectName}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF0B3C6A),
+                                color: theme.colorScheme.primary, // Themed Title
                                 height: 1.1,
                               ),
                             ),
@@ -200,22 +206,22 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFF9800),
+                              color: theme.colorScheme.secondary, // Themed XP Pill (Orange)
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.star,
-                                  color: Colors.white,
+                                  color: theme.colorScheme.onSecondary, // Matches XP Text
                                   size: 16,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '+$xpReward XP',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    color: theme.colorScheme.onSecondary, // Themed XP Text
                                   ),
                                 ),
                               ],
@@ -226,23 +232,25 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                       const SizedBox(height: 32),
                       Row(
                         children: [
-                          _buildTabButton(0, 'Quick Fact', Icons.bolt),
+                          _buildTabButton(0, 'Quick Fact', Icons.bolt, theme),
                           const SizedBox(width: 8),
                           _buildTabButton(
                             1,
                             'Concepts',
                             Icons.lightbulb_outline,
+                            theme
                           ),
                           const SizedBox(width: 8),
                           _buildTabButton(
                             2,
                             'Hands-on',
                             Icons.build_circle_outlined,
+                            theme
                           ),
                         ],
                       ),
                       const SizedBox(height: 24),
-                      _buildActiveCard(),
+                      _buildActiveCard(theme),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -255,18 +263,18 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
           bottom: 24,
           left: 24,
           right: 24,
-          child: _buildChallengeButton(),
+          child: _buildChallengeButton(theme),
         ),
       ],
     );
   }
 
-  Widget _buildChallengeButton() {
+  Widget _buildChallengeButton(ThemeData theme) {
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFF9800).withValues(alpha: 0.4),
+            color: theme.colorScheme.secondary.withValues(alpha: 0.4), // Themed Shadow
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -275,8 +283,8 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
       child: ElevatedButton(
         onPressed: _showChallengeModal,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFF9800),
-          foregroundColor: Colors.white,
+          backgroundColor: theme.colorScheme.secondary, // Themed Orange
+          foregroundColor: theme.colorScheme.onSecondary, // Themed White
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -320,13 +328,15 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
+        final theme = Theme.of(context); // Get theme inside builder
+
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             return Container(
               padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface, // Themed Modal Background
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
               ),
               child: SafeArea(
                 child: SingleChildScrollView(
@@ -338,18 +348,18 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                         child: Container(
                           width: 40,
                           height: 5,
-                          decoration: const BoxDecoration(
-                            color: Colors.grey,
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.3), // Themed Handle
+                            borderRadius: const BorderRadius.all(Radius.circular(10)),
                           ),
                         ),
                       ),
                       const SizedBox(height: 24),
-                      const Text(
+                      Text(
                         'TUKLAS CHALLENGE',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Color(0xFFFF9800),
+                          color: theme.colorScheme.secondary, // Themed Challenge Title
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.5,
                         ),
@@ -357,10 +367,10 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                       const SizedBox(height: 16),
                       Text(
                         question,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0B3C6A),
+                          color: theme.colorScheme.onSurface, // Themed Question Text
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -369,23 +379,28 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                         final bool isThisSelected = selectedOption == option;
                         final bool isThisCorrect = option == correctAnswer;
 
-                        Color buttonColor = Colors.white;
-                        Color textColor = const Color(0xFF0B3C6A);
-                        Color borderColor = Colors.grey[300]!;
+                        // Base Option Colors (Themed)
+                        Color buttonColor = theme.colorScheme.surface;
+                        Color textColor = theme.colorScheme.onSurface;
+                        Color borderColor = theme.colorScheme.onSurface.withValues(alpha: 0.2);
 
                         if (hasAnswered) {
                           if (isThisCorrect) {
-                            buttonColor = Colors.green[100]!;
+                            // Correct Answer Colors (Safe for Dark Mode)
+                            buttonColor = Colors.green.withValues(alpha: 0.15);
                             borderColor = Colors.green;
-                            textColor = Colors.green[800]!;
+                            textColor = Colors.green;
                           } else if (isThisSelected && !isThisCorrect) {
-                            buttonColor = Colors.red[100]!;
+                            // Wrong Answer Colors (Safe for Dark Mode)
+                            buttonColor = Colors.red.withValues(alpha: 0.15);
                             borderColor = Colors.red;
-                            textColor = Colors.red[800]!;
+                            textColor = Colors.red;
                           }
                         } else if (isThisSelected) {
-                          buttonColor = Colors.blue[50]!;
-                          borderColor = const Color(0xFF0B3C6A);
+                          // Selected but not answered yet
+                          buttonColor = theme.colorScheme.primary.withValues(alpha: 0.15);
+                          borderColor = theme.colorScheme.primary;
+                          textColor = theme.colorScheme.primary;
                         }
 
                         return Padding(
@@ -452,16 +467,16 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0B3C6A),
+                            backgroundColor: theme.colorScheme.primary, // Themed Submit Button
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text(
+                          child: Text(
                             'SUBMIT ANSWER',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: theme.colorScheme.onPrimary, // Themed Submit Text
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -473,8 +488,8 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: isCorrect
-                                    ? Colors.green[50]
-                                    : Colors.red[50],
+                                    ? Colors.green.withValues(alpha: 0.15)
+                                    : Colors.red.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -483,8 +498,8 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                                     : "Not quite! $explanation",
                                 style: TextStyle(
                                   color: isCorrect
-                                      ? Colors.green[800]
-                                      : Colors.red[800],
+                                      ? Colors.green
+                                      : Colors.red,
                                   height: 1.5,
                                 ),
                               ),
@@ -497,7 +512,7 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                                   Navigator.pop(context);
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFF9800),
+                                  backgroundColor: theme.colorScheme.secondary, // Themed Claim XP Button
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
                                     horizontal: 32,
@@ -506,10 +521,10 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'CLAIM XP & CONTINUE',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: theme.colorScheme.onSecondary, // Themed Claim Text
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -605,7 +620,7 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
     }
   }
 
-  Widget _buildTabButton(int index, String label, IconData icon) {
+  Widget _buildTabButton(int index, String label, IconData icon, ThemeData theme) {
     final bool isSelected = _selectedIndex == index;
 
     return Expanded(
@@ -619,12 +634,12 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFFF9800) : Colors.transparent,
+            color: isSelected ? theme.colorScheme.secondary : Colors.transparent, // Themed BG
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFFFF9800)
-                  : const Color(0xFF0B3C6A).withValues(alpha: 0.2),
+                  ? theme.colorScheme.secondary
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.2), // Themed Border
               width: 1.5,
             ),
           ),
@@ -632,7 +647,7 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
             children: [
               Icon(
                 icon,
-                color: isSelected ? Colors.white : const Color(0xFF0B3C6A),
+                color: isSelected ? theme.colorScheme.onSecondary : theme.colorScheme.onSurface, // Themed Tab Icon
                 size: 24,
               ),
               const SizedBox(height: 4),
@@ -642,7 +657,7 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : const Color(0xFF0B3C6A),
+                  color: isSelected ? theme.colorScheme.onSecondary : theme.colorScheme.onSurface, // Themed Tab Text
                 ),
               ),
             ],
@@ -652,7 +667,7 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
     );
   }
 
-  Widget _buildActiveCard() {
+  Widget _buildActiveCard(ThemeData theme) {
     final conceptCard =
         _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
     final realWorldCard =
@@ -672,27 +687,27 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
 
     switch (_selectedIndex) {
       case 0:
-        return _buildGlassSection('Quick Fact', quickFact);
+        return _buildGlassSection('Quick Fact', quickFact, theme);
       case 1:
-        return _buildGlassSection('Concepts', concept);
+        return _buildGlassSection('Concepts', concept, theme);
       case 2:
-        return _buildGlassSection('Hands-on Project', handsOn);
+        return _buildGlassSection('Hands-on Project', handsOn, theme);
       default:
         return const SizedBox();
     }
   }
 
-  Widget _buildGlassSection(String title, String content) {
+  Widget _buildGlassSection(String title, String content, ThemeData theme) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.6),
+        color: theme.colorScheme.surface.withValues(alpha: 0.85), // Themed Adaptive Glass Background
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1), width: 2), // Themed subtle border
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: theme.shadowColor.withValues(alpha: 0.05), // Themed shadow
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -703,10 +718,10 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
         children: [
           Text(
             title.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: Color(0xFFFF9800),
+              color: theme.colorScheme.secondary, // Themed Label (Orange)
               letterSpacing: 1.2,
             ),
           ),
@@ -715,7 +730,7 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
             content,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey[800],
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.9), // Themed Description
               height: 1.6,
             ),
           ),
