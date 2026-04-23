@@ -14,20 +14,29 @@ class GradientScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Check if the app is currently in dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFFFFDF4), // Top Color
-            Color(0xFFD9D7CE), // Bottom Color
-          ],
+          // 2. Apply the correct gradient based on the theme
+          colors: isDarkMode 
+            ? const [
+                Color(0xFF121212), // Top Color: Your primary dark background
+                Color(0xFF050505), // Bottom Color: A subtle darker shade for depth
+              ]
+            : const [
+                Color(0xFFFFFDF4), // Top Color: Original light background
+                Color(0xFFD9D7CE), // Bottom Color: Original light bottom shade
+              ],
         ),
       ),
-      // 1. We wrap the Scaffold in a Theme
+      // 3. We wrap the Scaffold in a Theme
       child: Theme(
-        // 2. We copy the current app theme, but force the AppBar to be transparent!
+        // 4. We copy the current app theme, but force the AppBar to be transparent!
         data: Theme.of(context).copyWith(
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.transparent,
@@ -37,7 +46,7 @@ class GradientScaffold extends StatelessWidget {
         ),
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          // 3. Now we can just pass the appBar directly without errors!
+          // 5. Now we can just pass the appBar directly without errors!
           appBar: appBar,
           body: body,
           bottomNavigationBar: bottomNavigationBar,
