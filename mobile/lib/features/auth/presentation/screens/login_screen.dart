@@ -120,7 +120,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+  //facebook sign in
+  Future<void> _signInWithFacebook() async {
+    final currentUser = ref.read(authStateProvider).value;
+    if (currentUser != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('You are already signed in.'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+      }
+      return;
+    }
 
+    setState(() => _isLoading = true);
+    try {
+      // Call the Facebook auth method from your controller
+      final authResponse = await ref.read(authControllerProvider.notifier).signInWithFacebook();
+
+      // Supabase OAuth usually handles redirects externally, but if it returns a response:
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Successfully signed in with Facebook!'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+          (route) => false,
+        );
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Authentication Error: ${e.message}'), 
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to sign in with Facebook'), 
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 4)
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
   // --- CUSTOM PAGE TRANSITION ---
   Route _createAnimatedRoute(Widget page) {
     return PageRouteBuilder(
@@ -270,7 +325,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         context: context, 
                         imagePath: 'assets/images/facebook.png', 
                         label: 'Facebook', 
-                        onPressed: () {}
+                        onPressed: _signInWithFacebook
                       ).animate().fade(duration: 600.ms, delay: 700.ms),
 
                       const SizedBox(height: 32),

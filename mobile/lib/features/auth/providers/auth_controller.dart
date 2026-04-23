@@ -81,6 +81,19 @@ class AuthController extends AsyncNotifier<void> {
       rethrow;
     }
   }
+  // New method for Facebook sign-in
+  Future<AuthResponse?> signInWithFacebook() async {
+    state = const AsyncLoading();
+    try {
+      // This will call the method we are about to add to your service file
+      final response = await _authService.signInWithFacebook();
+      state = const AsyncData(null);
+      return response;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
+    }
+  }
 }
 
 final authControllerProvider = AsyncNotifierProvider<AuthController, void>(() {
