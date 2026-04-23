@@ -41,11 +41,12 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
 
   // 2. Fetch Today's Scans Count for the Daily Quest (0/3)
   final today = DateTime.now();
+  // Get local midnight, convert it to a UTC DateTime, and safely format to ISO with the 'Z'
   final startOfDay = DateTime(
     today.year,
     today.month,
     today.day,
-  ).toIso8601String();
+  ).toUtc().toIso8601String();
 
   final scansData = await client
       .from('scans')
