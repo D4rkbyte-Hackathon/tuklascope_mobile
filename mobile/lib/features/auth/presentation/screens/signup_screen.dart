@@ -31,8 +31,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   // 🚀 Added this state variable to track when the modal is actively open
   bool _isDropdownOpen = false; 
 
-  final Color primaryNeon = const Color(0xFFFF6B2C); // Using the orange theme for Signup to contrast Login
-
   Future<void> _signUp() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter your name')));
@@ -70,6 +68,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         }).eq('id', user.id);
 
         if (mounted) {
+          // Standard green is generally okay for success, or you could add a success color to the theme
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created successfully!'), backgroundColor: Colors.green));
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const CompassQuestionsScreen()));
         }
@@ -81,11 +80,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           _emailController.clear();
           errorMessage = 'This email is already registered. Please try logging in.';
         }
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Theme.of(context).colorScheme.error) // Themed
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Theme.of(context).colorScheme.error) // Themed
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -113,19 +116,22 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   // --- 🚀 UPDATED: Now tracks open/close state via await ---
   void _showEducationLevelPicker() async {
-    // 1. Turn on the glow
+    // Turn on the glow
     setState(() => _isDropdownOpen = true);
 
-    // 2. Wait for the modal to close
+    // Wait for the modal to close
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent, 
       isScrollControlled: true,
       builder: (BuildContext context) {
+        final theme = Theme.of(context); // Themed context for the bottom sheet
+        final primaryNeon = theme.colorScheme.secondary;
+
         return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFFFFFDF4), 
-            borderRadius: BorderRadius.only(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface, // Themed popup background
+            borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(32),
               topRight: Radius.circular(32),
             ),
@@ -141,16 +147,16 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     height: 5,
                     margin: const EdgeInsets.only(bottom: 24),
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.2), // Themed handle
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Select Educational Level',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF0B3C6A),
+                      color: theme.colorScheme.primary, // Themed Title
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -169,7 +175,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                          color: isSelected ? primaryNeon : const Color(0xFF0B3C6A),
+                          color: isSelected ? primaryNeon : theme.colorScheme.onSurface, // Themed items
                         ),
                       ).animate(target: isSelected ? 1 : 0).scaleXY(end: 1.05, duration: 200.ms),
                       
@@ -189,7 +195,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       },
     );
 
-    // 3. Turn off the glow when the modal is completely closed
+    // Turn off the glow when the modal is completely closed
     if (mounted) {
       setState(() => _isDropdownOpen = false);
     }
@@ -207,6 +213,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache theme
+    final primaryNeon = theme.colorScheme.secondary; // Themed Orange
+
     return GradientScaffold(
       body: SafeArea(
         child: Center(
@@ -216,14 +225,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
+                Text(
                   'Create Account',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 36,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF0B3C6A),
-                    shadows: [Shadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
+                    color: theme.colorScheme.primary, // Themed Title
+                    shadows: [Shadow(color: theme.shadowColor.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
                   ),
                 ).animate().fade(duration: 600.ms, delay: 100.ms).slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
 
@@ -256,7 +265,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   obscureText: _obscurePassword,
                   neonColor: primaryNeon,
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey[600]),
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility, 
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5) // Themed
+                    ),
                     onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ).animate().fade(duration: 600.ms, delay: 400.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
@@ -275,14 +287,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                           boxShadow: [
                             BoxShadow(color: primaryNeon.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5)),
                           ],
-                          gradient: const LinearGradient(colors: [Color(0xFFFF9800), Color(0xFFFF6B2C)]),
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.colorScheme.tertiary, // Themed gradient
+                              theme.colorScheme.secondary
+                            ]
+                          ),
                         ),
                         child: ElevatedButton(
                           onPressed: _signUp,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
-                            foregroundColor: Colors.white,
+                            foregroundColor: theme.colorScheme.onSecondary, // Themed Button Text
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
                           ),
@@ -295,10 +312,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text("Already have an account? ", style: TextStyle(color: Colors.grey[700], fontSize: 15)),
+                          Text("Already have an account? ", style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 15)), // Themed
                           GestureDetector(
                             onTap: () => Navigator.pushReplacement(context, _createAnimatedRoute(const LoginScreen())),
-                            child: const Text('Log In', style: TextStyle(color: Color(0xFF64B5F6), fontSize: 15, fontWeight: FontWeight.bold)),
+                            child: Text('Log In', style: TextStyle(color: theme.colorScheme.primary, fontSize: 15, fontWeight: FontWeight.bold)), // Themed (Blue)
                           ),
                         ],
                       ).animate().fade(duration: 600.ms, delay: 550.ms),
@@ -314,6 +331,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   // --- 🚀 UPDATED: Logic separated for "populated" vs "focused" ---
   Widget _buildNeonEducationSelector() {
+    final theme = Theme.of(context); // Pull theme inside custom widget
+    final primaryNeon = theme.colorScheme.secondary;
+
     bool isPopulated = _selectedEducationLevel != null;
     bool isFocused = _isDropdownOpen; // Now exclusively tied to the modal being open
 
@@ -323,7 +343,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18), 
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.9),
+          color: theme.colorScheme.surface.withValues(alpha: 0.9), // Themed background
           borderRadius: BorderRadius.circular(16),
           // Glow/Border is only active when isFocused is TRUE
           border: Border.all(
@@ -332,23 +352,23 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
           boxShadow: isFocused
               ? [BoxShadow(color: primaryNeon.withValues(alpha: 0.2), blurRadius: 15, offset: const Offset(0, 4))]
-              : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+              : [BoxShadow(color: theme.shadowColor.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))], // Themed shadow
         ),
         child: Row(
           children: [
-            // Icon stays orange when focused, otherwise goes grey
-            Icon(Icons.school_outlined, color: isFocused ? primaryNeon : Colors.grey[400]),
+            // Icon stays orange when focused, otherwise goes transparent/grey
+            Icon(Icons.school_outlined, color: isFocused ? primaryNeon : theme.colorScheme.onSurface.withValues(alpha: 0.4)), // Themed
             const SizedBox(width: 12),
             Text(
               _selectedEducationLevel ?? 'Educational Level',
               style: TextStyle(
                 fontSize: 16,
-                // Text stays Dark Blue if they made a selection, Grey if empty
-                color: isPopulated ? const Color(0xFF0B3C6A) : Colors.grey[600],
+                // Text stays Dark Blue/White if they made a selection, Grey if empty
+                color: isPopulated ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.6), // Themed
               ),
             ),
             const Spacer(),
-            Icon(Icons.arrow_drop_down_rounded, color: isFocused ? primaryNeon : Colors.grey[400], size: 28),
+            Icon(Icons.arrow_drop_down_rounded, color: isFocused ? primaryNeon : theme.colorScheme.onSurface.withValues(alpha: 0.4), size: 28), // Themed
           ],
         ),
       ),
