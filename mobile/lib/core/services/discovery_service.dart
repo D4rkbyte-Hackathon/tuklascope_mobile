@@ -7,26 +7,27 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/api_config.dart';
 import '../network/api_client.dart';
 
 class DiscoveryService {
-  /// Takes an image file, compresses it, sends it securely to the FastAPI backend, and returns the AI's analysis.
-  static Future<Map<String, dynamic>?> analyzeImage(File imageFile) async {
+  /// Takes an image file, compresses it, sends it securely to FastAPI, and returns AI analysis.
+  static Future<Map<String, dynamic>?> analyzeImage({
+    required File imageFile,
+    String gradeLevel =
+        'JHS (Grades 7-10)', // Safe default to prevent 422 errors
+  }) async {
     try {
       debugPrint('🚀 Initiating Secure Uplink: Preparing image...');
 
-      // --- 1. COMPRESS THE IMAGE ---
-      // Get a temporary directory to store the compressed file
       final dir = await getTemporaryDirectory();
       final targetPath = p.join(
         dir.path,
         'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
       );
 
-      // Compress the image to a max width/height of 1024px and 70% quality.
-      // This usually turns a 10MB photo into a ~400KB photo perfectly fine for AI.
       final XFile? compressedXFile =
           await FlutterImageCompress.compressAndGetFile(
             imageFile.absolute.path,
@@ -36,18 +37,10 @@ class DiscoveryService {
             minHeight: 1024,
           );
 
-      // Fallback to original if compression fails for some reason
       final File fileToUpload = compressedXFile != null
           ? File(compressedXFile.path)
           : imageFile;
 
-      final originalSize = (await imageFile.length()) / (1024 * 1024);
-      final newSize = (await fileToUpload.length()) / (1024 * 1024);
-      debugPrint(
-        '📸 Compression complete: ${originalSize.toStringAsFixed(2)}MB -> ${newSize.toStringAsFixed(2)}MB',
-      );
-
-      // --- 2. UPLOAD THE COMPRESSED IMAGE ---
       final multipartFile = await http.MultipartFile.fromPath(
         'file',
         fileToUpload.path,
@@ -56,13 +49,10 @@ class DiscoveryService {
 
       final response = await ApiClient.multipartPost(
         ApiConfig.discoverVision,
-        fields: {
-          'grade_level': 'JHS (Grades 7-10)', // Dynamic via user profile later
-        },
+        fields: {'grade_level': gradeLevel},
         file: multipartFile,
       );
 
-      // --- 3. HANDLE THE RESULT ---
       if (response.statusCode == 200) {
         debugPrint('✅ AI Analysis Complete!');
         return jsonDecode(utf8.decode(response.bodyBytes));
@@ -70,12 +60,78 @@ class DiscoveryService {
         debugPrint(
           '❌ Backend rejected the image. Status: ${response.statusCode}',
         );
-        debugPrint('Error details: ${response.body}');
         return null;
       }
     } catch (e) {
       debugPrint('🚨 CRITICAL FAILURE: Image upload crashed. Error: $e');
       return null;
+    }
+  }
+
+  /// Uploads image to Supabase, then saves the full scan to the Render backend.
+  static Future<bool> saveDiscovery({
+    required String objectName,
+    required String chosenLens,
+    required String imagePath,
+    required Map<String, dynamic> learningDeck,
+  }) async {
+    try {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session == null) {
+        debugPrint("🚨 Cannot save: User is not logged in.");
+        return false;
+      }
+
+      final userId = session.user.id;
+      debugPrint("☁️ Uploading image to Supabase Storage...");
+
+      final file = File(imagePath);
+      final fileBytes = await file.readAsBytes();
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final storagePath = '$userId/$fileName';
+
+      // 1. Upload to Supabase 'scans' bucket
+      await Supabase.instance.client.storage
+          .from('scans')
+          .uploadBinary(
+            storagePath,
+            fileBytes,
+            fileOptions: const FileOptions(contentType: 'image/jpeg'),
+          );
+
+      // 2. Get Public URL
+      final publicUrl = Supabase.instance.client.storage
+          .from('scans')
+          .getPublicUrl(storagePath);
+
+      debugPrint("✅ Image uploaded: $publicUrl");
+
+      // 3. Send to Render Backend using our centralized secure ApiClient
+      final payload = {
+        'object_name': objectName,
+        'chosen_lens': chosenLens,
+        'image_url': publicUrl,
+        'learning_deck': learningDeck,
+        'xp_awarded': 50,
+        'is_aligned_with_compass':
+            false, // TODO: Wire this to actual compass logic later
+      };
+
+      final response = await ApiClient.post(
+        ApiConfig.discoverSave,
+        body: payload,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint("✅ Progress successfully saved to backend!");
+        return true;
+      } else {
+        debugPrint("🚨 Failed to save progress to backend: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      debugPrint("🚨 Error saving discovery: $e");
+      return false;
     }
   }
 }

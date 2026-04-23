@@ -1,12 +1,8 @@
 // mobile/lib/features/scanner/discovery_cards_screen.dart
-import 'dart:convert';
-import 'dart:io'; // Required for reading the image file
-import 'package:http/http.dart' as http;
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../core/config/api_config.dart';
 import 'package:flutter/material.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
+import '../../core/services/discovery_service.dart';
 
 class DiscoveryCardsScreen extends StatefulWidget {
   final String objectName;
@@ -91,7 +87,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(color: theme.colorScheme.primary), // Themed Loader
+                  CircularProgressIndicator(
+                    color: theme.colorScheme.primary,
+                  ), // Themed Loader
                   const SizedBox(height: 16),
                   Text(
                     'Generating custom lesson...',
@@ -119,13 +117,16 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                     Text(
                       _error!,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: theme.colorScheme.error), // Themed Error
+                      style: TextStyle(
+                        color: theme.colorScheme.error,
+                      ), // Themed Error
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _fetchLearningDeck,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary, // Themed Button
+                        backgroundColor:
+                            theme.colorScheme.primary, // Themed Button
                         foregroundColor: theme.colorScheme.onPrimary,
                       ),
                       child: const Text('Try Again'),
@@ -158,8 +159,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                     Image.network(
                       imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          Container(color: theme.colorScheme.surface.withValues(alpha: 0.5)),
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: theme.colorScheme.surface.withValues(alpha: 0.5),
+                      ),
                     ),
                     Container(
                       decoration: BoxDecoration(
@@ -169,7 +171,8 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                           colors: [
                             Colors.black.withValues(alpha: 0.45),
                             Colors.transparent,
-                            theme.scaffoldBackgroundColor, // Adaptive Fade to Background!
+                            theme
+                                .scaffoldBackgroundColor, // Adaptive Fade to Background!
                           ],
                           stops: const [0.0, 0.4, 1.0],
                         ),
@@ -195,7 +198,8 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w900,
-                                color: theme.colorScheme.primary, // Themed Title
+                                color:
+                                    theme.colorScheme.primary, // Themed Title
                                 height: 1.1,
                               ),
                             ),
@@ -206,14 +210,18 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.secondary, // Themed XP Pill (Orange)
+                              color: theme
+                                  .colorScheme
+                                  .secondary, // Themed XP Pill (Orange)
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               children: [
                                 Icon(
                                   Icons.star,
-                                  color: theme.colorScheme.onSecondary, // Matches XP Text
+                                  color: theme
+                                      .colorScheme
+                                      .onSecondary, // Matches XP Text
                                   size: 16,
                                 ),
                                 const SizedBox(width: 4),
@@ -221,7 +229,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                                   '+$xpReward XP',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSecondary, // Themed XP Text
+                                    color: theme
+                                        .colorScheme
+                                        .onSecondary, // Themed XP Text
                                   ),
                                 ),
                               ],
@@ -238,14 +248,14 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                             1,
                             'Concepts',
                             Icons.lightbulb_outline,
-                            theme
+                            theme,
                           ),
                           const SizedBox(width: 8),
                           _buildTabButton(
                             2,
                             'Hands-on',
                             Icons.build_circle_outlined,
-                            theme
+                            theme,
                           ),
                         ],
                       ),
@@ -274,7 +284,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.secondary.withValues(alpha: 0.4), // Themed Shadow
+            color: theme.colorScheme.secondary.withValues(
+              alpha: 0.4,
+            ), // Themed Shadow
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -336,7 +348,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface, // Themed Modal Background
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(32),
+                ),
               ),
               child: SafeArea(
                 child: SingleChildScrollView(
@@ -349,8 +363,12 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                           width: 40,
                           height: 5,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.3), // Themed Handle
-                            borderRadius: const BorderRadius.all(Radius.circular(10)),
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.3,
+                            ), // Themed Handle
+                            borderRadius: const BorderRadius.all(
+                              Radius.circular(10),
+                            ),
                           ),
                         ),
                       ),
@@ -359,7 +377,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                         'TUKLAS CHALLENGE',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: theme.colorScheme.secondary, // Themed Challenge Title
+                          color: theme
+                              .colorScheme
+                              .secondary, // Themed Challenge Title
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.5,
                         ),
@@ -370,7 +390,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
-                          color: theme.colorScheme.onSurface, // Themed Question Text
+                          color: theme
+                              .colorScheme
+                              .onSurface, // Themed Question Text
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -382,7 +404,8 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                         // Base Option Colors (Themed)
                         Color buttonColor = theme.colorScheme.surface;
                         Color textColor = theme.colorScheme.onSurface;
-                        Color borderColor = theme.colorScheme.onSurface.withValues(alpha: 0.2);
+                        Color borderColor = theme.colorScheme.onSurface
+                            .withValues(alpha: 0.2);
 
                         if (hasAnswered) {
                           if (isThisCorrect) {
@@ -398,7 +421,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                           }
                         } else if (isThisSelected) {
                           // Selected but not answered yet
-                          buttonColor = theme.colorScheme.primary.withValues(alpha: 0.15);
+                          buttonColor = theme.colorScheme.primary.withValues(
+                            alpha: 0.15,
+                          );
                           borderColor = theme.colorScheme.primary;
                           textColor = theme.colorScheme.primary;
                         }
@@ -467,7 +492,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary, // Themed Submit Button
+                            backgroundColor: theme
+                                .colorScheme
+                                .primary, // Themed Submit Button
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -476,7 +503,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                           child: Text(
                             'SUBMIT ANSWER',
                             style: TextStyle(
-                              color: theme.colorScheme.onPrimary, // Themed Submit Text
+                              color: theme
+                                  .colorScheme
+                                  .onPrimary, // Themed Submit Text
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -497,9 +526,7 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                                     ? "🎉 Correct! $explanation"
                                     : "Not quite! $explanation",
                                 style: TextStyle(
-                                  color: isCorrect
-                                      ? Colors.green
-                                      : Colors.red,
+                                  color: isCorrect ? Colors.green : Colors.red,
                                   height: 1.5,
                                 ),
                               ),
@@ -512,7 +539,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                                   Navigator.pop(context);
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: theme.colorScheme.secondary, // Themed Claim XP Button
+                                  backgroundColor: theme
+                                      .colorScheme
+                                      .secondary, // Themed Claim XP Button
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
                                     horizontal: 32,
@@ -524,7 +553,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                                 child: Text(
                                   'CLAIM XP & CONTINUE',
                                   style: TextStyle(
-                                    color: theme.colorScheme.onSecondary, // Themed Claim Text
+                                    color: theme
+                                        .colorScheme
+                                        .onSecondary, // Themed Claim Text
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -542,85 +573,38 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
     );
   }
 
-  // --- NEW: Uploads the local image to Supabase Storage and returns the Public URL ---
-  Future<String?> _uploadImageToSupabase(String userId) async {
-    try {
-      debugPrint("☁️ Uploading image to Supabase Storage...");
-      final file = File(widget.imagePath);
-      final fileBytes = await file.readAsBytes();
-
-      // Create a unique file name
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-      // CRITICAL: The RLS policy requires the path to start with the user's ID!
-      final filePath = '$userId/$fileName';
-
-      // Upload to the 'scans' bucket
-      await Supabase.instance.client.storage
-          .from('scans')
-          .uploadBinary(
-            filePath,
-            fileBytes,
-            fileOptions: const FileOptions(contentType: 'image/jpeg'),
-          );
-
-      // Fetch and return the public URL so the backend can save it
-      final publicUrl = Supabase.instance.client.storage
-          .from('scans')
-          .getPublicUrl(filePath);
-
-      debugPrint("✅ Upload successful! URL: $publicUrl");
-      return publicUrl;
-    } catch (e) {
-      debugPrint("🚨 Supabase Storage Upload Error: $e");
-      return null;
-    }
-  }
-
   Future<void> _saveProgressToBackend() async {
-    try {
-      // 1. Get the current user
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null) return;
+    if (_deckData == null) return;
 
-      // 2. UPLOAD THE IMAGE FIRST
-      final String? realImageUrl = await _uploadImageToSupabase(
-        session.user.id,
-      );
+    // Show a loading indicator if you want, or just let it save in the background
+    final success = await DiscoveryService.saveDiscovery(
+      objectName: widget.objectName,
+      chosenLens: widget.selectedLens,
+      imagePath: widget.imagePath,
+      learningDeck: _deckData!,
+    );
 
-      if (realImageUrl == null) {
-        debugPrint("🚨 Aborting save: Image upload failed.");
-        return;
+    if (success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('XP Claimed and Discovery Saved!')),
+        );
       }
-
-      // 3. SEND TO BACKEND WITH THE REAL URL
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/discover/save'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${session.accessToken}',
-        },
-        body: jsonEncode({
-          "object_name": widget.objectName,
-          "chosen_lens": widget.selectedLens,
-          "image_url": realImageUrl, // 🚀 Now using the real uploaded image
-          "learning_deck": _deckData,
-          "xp_awarded": 50,
-          "is_aligned_with_compass": false,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        debugPrint("✅ Progress successfully saved to Supabase Postgres!");
-      } else {
-        debugPrint("🚨 Failed to save progress: ${response.body}");
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save. Please try again.')),
+        );
       }
-    } catch (e) {
-      debugPrint("🚨 Error saving progress: $e");
     }
   }
 
-  Widget _buildTabButton(int index, String label, IconData icon, ThemeData theme) {
+  Widget _buildTabButton(
+    int index,
+    String label,
+    IconData icon,
+    ThemeData theme,
+  ) {
     final bool isSelected = _selectedIndex == index;
 
     return Expanded(
@@ -634,12 +618,16 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? theme.colorScheme.secondary : Colors.transparent, // Themed BG
+            color: isSelected
+                ? theme.colorScheme.secondary
+                : Colors.transparent, // Themed BG
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
                   ? theme.colorScheme.secondary
-                  : theme.colorScheme.onSurface.withValues(alpha: 0.2), // Themed Border
+                  : theme.colorScheme.onSurface.withValues(
+                      alpha: 0.2,
+                    ), // Themed Border
               width: 1.5,
             ),
           ),
@@ -647,7 +635,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
             children: [
               Icon(
                 icon,
-                color: isSelected ? theme.colorScheme.onSecondary : theme.colorScheme.onSurface, // Themed Tab Icon
+                color: isSelected
+                    ? theme.colorScheme.onSecondary
+                    : theme.colorScheme.onSurface, // Themed Tab Icon
                 size: 24,
               ),
               const SizedBox(height: 4),
@@ -657,7 +647,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isSelected ? theme.colorScheme.onSecondary : theme.colorScheme.onSurface, // Themed Tab Text
+                  color: isSelected
+                      ? theme.colorScheme.onSecondary
+                      : theme.colorScheme.onSurface, // Themed Tab Text
                 ),
               ),
             ],
@@ -702,9 +694,14 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.85), // Themed Adaptive Glass Background
+        color: theme.colorScheme.surface.withValues(
+          alpha: 0.85,
+        ), // Themed Adaptive Glass Background
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1), width: 2), // Themed subtle border
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+          width: 2,
+        ), // Themed subtle border
         boxShadow: [
           BoxShadow(
             color: theme.shadowColor.withValues(alpha: 0.05), // Themed shadow
@@ -730,7 +727,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
             content,
             style: TextStyle(
               fontSize: 16,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.9), // Themed Description
+              color: theme.colorScheme.onSurface.withValues(
+                alpha: 0.9,
+              ), // Themed Description
               height: 1.6,
             ),
           ),
