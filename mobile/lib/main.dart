@@ -3,6 +3,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/theme/theme_provider.dart'; // The state notifier
+import 'core/theme/app_theme.dart';      // <-- ADDED: The actual color palettes we made
+
 import 'features/auth/presentation/widgets/auth_gate.dart';
 
 Future<void> main() async {
@@ -28,15 +31,25 @@ class TuklascopeApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // We removed the authState watcher here so it doesn't interrupt our Compass flow.
-    return MaterialApp(
-      title: 'Tuklascope',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      // App strictly starts at the Splash Screen now
-      home: const AuthGate(),
+    // 1. Wrap MaterialApp with ValueListenableBuilder
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: appThemeNotifier,
+      builder: (context, currentMode, child) {
+        return MaterialApp(
+          title: 'Tuklascope',
+          debugShowCheckedModeBanner: false, // Optional: Removes the red debug banner
+          
+          // 2. Hook up the AppTheme we made in Step 1
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          
+          // 3. Bind the active theme mode to our global notifier
+          themeMode: currentMode, 
+          
+          // App strictly starts at the Splash Screen/Auth Gate now
+          home: const AuthGate(),
+        );
+      },
     );
   }
 }
