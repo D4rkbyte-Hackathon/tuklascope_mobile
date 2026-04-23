@@ -15,28 +15,24 @@ import '../auth/presentation/widgets/auth_gate.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  static const Color _navy = Color(0xFF0D3B66);
-  static const Color _cream = Color(0xFFF9F6F0);
-  static const Color _linkBlue = Color(0xFF42A5F5);
-  static const Color _avgLevel = Color(0xFFE65100);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context); // Cache theme
     final appUserState = ref.watch(appUserProvider);
 
     return GradientScaffold(
       appBar: AppBar(
         title: const Text('Profile & Skill Tree'),
-        foregroundColor: _navy,
+        foregroundColor: theme.colorScheme.primary, // Themed AppBar Text
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
       body: appUserState.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        loading: () => Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
+        error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: theme.colorScheme.error))),
         data: (appUser) {
           if (appUser == null) {
-            return const Center(child: Text('Please log in.'));
+            return Center(child: Text('Please log in.', style: TextStyle(color: theme.colorScheme.onSurface)));
           }
 
           final profile = appUser.profile;
@@ -52,8 +48,7 @@ class ProfileScreen extends ConsumerWidget {
 
           final List<Widget> profileItems = [
             _ProfileHeaderCard(
-              navy: _navy,
-              linkBlue: _linkBlue,
+              theme: theme, // Pass theme to helper
               fullName: profile.fullName ?? 'New Explorer',
               educationLevel: profile.educationLevel ?? 'Curious Mind',
               location: location,
@@ -69,8 +64,8 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(top: 28, bottom: 12),
               child: RichText(
                 textAlign: TextAlign.center,
-                text: const TextSpan(
-                  style: TextStyle(
+                text: TextSpan(
+                  style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     height: 1.15,
@@ -78,44 +73,45 @@ class ProfileScreen extends ConsumerWidget {
                   children: [
                     TextSpan(
                       text: 'Your ',
-                      style: TextStyle(color: _navy),
+                      style: TextStyle(color: theme.colorScheme.primary), // Themed Blue
                     ),
                     TextSpan(
                       text: 'Skill Tree',
-                      style: TextStyle(color: Colors.orange),
+                      style: TextStyle(color: theme.colorScheme.secondary), // Themed Orange
                     ),
                   ],
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 28),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 28),
               child: Text(
                 'Watch your knowledge grow! Every discovery adds to your personal skill network and unlocks new learning pathways.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.black87,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.8), // Themed Adaptive Text
                   height: 1.35,
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 20),
-              child: _StatsGridCard(navy: _navy, avgLevelColor: _avgLevel),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: _StatsGridCard(theme: theme), // Pass theme
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: 20),
-              child: _SkillTreePlaceholderCard(),
+              child: _SkillTreePlaceholderCard(theme: theme), // Pass theme
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: _ProfilePromoCard(
-                borderColor: Colors.orange,
+                theme: theme,
+                borderColor: theme.colorScheme.secondary,
                 title: 'Open Your Blueprint',
                 description: 'From core principles to career path.',
                 buttonLabel: 'Open Pathfinder →',
-                buttonColor: _navy,
+                buttonColor: theme.colorScheme.primary,
                 onPressed: () => showPathfinderBlueprintSheet(
                   context,
                   onNavigateToScan: () =>
@@ -124,12 +120,13 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
             _ProfilePromoCard(
-              borderColor: _navy.withValues(alpha: 0.35),
+              theme: theme,
+              borderColor: theme.colorScheme.primary.withValues(alpha: 0.35),
               title: 'Ready to expand your network?',
               description:
                   'Upload a photo of any object around you and discover the concepts behind it!',
               buttonLabel: 'Start Discovery →',
-              buttonColor: Colors.orange,
+              buttonColor: theme.colorScheme.secondary,
               onPressed: () => MainNavScope.maybeOf(context)?.goToTab(1),
             ),
           ];
@@ -166,6 +163,7 @@ class ProfileScreen extends ConsumerWidget {
 // -----------------------------------------------------------------------------
 
 class _ProfilePromoCard extends StatelessWidget {
+  final ThemeData theme; // Themed
   final Color borderColor;
   final String title;
   final String description;
@@ -174,6 +172,7 @@ class _ProfilePromoCard extends StatelessWidget {
   final VoidCallback onPressed;
 
   const _ProfilePromoCard({
+    required this.theme,
     required this.borderColor,
     required this.title,
     required this.description,
@@ -187,7 +186,7 @@ class _ProfilePromoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9F6F0),
+        color: theme.colorScheme.surface, // Themed Surface
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: borderColor, width: 1),
       ),
@@ -197,19 +196,19 @@ class _ProfilePromoCard extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF0D3B66),
+              color: theme.colorScheme.primary, // Themed Title
             ),
           ),
           const SizedBox(height: 10),
           Text(
             description,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: Colors.black54,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed Subtitle
               height: 1.35,
             ),
           ),
@@ -219,7 +218,7 @@ class _ProfilePromoCard extends StatelessWidget {
               onPressed: onPressed,
               style: FilledButton.styleFrom(
                 backgroundColor: buttonColor,
-                foregroundColor: Colors.white,
+                foregroundColor: theme.colorScheme.onPrimary, // Ensures contrast on button
                 padding: const EdgeInsets.symmetric(
                   horizontal: 28,
                   vertical: 14,
@@ -236,8 +235,7 @@ class _ProfilePromoCard extends StatelessWidget {
 }
 
 class _ProfileHeaderCard extends StatelessWidget {
-  final Color navy;
-  final Color linkBlue;
+  final ThemeData theme;
   final String fullName;
   final String educationLevel;
   final String location;
@@ -245,8 +243,7 @@ class _ProfileHeaderCard extends StatelessWidget {
   final VoidCallback onEditPressed;
 
   const _ProfileHeaderCard({
-    required this.navy,
-    required this.linkBlue,
+    required this.theme,
     required this.fullName,
     required this.educationLevel,
     required this.location,
@@ -259,9 +256,9 @@ class _ProfileHeaderCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface, // Themed Surface
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.black12, width: 0.5),
+        border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1), width: 1), // Themed Border
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -273,12 +270,12 @@ class _ProfileHeaderCard extends StatelessWidget {
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: navy, width: 4),
+                  border: Border.all(color: theme.colorScheme.primary, width: 4), // Themed Primary
                 ),
                 child: CircleAvatar(
                   radius: 36,
-                  backgroundColor: Colors.grey[300],
-                  child: Icon(Icons.person, size: 40, color: Colors.grey[600]),
+                  backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                  child: Icon(Icons.person, size: 40, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
                 ),
               ),
               const SizedBox(width: 16),
@@ -291,7 +288,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: navy,
+                        color: theme.colorScheme.primary, // Themed Primary
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -302,7 +299,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.orange[700],
+                        color: theme.colorScheme.secondary, // Themed Secondary (Orange)
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -310,7 +307,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                       TextSpan(
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.black.withValues(alpha: 0.45),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6), // Themed adaptive text
                         ),
                         children: [
                           const TextSpan(text: 'Daily Streak '),
@@ -319,7 +316,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: Colors.orange[700],
+                              color: theme.colorScheme.secondary, // Themed Secondary (Orange)
                             ),
                           ),
                         ],
@@ -340,7 +337,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: linkBlue,
+                  color: theme.colorScheme.tertiary, // Used tertiary for link color
                 ),
               ),
             ),
@@ -352,36 +349,37 @@ class _ProfileHeaderCard extends StatelessWidget {
 }
 
 class _StatsGridCard extends StatelessWidget {
-  final Color navy;
-  final Color avgLevelColor;
+  final ThemeData theme;
 
-  const _StatsGridCard({required this.navy, required this.avgLevelColor});
+  const _StatsGridCard({required this.theme});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface, // Themed Surface
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.black12, width: 0.5),
+        border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1), width: 1),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: _StatCell(
                   value: '67%',
                   label: 'Total Progress',
-                  valueColor: Colors.orange,
+                  valueColor: theme.colorScheme.secondary, // Themed Orange
+                  theme: theme,
                 ),
               ),
               Expanded(
                 child: _StatCell(
                   value: '420',
                   label: 'Total EXP',
-                  valueColor: navy,
+                  valueColor: theme.colorScheme.primary, // Themed Blue
+                  theme: theme,
                 ),
               ),
             ],
@@ -389,18 +387,20 @@ class _StatsGridCard extends StatelessWidget {
           const SizedBox(height: 20),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: _StatCell(
                   value: '33',
                   label: 'Concepts Mastered',
-                  valueColor: Colors.green,
+                  valueColor: const Color(0xFF4CAF50), // Standard Green is safe
+                  theme: theme,
                 ),
               ),
               Expanded(
                 child: _StatCell(
                   value: '1',
                   label: 'Average Level',
-                  valueColor: avgLevelColor,
+                  valueColor: theme.colorScheme.secondary, // Themed Orange
+                  theme: theme,
                 ),
               ),
             ],
@@ -415,11 +415,13 @@ class _StatCell extends StatelessWidget {
   final String value;
   final String label;
   final Color valueColor;
+  final ThemeData theme; // Require theme for text colors
 
   const _StatCell({
     required this.value,
     required this.label,
     required this.valueColor,
+    required this.theme,
   });
 
   @override
@@ -441,10 +443,10 @@ class _StatCell extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Colors.black54,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6), // Themed Adaptive Label
             ),
           ),
         ],
@@ -454,14 +456,18 @@ class _StatCell extends StatelessWidget {
 }
 
 class _SkillTreePlaceholderCard extends StatelessWidget {
+  final ThemeData theme;
+
+  const _SkillTreePlaceholderCard({required this.theme});
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface, // Themed Surface
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.black12, width: 0.5),
+        border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1), width: 1),
       ),
       child: Column(
         children: [
@@ -470,8 +476,8 @@ class _SkillTreePlaceholderCard extends StatelessWidget {
             child: AspectRatio(
               aspectRatio: 1,
               child: ColoredBox(
-                color: Colors.black,
-                child: CustomPaint(painter: _SkillTreeGraphPainter()),
+                color: theme.scaffoldBackgroundColor, // Uses the active background mode color for the graph box
+                child: CustomPaint(painter: _SkillTreeGraphPainter(theme: theme)), // Passes theme to painter
               ),
             ),
           ),
@@ -481,7 +487,7 @@ class _SkillTreePlaceholderCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.black.withValues(alpha: 0.45),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.45), // Themed text
             ),
           ),
         ],
@@ -491,11 +497,20 @@ class _SkillTreePlaceholderCard extends StatelessWidget {
 }
 
 class _SkillTreeGraphPainter extends CustomPainter {
+  final ThemeData theme;
+
+  _SkillTreeGraphPainter({required this.theme});
+
   @override
   void paint(Canvas canvas, Size size) {
+    // Determine line color based on theme brightness
+    final Color lineColor = theme.brightness == Brightness.dark 
+        ? Colors.white.withValues(alpha: 0.24) 
+        : Colors.black.withValues(alpha: 0.1);
+
     final linePaint = Paint()
-      ..color = Colors.white24
-      ..strokeWidth = 1.2;
+      ..color = lineColor
+      ..strokeWidth = 1.5;
 
     final nodes = <Offset>[
       Offset(size.width * 0.22, size.height * 0.28),
@@ -543,7 +558,7 @@ class _SkillTreeGraphPainter extends CustomPainter {
         nodes[i],
         5,
         Paint()
-          ..color = Colors.white24
+          ..color = lineColor
           ..style = PaintingStyle.stroke,
       );
     }
@@ -557,7 +572,6 @@ class _SkillTreeGraphPainter extends CustomPainter {
 // NEW SCREEN: EDIT PROFILE SCREEN (WITH REFERENCE DATA)
 // =============================================================================
 
-// CHANGED: Now a ConsumerStatefulWidget to listen to your appUserProvider
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 
@@ -568,7 +582,6 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  static const Color _navy = Color(0xFF0D3B66);
 
   @override
   void initState() {
@@ -584,6 +597,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
   // 🚀 NEW FUNCTION: Opens a dialog and updates Supabase
   Future<void> _showEditNameDialog(String currentName) async {
+    final theme = Theme.of(context);
     final TextEditingController nameController = TextEditingController(
       text: currentName,
     );
@@ -592,23 +606,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Edit Full Name', style: TextStyle(color: _navy)),
+          backgroundColor: theme.colorScheme.surface, // Themed Dialog Background
+          title: Text('Edit Full Name', style: TextStyle(color: theme.colorScheme.primary)),
           content: TextField(
             controller: nameController,
-            decoration: const InputDecoration(
+            style: TextStyle(color: theme.colorScheme.onSurface), // Themed Input Text
+            decoration: InputDecoration(
               hintText: 'Enter your new name',
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
               focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.orange),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
               ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.secondary), // Themed Orange
               onPressed: () async {
                 final newName = nameController.text.trim();
                 if (newName.isNotEmpty && newName != currentName) {
@@ -640,7 +657,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Error updating profile: $e'),
-                          backgroundColor: Colors.red,
+                          backgroundColor: theme.colorScheme.error,
                         ),
                       );
                     }
@@ -657,6 +674,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
   // 🚀 NEW FUNCTION: Edit city dialog
   Future<void> _showEditCityDialog(String currentCity) async {
+    final theme = Theme.of(context);
     final TextEditingController cityController = TextEditingController(
       text: currentCity,
     );
@@ -665,23 +683,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Edit City', style: TextStyle(color: _navy)),
+          backgroundColor: theme.colorScheme.surface, // Themed Dialog Background
+          title: Text('Edit City', style: TextStyle(color: theme.colorScheme.primary)),
           content: TextField(
             controller: cityController,
-            decoration: const InputDecoration(
+            style: TextStyle(color: theme.colorScheme.onSurface), // Themed Input Text
+            decoration: InputDecoration(
               hintText: 'Enter your city',
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
               focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.orange),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
               ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.secondary),
               onPressed: () async {
                 final newCity = cityController.text.trim();
                 if (newCity != currentCity) {
@@ -711,7 +732,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Error updating city: $e'),
-                          backgroundColor: Colors.red,
+                          backgroundColor: theme.colorScheme.error,
                         ),
                       );
                     }
@@ -730,6 +751,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
   // 🚀 NEW FUNCTION: Edit country dialog
   Future<void> _showEditCountryDialog(String currentCountry) async {
+    final theme = Theme.of(context);
     final TextEditingController countryController = TextEditingController(
       text: currentCountry,
     );
@@ -738,23 +760,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Edit Country', style: TextStyle(color: _navy)),
+          backgroundColor: theme.colorScheme.surface, // Themed Dialog Background
+          title: Text('Edit Country', style: TextStyle(color: theme.colorScheme.primary)),
           content: TextField(
             controller: countryController,
-            decoration: const InputDecoration(
+            style: TextStyle(color: theme.colorScheme.onSurface), // Themed Input Text
+            decoration: InputDecoration(
               hintText: 'Enter your country',
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
               focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.orange),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
               ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.secondary),
               onPressed: () async {
                 final newCountry = countryController.text.trim();
                 if (newCountry != currentCountry) {
@@ -784,7 +809,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Error updating country: $e'),
-                          backgroundColor: Colors.red,
+                          backgroundColor: theme.colorScheme.error,
                         ),
                       );
                     }
@@ -803,10 +828,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
   // 🚀 NEW FUNCTION: Edit education level dialog with better-styled dropdown
   Future<void> _showEditEducationLevelDialog(String currentLevel) async {
+    final theme = Theme.of(context);
     final List<String> educationLevels = [
       'Elementary',
       'High School',
       'Senior High School',
+      'Others',
     ];
     String? selectedLevel = currentLevel.isNotEmpty && educationLevels.contains(currentLevel)
         ? currentLevel
@@ -818,31 +845,33 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Edit Education Level', style: TextStyle(color: _navy)),
+              backgroundColor: theme.colorScheme.surface, // Themed Dialog Background
+              title: Text('Edit Education Level', style: TextStyle(color: theme.colorScheme.primary)),
               content: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.orange, width: 2),
+                  border: Border.all(color: theme.colorScheme.secondary, width: 2), // Themed Border
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
+                    dropdownColor: theme.colorScheme.surface, // Themed Dropdown list
                     isExpanded: true,
-                    hint: const Text(
+                    hint: Text(
                       'Select your education level',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                     ),
                     value: selectedLevel,
-                    icon: const Icon(Icons.arrow_drop_down, color: Colors.orange),
+                    icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.secondary),
                     items: educationLevels.map((String level) {
                       return DropdownMenuItem<String>(
                         value: level,
                         child: Text(
                           level,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
-                            color: _navy,
+                            color: theme.colorScheme.onSurface, // Themed Text
                           ),
                         ),
                       );
@@ -858,10 +887,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                  child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
                 ),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+                  style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.secondary),
                   onPressed: selectedLevel != null && selectedLevel != currentLevel
                       ? () async {
                           try {
@@ -890,7 +919,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Error updating education level: $e'),
-                                  backgroundColor: Colors.red,
+                                  backgroundColor: theme.colorScheme.error,
                                 ),
                               );
                             }
@@ -909,17 +938,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
   // 🚀 NEW FUNCTION: Change password dialog
   Future<void> _showChangePasswordDialog() async {
+    final theme = Theme.of(context);
+    
     // Check if user is a Google sign-in user
     final authService = ref.read(authServiceProvider);
     if (authService.isGoogleUser()) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
+          SnackBar(
+            content: const Text(
               'Google Sign-In users cannot change password. Please sign in with email and password to change your password.',
             ),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 4),
+            backgroundColor: theme.colorScheme.secondary, // Themed Warning
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -940,7 +971,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Change Password', style: TextStyle(color: _navy)),
+              backgroundColor: theme.colorScheme.surface, // Themed Background
+              title: Text('Change Password', style: TextStyle(color: theme.colorScheme.primary)), // Themed Title
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -950,17 +982,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       controller: currentPasswordController,
                       obscureText: !showCurrentPassword,
                       enabled: !isLoading,
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'Current password',
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.orange),
+                        hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: theme.colorScheme.secondary),
                         ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             showCurrentPassword
                                 ? Icons.visibility
                                 : Icons.visibility_off,
-                            color: Colors.grey,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                           onPressed: () {
                             setState(() {
@@ -976,17 +1010,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       controller: newPasswordController,
                       obscureText: !showNewPassword,
                       enabled: !isLoading,
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'New password',
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.orange),
+                        hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: theme.colorScheme.secondary),
                         ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             showNewPassword
                                 ? Icons.visibility
                                 : Icons.visibility_off,
-                            color: Colors.grey,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                           onPressed: () {
                             setState(() {
@@ -1002,17 +1038,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       controller: confirmPasswordController,
                       obscureText: !showConfirmPassword,
                       enabled: !isLoading,
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'Confirm new password',
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.orange),
+                        hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: theme.colorScheme.secondary),
                         ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             showConfirmPassword
                                 ? Icons.visibility
                                 : Icons.visibility_off,
-                            color: Colors.grey,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                           onPressed: () {
                             setState(() {
@@ -1028,10 +1066,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
               actions: [
                 TextButton(
                   onPressed: isLoading ? null : () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                  child: Text('Cancel', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
                 ),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+                  style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.secondary),
                   onPressed: isLoading
                       ? null
                       : () async {
@@ -1045,9 +1083,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           // Validation
                           if (currentPassword.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter your current password'),
-                                backgroundColor: Colors.red,
+                              SnackBar(
+                                content: const Text('Please enter your current password'),
+                                backgroundColor: theme.colorScheme.error,
                               ),
                             );
                             return;
@@ -1055,9 +1093,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
                           if (newPassword.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter a new password'),
-                                backgroundColor: Colors.red,
+                              SnackBar(
+                                content: const Text('Please enter a new password'),
+                                backgroundColor: theme.colorScheme.error,
                               ),
                             );
                             return;
@@ -1065,10 +1103,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
                           if (newPassword.length < 6) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'Password must be at least 6 characters'),
-                                backgroundColor: Colors.red,
+                              SnackBar(
+                                content: const Text('Password must be at least 6 characters'),
+                                backgroundColor: theme.colorScheme.error,
                               ),
                             );
                             return;
@@ -1076,9 +1113,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
                           if (newPassword != confirmPassword) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Passwords do not match'),
-                                backgroundColor: Colors.red,
+                              SnackBar(
+                                content: const Text('Passwords do not match'),
+                                backgroundColor: theme.colorScheme.error,
                               ),
                             );
                             return;
@@ -1086,10 +1123,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
                           if (newPassword == currentPassword) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'New password must be different from current password'),
-                                backgroundColor: Colors.red,
+                              SnackBar(
+                                content: const Text('New password must be different from current password'),
+                                backgroundColor: theme.colorScheme.error,
                               ),
                             );
                             return;
@@ -1133,7 +1169,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                                         ? 'Current password is incorrect'
                                         : 'Error changing password: $e',
                                   ),
-                                  backgroundColor: Colors.red,
+                                  backgroundColor: theme.colorScheme.error,
                                 ),
                               );
                             }
@@ -1144,13 +1180,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           }
                         },
                   child: isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                                AlwaysStoppedAnimation<Color>(theme.colorScheme.onSecondary), // Themed loader color
                           ),
                         )
                       : const Text('Change Password'),
@@ -1165,10 +1201,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache theme
+
     return GradientScaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
-        foregroundColor: _navy,
+        foregroundColor: theme.colorScheme.primary, // Themed AppBar text
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -1180,20 +1218,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
             child: Container(
               height: 50,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface, // Themed Surface
                 borderRadius: BorderRadius.circular(25),
-                border: Border.all(color: Colors.black12, width: 1),
+                border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1), width: 1), // Themed Border
               ),
               child: TabBar(
                 controller: _tabController,
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerColor: Colors.transparent,
                 indicator: BoxDecoration(
-                  color: _navy,
+                  color: theme.colorScheme.primary, // Themed Active Tab Highlight
                   borderRadius: BorderRadius.circular(25),
                 ),
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.black54,
+                labelColor: theme.colorScheme.onPrimary, // Ensures text is visible on the blue tab
+                unselectedLabelColor: theme.colorScheme.onSurface.withValues(alpha: 0.6), // Themed Unselected text
                 labelStyle: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
@@ -1212,9 +1250,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildProfileTab(),
-                _buildSettingsTab(),
-                _buildAboutTab(),
+                _buildProfileTab(theme),
+                _buildSettingsTab(theme),
+                _buildAboutTab(theme),
               ],
             ),
           ),
@@ -1226,15 +1264,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
   // ---------------------------------------------------------------------------
   // TAB 1: PROFILE
   // ---------------------------------------------------------------------------
-  Widget _buildProfileTab() {
-    // 🚀 Watch the provider to get REAL data instead of hardcoded text
+  Widget _buildProfileTab(ThemeData theme) {
     final appUserState = ref.watch(appUserProvider);
 
     return appUserState.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => const Center(child: Text('Error loading profile')),
+      loading: () => Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
+      error: (err, stack) => Center(child: Text('Error loading profile', style: TextStyle(color: theme.colorScheme.error))),
       data: (appUser) {
-        if (appUser == null) return const Center(child: Text('Not logged in'));
+        if (appUser == null) return Center(child: Text('Not logged in', style: TextStyle(color: theme.colorScheme.onSurface)));
 
         final profile = appUser.profile;
         final currentName = profile.fullName ?? 'Explorer';
@@ -1255,15 +1292,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                   Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.orange, width: 3),
+                      border: Border.all(color: theme.colorScheme.secondary, width: 3), // Themed Avatar Border (Orange)
                     ),
                     child: CircleAvatar(
                       radius: 65,
-                      backgroundColor: Colors.grey[200],
+                      backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.1),
                       child: Icon(
                         Icons.person,
                         size: 70,
-                        color: Colors.grey[500],
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
                   ),
@@ -1271,17 +1308,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                     bottom: 0,
                     right: 0,
                     child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface, // Themed Edit Button background
                         shape: BoxShape.circle,
                         boxShadow: [
-                          BoxShadow(color: Colors.black26, blurRadius: 4),
+                          BoxShadow(color: theme.shadowColor.withValues(alpha: 0.2), blurRadius: 4), // Themed Shadow
                         ],
                       ),
                       child: IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.camera_alt,
-                          color: Colors.orange,
+                          color: theme.colorScheme.secondary, // Themed Icon Color
                           size: 22,
                         ),
                         onPressed: () {}, // Image picker logic goes here later
@@ -1297,107 +1334,111 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
             // Edit Info Card
             Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: theme.colorScheme.surface, // Themed Surface
                     borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.black12),
+                    border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)), // Themed Border
                   ),
                   child: Column(
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.person_outline, color: _navy),
-                        title: const Text(
+                        leading: Icon(Icons.person_outline, color: theme.colorScheme.primary), // Themed Icon
+                        title: Text(
                           'Full Name',
-                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 12), // Themed adaptive label
                         ),
                         subtitle: Text(
                           currentName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            color: theme.colorScheme.onSurface, // Themed Value
                           ),
                         ),
-                        trailing: const Icon(
+                        trailing: Icon(
                           Icons.edit,
-                          color: Colors.orange,
+                          color: theme.colorScheme.secondary, // Themed Orange
                           size: 20,
                         ),
-                        // 🚀 Calls our new edit function
                         onTap: () => _showEditNameDialog(currentName),
                       ),
-                      const Divider(height: 1),
+                      Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
                       ListTile(
-                        leading: const Icon(Icons.email_outlined, color: _navy),
-                        title: const Text(
+                        leading: Icon(Icons.email_outlined, color: theme.colorScheme.primary),
+                        title: Text(
                           'Email',
-                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 12),
                         ),
                         subtitle: Text(
                           email,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
                       ),
-                      const Divider(height: 1),
+                      Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
                       ListTile(
-                        leading: const Icon(Icons.location_on_outlined, color: _navy),
-                        title: const Text(
+                        leading: Icon(Icons.location_on_outlined, color: theme.colorScheme.primary),
+                        title: Text(
                           'City',
-                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 12),
                         ),
                         subtitle: Text(
                           currentCity.isNotEmpty ? currentCity : 'Not set',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
-                        trailing: const Icon(
+                        trailing: Icon(
                           Icons.edit,
-                          color: Colors.orange,
+                          color: theme.colorScheme.secondary,
                           size: 20,
                         ),
                         onTap: () => _showEditCityDialog(currentCity),
                       ),
-                      const Divider(height: 1),
+                      Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
                       ListTile(
-                        leading: const Icon(Icons.public_outlined, color: _navy),
-                        title: const Text(
+                        leading: Icon(Icons.public_outlined, color: theme.colorScheme.primary),
+                        title: Text(
                           'Country',
-                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 12),
                         ),
                         subtitle: Text(
                           currentCountry.isNotEmpty ? currentCountry : 'Not set',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
-                        trailing: const Icon(
+                        trailing: Icon(
                           Icons.edit,
-                          color: Colors.orange,
+                          color: theme.colorScheme.secondary,
                           size: 20,
                         ),
                         onTap: () => _showEditCountryDialog(currentCountry),
                       ),
-                      const Divider(height: 1),
+                      Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
                       ListTile(
-                        leading: const Icon(Icons.school_outlined, color: _navy),
-                        title: const Text(
+                        leading: Icon(Icons.school_outlined, color: theme.colorScheme.primary),
+                        title: Text(
                           'Education Level',
-                          style: TextStyle(color: Colors.black54, fontSize: 12),
+                          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 12),
                         ),
                         subtitle: Text(
                           currentEducationLevel,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
-                        trailing: const Icon(
+                        trailing: Icon(
                           Icons.edit,
-                          color: Colors.orange,
+                          color: theme.colorScheme.secondary,
                           size: 20,
                         ),
                         onTap: () => _showEditEducationLevelDialog(currentEducationLevel),
@@ -1419,38 +1460,36 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
   // ---------------------------------------------------------------------------
   // TAB 2: SETTINGS
   // ---------------------------------------------------------------------------
-  Widget _buildSettingsTab() {
+  Widget _buildSettingsTab(ThemeData theme) {
     return ListView(
       padding: const EdgeInsets.all(20),
       physics: const BouncingScrollPhysics(),
       children: [
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.colorScheme.surface, // Themed Surface
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.black12),
+            border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)), // Themed Border
           ),
           child: Column(
             children: [
               ValueListenableBuilder<ThemeMode>(
                 valueListenable: appThemeNotifier,
                 builder: (context, currentMode, child) {
-                  // Check if the current mode is dark to determine if the switch is ON (true) or OFF (false)
                   final isDarkMode = currentMode == ThemeMode.dark;
 
                   return SwitchListTile(
                     secondary: Icon(
-                      isDarkMode ? Icons.dark_mode : Icons.light_mode, // Swaps icon based on mode!
-                      color: Theme.of(context).colorScheme.primary, // Uses your theme's orange
+                      isDarkMode ? Icons.dark_mode : Icons.light_mode, 
+                      color: theme.colorScheme.primary, // Themed Blue Icon
                     ),
-                    title: const Text(
+                    title: Text(
                       'Dark Mode',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface), // Themed Adaptive Text
                     ),
-                    value: isDarkMode, // Binds the switch state to our global notifier
-                    activeThumbColor: Theme.of(context).colorScheme.primary,
+                    value: isDarkMode,
+                    activeColor: theme.colorScheme.primary, // Themed Primary Color for active switch
                     onChanged: (bool value) {
-                      // When toggled, update the global theme notifier
                       if (value) {
                         appThemeNotifier.value = ThemeMode.dark;
                       } else {
@@ -1460,62 +1499,61 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                   );
                 },
               ),
-              const Divider(height: 1),
+              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
               SwitchListTile(
-                secondary: const Icon(Icons.vibration, color: Colors.orange),
-                title: const Text(
+                secondary: Icon(Icons.vibration, color: theme.colorScheme.secondary), // Themed Orange
+                title: Text(
                   'Vibration',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                 ),
                 value: true,
-                activeColor: Colors.orange,
+                activeColor: theme.colorScheme.secondary, // Themed Orange switch
                 onChanged: (bool value) {},
               ),
             ],
           ),
         ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
         // Account Actions
-        const Padding(
-          padding: EdgeInsets.only(top: 20, bottom: 10),
+        Padding(
+          padding: const EdgeInsets.only(top: 20, bottom: 10),
           child: Text(
             'Account',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: _navy,
+              color: theme.colorScheme.primary, // Themed Blue Title
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.colorScheme.surface, // Themed Surface
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.black12),
+            border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
           ),
           child: Column(
             children: [
               ListTile(
-                title: const Text(
+                title: Text(
                   'Change Password',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface), // Themed Text
                 ),
-                trailing: const Icon(Icons.lock_outline, color: Colors.orange),
+                trailing: Icon(Icons.lock_outline, color: theme.colorScheme.secondary), // Themed Orange
                 onTap: () => _showChangePasswordDialog(),
               ),
-              const Divider(height: 1),
+              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
               ListTile(
-                title: const Text(
+                title: Text(
                   'Sign Out',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.red,
+                    color: theme.colorScheme.error, // Themed Error Color
                   ),
                 ),
-                trailing: const Icon(Icons.logout, color: Colors.red),
+                trailing: Icon(Icons.logout, color: theme.colorScheme.error), // Themed Error Color
                 onTap: () async {
                   await Supabase.instance.client.auth.signOut();
                   if (context.mounted) {
-                    // Properly destroy the current navigation stack and return to the AuthGate
                     Navigator.of(
                       context,
                       rootNavigator: true,
@@ -1536,7 +1574,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
   // ---------------------------------------------------------------------------
   // TAB 3: ABOUT
   // ---------------------------------------------------------------------------
-  Widget _buildAboutTab() {
+  Widget _buildAboutTab(ThemeData theme) {
     return ListView(
       padding: const EdgeInsets.all(20),
       physics: const BouncingScrollPhysics(),
@@ -1545,20 +1583,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.colorScheme.surface, // Themed Surface
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.black12),
+            border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
           ),
-          child: const Column(
+          child: Column(
             children: [
-              Icon(Icons.school, size: 48, color: _navy),
-              SizedBox(height: 16),
+              Icon(Icons.school, size: 48, color: theme.colorScheme.primary), // Themed Blue Icon
+              const SizedBox(height: 16),
               Text(
                 'Tuklascope is a modern learning companion that helps you discover, track, and engage with educational content. Built with love and purpose to make learning accessible for everyone.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.black87,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.9), // Themed Description Text
                   height: 1.4,
                 ),
               ),
@@ -1569,60 +1607,60 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
         const SizedBox(height: 20),
 
         // Developers
-        const Text(
+        Text(
           'Developed by:',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: _navy,
+            color: theme.colorScheme.primary, // Themed Primary Title
           ),
         ),
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.colorScheme.surface, // Themed Surface Background
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.black12),
+            border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)), // Themed border
           ),
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text(
+                leading: Icon(Icons.code, color: theme.colorScheme.secondary), // Themed secondary
+                title: Text(
                   'John Michael A. Nave',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary), // Themed Name
                 ),
               ),
-              const Divider(height: 1),
+              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
               ListTile(
-                leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text(
+                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
+                title: Text(
                   'James Andrew S. Ologuin',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
               ),
-              const Divider(height: 1),
+              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
               ListTile(
-                leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text(
+                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
+                title: Text(
                   'John Peter D. Pestaño',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
               ),
-              const Divider(height: 1),
+              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
               ListTile(
-                leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text(
+                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
+                title: Text(
                   'Jordan A. Cabandon',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
               ),
-              const Divider(height: 1),
+              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
               ListTile(
-                leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text(
+                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
+                title: Text(
                   'John Zachary N. Gillana',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
               ),
             ],
