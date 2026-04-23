@@ -446,7 +446,7 @@ final List<ProjectData> myProjects = [
   ProjectData(
     title: "Smiling Masterclass",
     description: "Smile no matter the situation you're in.",
-    image: "https://cdn.discordapp.com/attachments/515699608580521984/1490364058266763365/jonard_smile.png?ex=69d3c931&is=69d277b1&hm=8b9ae869d22d9e440b6419886f887ac650baaa0e051075656661581195b54aad",
+    image: "https://picsum.photos/id/10/400/200",
     difficulty: "Advanced",
     points: 670,
     progress: 100,
