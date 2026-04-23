@@ -1,10 +1,9 @@
-// mobile/lib/features/scanner/live_feed_screen.dart
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:tuklascope_mobile/core/services/discovery_service.dart';
-import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart'; // 🚀 Added to access navbar state
+import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart'; 
 import 'teaser_doors_screen.dart';
 
 class LiveFeedScreen extends StatefulWidget {
@@ -102,10 +101,12 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache theme
+
     if (!_isCameraInitialized || _controller == null) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      return Scaffold(
+        backgroundColor: Colors.black, // Always black behind camera
+        body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)), // Themed Loader
       );
     }
 
@@ -155,12 +156,12 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                     left: 20,
                     right: 20,
                   ),
-                  color: Colors.black.withValues(alpha: 0.4),
+                  color: Colors.black.withValues(alpha: 0.4), // Camera HUD stays dark
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.fiber_manual_record,
-                        color: Colors.green,
+                        color: theme.colorScheme.secondary, // Themed "Recording" dot (Orange)
                         size: 16,
                       ),
                       const SizedBox(width: 8),
@@ -176,7 +177,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                       IconButton(
                         icon: Icon(
                           _isFlashOn ? Icons.flash_on : Icons.flash_off,
-                          color: _isFlashOn ? Colors.yellow : Colors.white,
+                          color: _isFlashOn ? theme.colorScheme.secondary : Colors.white, // Themed active flash
                         ),
                         onPressed: _toggleFlash,
                       ),
@@ -195,18 +196,16 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
             child: ClipRect(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                // 🚀 FIX: Swapped to AnimatedContainer to react to navbar
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 400), // Matches navbar speed
                   curve: Curves.easeOutQuint, // Matches navbar curve
                   padding: EdgeInsets.only(
                     top: 20,
-                    // 🚀 FIX: Added dynamic extra padding here
                     bottom: MediaQuery.of(context).padding.bottom + extraBottomPadding, 
                     left: 40,
                     right: 40,
                   ),
-                  color: Colors.black.withValues(alpha: 0.5),
+                  color: Colors.black.withValues(alpha: 0.5), // Camera HUD stays dark
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -292,7 +291,6 @@ class _ScanningModalState extends State<ScanningModal> {
 
     if (aiResult != null) {
       // SUCCESS!
-      // Print the JSON so we can see it in VS Code Debug Console
       debugPrint("🎯 AI RESPONSE: $aiResult");
 
       // Go to the Teaser Doors and pass the JSON data AND the image path!
@@ -308,11 +306,11 @@ class _ScanningModalState extends State<ScanningModal> {
     } else {
       // FAILURE: Show an error to the user
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
+        SnackBar(
+          content: const Text(
             'Failed to analyze image. Ensure you have internet and try again.',
           ),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error, // Themed Error
         ),
       );
     }
@@ -320,6 +318,8 @@ class _ScanningModalState extends State<ScanningModal> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache theme
+
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -328,15 +328,11 @@ class _ScanningModalState extends State<ScanningModal> {
         height: 320,
         width: double.infinity,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFFDF4), Color(0xFFD9D7CE)],
-          ),
+          color: theme.colorScheme.surface, // Themed Adaptive Surface (White/Dark Grey)
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: theme.shadowColor.withValues(alpha: 0.1), // Themed Shadow
               blurRadius: 20,
               spreadRadius: 5,
             ),
@@ -348,13 +344,13 @@ class _ScanningModalState extends State<ScanningModal> {
             Stack(
               alignment: Alignment.center,
               children: [
-                const SizedBox(
+                SizedBox(
                   width: 100,
                   height: 100,
                   child: CircularProgressIndicator(
                     strokeWidth: 6,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Color(0xFFFF9800),
+                      theme.colorScheme.secondary, // Themed Spinner (Orange)
                     ),
                   ),
                 ),
@@ -362,30 +358,33 @@ class _ScanningModalState extends State<ScanningModal> {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0B3C6A).withValues(alpha: 0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1), // Themed Circle Bg
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.document_scanner_rounded,
                     size: 36,
-                    color: Color(0xFF0B3C6A),
+                    color: theme.colorScheme.primary, // Themed Icon
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 35),
-            const Text(
+            Text(
               'Analyzing Artifact...',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF0B3C6A),
+                color: theme.colorScheme.primary, // Themed Title
               ),
             ),
             const SizedBox(height: 10),
             Text(
               'Cross-referencing historical databases',
-              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              style: TextStyle(
+                fontSize: 14, 
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7) // Themed Subtitle
+              ),
             ),
           ],
         ),

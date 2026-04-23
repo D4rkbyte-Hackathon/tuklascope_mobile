@@ -6,7 +6,7 @@ import 'discovery_cards_screen.dart';
 class TeaserDoorsScreen extends StatefulWidget {
   final Map<String, dynamic> aiData;
   final String
-  imagePath; // 🚀 NEW: We need to receive this from the Camera/LiveFeed
+      imagePath; // 🚀 NEW: We need to receive this from the Camera/LiveFeed
 
   const TeaserDoorsScreen({
     super.key,
@@ -51,6 +51,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
     }
   }
 
+  // TECH LEAD: We keep these specific colors as they represent specific pathways!
   Color _getColorForStrand(String lens) {
     switch (lens.toUpperCase()) {
       case 'STEM':
@@ -68,6 +69,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache the theme
+
     if (_teaserDoors.isEmpty) {
       return GradientScaffold(
         appBar: AppBar(title: const Text('Error')),
@@ -79,13 +82,13 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
       appBar: AppBar(
         title: Text(
           _objectName,
-          style: const TextStyle(
-            color: Color(0xFF0B3C6A),
+          style: TextStyle(
+            color: theme.colorScheme.primary, // Themed AppBar Title
             fontWeight: FontWeight.w900,
           ),
         ),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Color(0xFF0B3C6A)),
+        iconTheme: IconThemeData(color: theme.colorScheme.primary), // Themed Back Button
       ),
       body: SafeArea(
         child: Column(
@@ -93,8 +96,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
           children: [
             const SizedBox(height: 20),
             RichText(
-              text: const TextSpan(
-                style: TextStyle(
+              text: TextSpan(
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
                   fontFamily: 'Roboto',
@@ -102,11 +105,11 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                 children: [
                   TextSpan(
                     text: 'Open a ',
-                    style: TextStyle(color: Color(0xFF0B3C6A)),
+                    style: TextStyle(color: theme.colorScheme.primary), // Themed Primary
                   ),
                   TextSpan(
                     text: 'Door',
-                    style: TextStyle(color: Color(0xFFFF6B2C)),
+                    style: TextStyle(color: theme.colorScheme.secondary), // Themed Orange
                   ),
                 ],
               ),
@@ -119,7 +122,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[700],
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed Subtitle
                   height: 1.5,
                 ),
               ),
@@ -134,7 +137,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                   return AnimatedBuilder(
                     animation: _pageController,
                     builder: (context, child) {
-                      // 🚀 FIX: Added 'final' to these local variables
                       final double page =
                           _pageController.position.haveDimensions
                           ? _pageController.page!
@@ -153,7 +155,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                         scale: scale,
                         child: Opacity(
                           opacity: opacity,
-                          child: _buildMagicalDoor(context, index),
+                          // Pass theme into builder for performance
+                          child: _buildMagicalDoor(context, index, theme),
                         ),
                       );
                     },
@@ -168,7 +171,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
     );
   }
 
-  Widget _buildMagicalDoor(BuildContext context, int index) {
+  Widget _buildMagicalDoor(BuildContext context, int index, ThemeData theme) {
     final door = _teaserDoors[index];
     final lens = door['lens'] ?? 'Unknown';
     final title = door['title'] ?? 'Mysterious Path';
@@ -181,9 +184,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface, // Themed Surface Background!
         borderRadius: BorderRadius.circular(40),
-        // 🚀 FIX: Used withValues(alpha: X)
         border: Border.all(color: strandColor.withValues(alpha: 0.3), width: 2),
         boxShadow: [
           BoxShadow(
@@ -205,7 +207,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    // 🚀 FIX: Used withValues(alpha: X)
                     color: strandColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
@@ -217,7 +218,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0B3C6A),
+                    color: theme.colorScheme.primary, // Themed Blue XP Pill
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -230,8 +231,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                       const SizedBox(width: 4),
                       Text(
                         '+$xp XP',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: theme.colorScheme.onPrimary, // Ensures contrast on the primary color
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -257,15 +258,15 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF0B3C6A),
+                color: theme.colorScheme.primary, // Themed Card Title
                 height: 1.2,
               ),
             ),
             const SizedBox(height: 16),
-            const Divider(color: Color(0xFFEEEEEE), thickness: 2),
+            Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.1), thickness: 2), // Themed Divider
             const SizedBox(height: 16),
             Expanded(
               child: SingleChildScrollView(
@@ -275,7 +276,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,
-                    color: Colors.grey[800],
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8), // Themed Teaser Text
                     height: 1.5,
                   ),
                 ),
@@ -288,7 +289,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: strandColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Colors.white, // Kept white to pop on the vibrant strand colors
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -302,8 +303,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                         objectName: _objectName,
                         gradeLevel: widget.aiData['grade_level'] ?? '',
                         selectedLens: lens,
-                        imagePath: widget
-                            .imagePath, // 🚀 FIX: Passed the path through!
+                        imagePath: widget.imagePath,
                       ),
                     ),
                   );
