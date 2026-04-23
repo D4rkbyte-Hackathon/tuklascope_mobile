@@ -15,6 +15,7 @@ class ApiConfig {
 
   // Specific Endpoint Routes
   static String get discoverVision => '$baseUrl/discover/vision';
+  static String get discoverSave => '$baseUrl/discover/save';
   static String get generateLearnDeck => '$baseUrl/learn/generate-deck';
   static String get pathfinderAnalyze => '$baseUrl/pathfinder/analyze';
 }

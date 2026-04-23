@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:tuklascope_mobile/core/services/discovery_service.dart';
-import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart'; 
+import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
 import 'teaser_doors_screen.dart';
 
 class LiveFeedScreen extends StatefulWidget {
@@ -106,14 +106,16 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
     if (!_isCameraInitialized || _controller == null) {
       return Scaffold(
         backgroundColor: Colors.black, // Always black behind camera
-        body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)), // Themed Loader
+        body: Center(
+          child: CircularProgressIndicator(color: theme.colorScheme.primary),
+        ), // Themed Loader
       );
     }
 
     // 🚀 1. Grab the visibility state from the inherited scope
     final navScope = MainNavScope.maybeOf(context);
-    final isNavBarVisible = navScope?.isNavBarVisible ?? true; 
-    
+    final isNavBarVisible = navScope?.isNavBarVisible ?? true;
+
     // 🚀 2. Calculate dynamic padding (90 gives clearance for 70px navbar + padding)
     final extraBottomPadding = isNavBarVisible ? 100.0 : 20.0;
 
@@ -156,12 +158,16 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                     left: 20,
                     right: 20,
                   ),
-                  color: Colors.black.withValues(alpha: 0.4), // Camera HUD stays dark
+                  color: Colors.black.withValues(
+                    alpha: 0.4,
+                  ), // Camera HUD stays dark
                   child: Row(
                     children: [
                       Icon(
                         Icons.fiber_manual_record,
-                        color: theme.colorScheme.secondary, // Themed "Recording" dot (Orange)
+                        color: theme
+                            .colorScheme
+                            .secondary, // Themed "Recording" dot (Orange)
                         size: 16,
                       ),
                       const SizedBox(width: 8),
@@ -177,7 +183,9 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                       IconButton(
                         icon: Icon(
                           _isFlashOn ? Icons.flash_on : Icons.flash_off,
-                          color: _isFlashOn ? theme.colorScheme.secondary : Colors.white, // Themed active flash
+                          color: _isFlashOn
+                              ? theme.colorScheme.secondary
+                              : Colors.white, // Themed active flash
                         ),
                         onPressed: _toggleFlash,
                       ),
@@ -197,15 +205,21 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 400), // Matches navbar speed
+                  duration: const Duration(
+                    milliseconds: 400,
+                  ), // Matches navbar speed
                   curve: Curves.easeOutQuint, // Matches navbar curve
                   padding: EdgeInsets.only(
                     top: 20,
-                    bottom: MediaQuery.of(context).padding.bottom + extraBottomPadding, 
+                    bottom:
+                        MediaQuery.of(context).padding.bottom +
+                        extraBottomPadding,
                     left: 40,
                     right: 40,
                   ),
-                  color: Colors.black.withValues(alpha: 0.5), // Camera HUD stays dark
+                  color: Colors.black.withValues(
+                    alpha: 0.5,
+                  ), // Camera HUD stays dark
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -281,8 +295,10 @@ class _ScanningModalState extends State<ScanningModal> {
 
   // The actual backend communication logic
   Future<void> _uploadAndAnalyze() async {
-    // Call our backend!
-    final aiResult = await DiscoveryService.analyzeImage(widget.imageFile);
+    // Call our backend using the named parameter!
+    final aiResult = await DiscoveryService.analyzeImage(
+      imageFile: widget.imageFile,
+    );
 
     if (!mounted) return;
 
@@ -298,8 +314,8 @@ class _ScanningModalState extends State<ScanningModal> {
         context,
         MaterialPageRoute(
           builder: (context) => TeaserDoorsScreen(
-            aiData: aiResult, 
-            imagePath: widget.imageFile.path, 
+            aiData: aiResult,
+            imagePath: widget.imageFile.path,
           ),
         ),
       );
@@ -328,7 +344,9 @@ class _ScanningModalState extends State<ScanningModal> {
         height: 320,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface, // Themed Adaptive Surface (White/Dark Grey)
+          color: theme
+              .colorScheme
+              .surface, // Themed Adaptive Surface (White/Dark Grey)
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
@@ -358,7 +376,9 @@ class _ScanningModalState extends State<ScanningModal> {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1), // Themed Circle Bg
+                    color: theme.colorScheme.primary.withValues(
+                      alpha: 0.1,
+                    ), // Themed Circle Bg
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -382,8 +402,10 @@ class _ScanningModalState extends State<ScanningModal> {
             Text(
               'Cross-referencing historical databases',
               style: TextStyle(
-                fontSize: 14, 
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7) // Themed Subtitle
+                fontSize: 14,
+                color: theme.colorScheme.onSurface.withValues(
+                  alpha: 0.7,
+                ), // Themed Subtitle
               ),
             ),
           ],
