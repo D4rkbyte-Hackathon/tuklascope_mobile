@@ -76,13 +76,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context); // Dynamically grab the theme!
     final isDark = theme.brightness == Brightness.dark;
-    
+
     // TECH LEAD: Watch the provider to get real-time stats
     final statsAsync = ref.watch(homeStatsProvider);
 
     // Dynamic brand colors for specific feature cards
     final mainGreen = const Color(0xFF4CAF50); // From your color palette
-    final adaptivePurple = isDark ? const Color(0xFFCE93D8) : const Color(0xFF8E24AA); // Lightens in dark mode
+    final adaptivePurple = isDark
+        ? const Color(0xFFCE93D8)
+        : const Color(0xFF8E24AA); // Lightens in dark mode
 
     final List<Widget> listItems = [
       _buildDailyQuestCard(statsAsync, theme),
@@ -110,7 +112,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             'Explore the science behind Filipino rice terraces - How do these ancient structures demonstrate physics and engineering?',
         borderColor: theme.colorScheme.secondary,
         buttonText: 'Ask TuklasTutor about this →',
-        buttonGradient: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)],
+        buttonGradient: [
+          theme.colorScheme.primary,
+          theme.colorScheme.primary.withValues(alpha: 0.8),
+        ],
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const TuklasTutorScreen()),
@@ -121,7 +126,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _buildDiscoverySection(theme),
       const SizedBox(height: 48),
 
-      _buildHeroHeading('Explore Your', 'Learning\nJourney', theme, isStacked: true),
+      _buildHeroHeading(
+        'Explore Your',
+        'Learning\nJourney',
+        theme,
+        isStacked: true,
+      ),
       const SizedBox(height: 16),
 
       Text(
@@ -139,11 +149,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _buildFeatureCard(
         theme: theme,
         title: 'Learning Pathways',
-        description: 'Structured learning journeys\nfrom beginner to advanced levels',
+        description:
+            'Structured learning journeys\nfrom beginner to advanced levels',
         borderColor: theme.colorScheme.primary,
         buttonText: 'Explore Pathways →',
         buttonTextColor: theme.colorScheme.primary,
-        iconArea: Icon(Icons.map_outlined, size: 64, color: theme.colorScheme.primary),
+        iconArea: Icon(
+          Icons.map_outlined,
+          size: 64,
+          color: theme.colorScheme.primary,
+        ),
         onTap: () => MainNavScope.maybeOf(context)?.goToTab(2),
       ),
       const SizedBox(height: 24),
@@ -151,7 +166,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _buildFeatureCard(
         theme: theme,
         title: 'The "Kaalaman" Skill Tree',
-        description: 'Track your progress, discover new pathways,\nand get personalized guidance for your journey.',
+        description:
+            'Track your progress, discover new pathways,\nand get personalized guidance for your journey.',
         borderColor: mainGreen,
         buttonText: 'View Pathfinder →',
         buttonTextColor: mainGreen,
@@ -163,11 +179,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _buildFeatureCard(
         theme: theme,
         title: 'Tuklascope AI',
-        description: 'Get personalized career and academic\nguidance based on your skills',
+        description:
+            'Get personalized career and academic\nguidance based on your skills',
         borderColor: adaptivePurple,
         buttonText: 'Get Guidance →',
         buttonTextColor: adaptivePurple,
-        iconArea: Icon(Icons.auto_awesome_outlined, size: 64, color: adaptivePurple),
+        iconArea: Icon(
+          Icons.auto_awesome_outlined,
+          size: 64,
+          color: adaptivePurple,
+        ),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const TuklasTutorScreen()),
@@ -180,30 +201,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            ListView.builder(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                16.0,
-                20.0,
-                16.0,
-                MediaQuery.paddingOf(context).bottom,
-              ),
-              itemCount: listItems.length,
-              itemBuilder: (context, index) {
-                final item = listItems[index];
-                if (item is SizedBox) return item;
-
-                return item
-                    .animate()
-                    .fade(duration: 600.ms, delay: (50 * (index % 10)).ms)
-                    .slideY(
-                      begin: 0.1,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
-                      delay: (50 * (index % 10)).ms,
-                    );
+            // RefreshIndicator allows pull-to-refresh
+            RefreshIndicator(
+              color: theme.colorScheme.primary,
+              backgroundColor: theme.colorScheme.surface,
+              onRefresh: () async {
+                // TECH LEAD: This forces the provider to run the Supabase query again!
+                return ref.refresh(homeStatsProvider.future);
               },
+              child: ListView.builder(
+                physics:
+                    const AlwaysScrollableScrollPhysics(), // Changed to allow pulling even if list is short
+                padding: EdgeInsets.fromLTRB(
+                  16.0,
+                  20.0,
+                  16.0,
+                  MediaQuery.paddingOf(context).bottom,
+                ),
+                itemCount: listItems.length,
+                itemBuilder: (context, index) {
+                  final item = listItems[index];
+                  if (item is SizedBox) return item;
+
+                  return item
+                      .animate()
+                      .fade(duration: 600.ms, delay: (50 * (index % 10)).ms)
+                      .slideY(
+                        begin: 0.1,
+                        end: 0,
+                        duration: 600.ms,
+                        curve: Curves.easeOutCubic,
+                        delay: (50 * (index % 10)).ms,
+                      );
+                },
+              ),
             ),
           ],
         ),
@@ -215,7 +246,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // HELPER WIDGETS
   // =========================================================================
 
-  Widget _buildDailyQuestCard(AsyncValue<HomeStats> statsAsync, ThemeData theme) {
+  Widget _buildDailyQuestCard(
+    AsyncValue<HomeStats> statsAsync,
+    ThemeData theme,
+  ) {
     final streak = statsAsync.value?.dailyStreak ?? 0;
     final points = statsAsync.value?.totalPoints ?? 0;
     final scansCount = statsAsync.value?.todayScansCount ?? 0;
@@ -249,7 +283,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Container(
             height: 24,
             decoration: BoxDecoration(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.8), // High contrast pill background
+              color: theme.colorScheme.onSurface.withValues(
+                alpha: 0.8,
+              ), // High contrast pill background
               borderRadius: BorderRadius.circular(12),
             ),
             child: Stack(
@@ -262,7 +298,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           height: 12,
                           width: 12,
                           child: CircularProgressIndicator(
-                            color: theme.colorScheme.surface, // Matches the inverted text color
+                            color: theme
+                                .colorScheme
+                                .surface, // Matches the inverted text color
                             strokeWidth: 2,
                           ),
                         )
@@ -270,7 +308,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           '$scansCount/3 Discovered',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.surface, // Always contrasts with the pill background
+                            color: theme
+                                .colorScheme
+                                .surface, // Always contrasts with the pill background
                             fontSize: 14,
                           ),
                         ),
@@ -299,14 +339,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
-                              color: theme.colorScheme.secondary, // Themed Orange
+                              color:
+                                  theme.colorScheme.secondary, // Themed Orange
                             ),
                           ),
                     const SizedBox(height: 4),
                     Text(
                       'Daily Streak',
                       style: TextStyle(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed label
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ), // Themed label
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -314,7 +357,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ],
                 ),
               ),
-              Container(width: 1, height: 60, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)), // Themed divider
+              Container(
+                width: 1,
+                height: 60,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+              ), // Themed divider
               Expanded(
                 child: Column(
                   children: [
@@ -337,7 +384,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Text(
                       'Total Points',
                       style: TextStyle(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed label
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ), // Themed label
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -352,7 +401,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildHeroHeading(String part1, String part2, ThemeData theme, {bool isStacked = false}) {
+  Widget _buildHeroHeading(
+    String part1,
+    String part2,
+    ThemeData theme, {
+    bool isStacked = false,
+  }) {
     return RichText(
       textAlign: TextAlign.center,
       text: TextSpan(
@@ -369,12 +423,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (isStacked)
             TextSpan(
               text: '\n$part2',
-              style: TextStyle(color: theme.colorScheme.secondary), // Themed Orange
+              style: TextStyle(
+                color: theme.colorScheme.secondary,
+              ), // Themed Orange
             )
           else
             TextSpan(
               text: part2,
-              style: TextStyle(color: theme.colorScheme.secondary), // Themed Orange
+              style: TextStyle(
+                color: theme.colorScheme.secondary,
+              ), // Themed Orange
             ),
         ],
       ),
@@ -433,7 +491,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         color: theme.colorScheme.surface, // Themed Surface
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.4), // Themed border
+          color: theme.colorScheme.primary.withValues(
+            alpha: 0.4,
+          ), // Themed border
           width: 1.5,
         ),
       ),
@@ -456,7 +516,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed Text
+              color: theme.colorScheme.onSurface.withValues(
+                alpha: 0.7,
+              ), // Themed Text
               height: 1.4,
             ),
           ),
@@ -464,7 +526,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           _buildGradientButton(
             'Start Discovery →',
-            [theme.colorScheme.tertiary, theme.colorScheme.secondary], // Themed Orange Gradient
+            [
+              theme.colorScheme.tertiary,
+              theme.colorScheme.secondary,
+            ], // Themed Orange Gradient
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
             onTap: () {
               MainNavScope.maybeOf(context)?.goToTab(1);
@@ -490,7 +555,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface, // Themed Surface
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor.withValues(alpha: 0.5), width: 2), // Softer border integration
+        border: Border.all(
+          color: borderColor.withValues(alpha: 0.5),
+          width: 2,
+        ), // Softer border integration
       ),
       child: Column(
         children: [
@@ -512,9 +580,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             description,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14, 
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed Desc
-              height: 1.4
+              fontSize: 14,
+              color: theme.colorScheme.onSurface.withValues(
+                alpha: 0.7,
+              ), // Themed Desc
+              height: 1.4,
             ),
           ),
           const SizedBox(height: 24),
@@ -529,7 +599,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: buttonTextColor, // Dynamic color (Blue, Green, or Purple)
+                  color:
+                      buttonTextColor, // Dynamic color (Blue, Green, or Purple)
                 ),
               ),
             ),
@@ -567,7 +638,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           borderRadius: BorderRadius.circular(50),
           onTap: onTap,
           child: Padding(
-            padding: padding ?? const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+            padding:
+                padding ??
+                const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
             child: Text(
               text,
               style: const TextStyle(

@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
 import '../../core/services/discovery_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../home/home_screen.dart';
 
-class DiscoveryCardsScreen extends StatefulWidget {
+class DiscoveryCardsScreen extends ConsumerStatefulWidget {
   final String objectName;
   final String gradeLevel;
   final String selectedLens;
@@ -19,10 +21,11 @@ class DiscoveryCardsScreen extends StatefulWidget {
   });
 
   @override
-  State<DiscoveryCardsScreen> createState() => _DiscoveryCardsScreenState();
+  ConsumerState<DiscoveryCardsScreen> createState() =>
+      _DiscoveryCardsScreenState();
 }
 
-class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
+class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   int _selectedIndex = 0;
 
   // State variables for network handling
@@ -586,6 +589,9 @@ class _DiscoveryCardsScreenState extends State<DiscoveryCardsScreen> {
 
     if (success) {
       if (mounted) {
+        // Tell Riverpod to throw away the old cached Home stats!
+        // When the user returns to the Home tab, it will automatically fetch the new 1/3 score.
+        ref.invalidate(homeStatsProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('XP Claimed and Discovery Saved!')),
         );
