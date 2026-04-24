@@ -8,7 +8,6 @@ import 'dart:math' as math;
 import '../../core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../auth/providers/auth_controller.dart';
-import '../auth/services/supabase_auth_service.dart';
 import 'pathfinder_blueprint_sheet.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/services/pathfinder_service.dart';
@@ -44,13 +43,11 @@ class ProfileStats {
     required this.topSkills,
   });
 
-  // Calculate percentage to next level (500 XP per level)
   int get progressToNextLevel {
-    int xpIntoCurrentLevel = totalXp % 500;
+    final int xpIntoCurrentLevel = totalXp % 500;
     return ((xpIntoCurrentLevel / 500) * 100).toInt();
   }
 
-  // Dynamic level calculator for gamification branches
   int calculateBranchLevel(int xp) => 1 + (xp ~/ 500);
 }
 
@@ -73,27 +70,23 @@ final profileStatsProvider = FutureProvider.autoDispose<ProfileStats>((
     );
   }
 
-  // 1. Fetch Profile Data (XP and Level)
   final profileRes = await client
       .from('profiles')
       .select('total_xp, current_level')
       .eq('id', userId)
       .maybeSingle();
 
-  // 2. Fetch 4-Strand XP Data
   final treeRes = await client
       .from('kaalaman_skill_tree')
       .select()
       .eq('user_id', userId)
       .maybeSingle();
 
-  // 3. Fetch Total Scans (Concepts Mastered)
   final scansRes = await client
       .from('scans')
       .select('id')
       .eq('user_id', userId);
 
-  // 4. Fetch Neo4j Specific Topic Nodes & Levels!
   final neo4jData = await PathfinderService.getSkillWeb();
   Map<String, int> parsedTopSkills = {};
   if (neo4jData != null && neo4jData['top_skills'] != null) {
@@ -121,13 +114,13 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context); // Cache theme
+    final theme = Theme.of(context);
     final appUserState = ref.watch(appUserProvider);
 
     return GradientScaffold(
       appBar: AppBar(
         title: const Text('Profile & Skill Tree'),
-        foregroundColor: theme.colorScheme.primary, // Themed AppBar Text
+        foregroundColor: theme.colorScheme.primary,
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -181,7 +174,6 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-// Stateful widget just to hold the Tab Controller
 class _ProfileTabs extends ConsumerStatefulWidget {
   final ThemeData theme;
   final String currentName;
@@ -203,7 +195,7 @@ class _ProfileTabs extends ConsumerStatefulWidget {
 
 class _ProfileTabsState extends ConsumerState<_ProfileTabs>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  late final TabController _tabController;
 
   @override
   void initState() {
@@ -226,32 +218,26 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
           child: Container(
             height: 50,
             decoration: BoxDecoration(
-              color: widget.theme.colorScheme.surface, // Themed Surface
+              color: widget.theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(25),
               border: Border.all(
                 color: widget.theme.colorScheme.onSurface.withValues(
                   alpha: 0.1,
                 ),
                 width: 1,
-              ), // Themed Border
+              ),
             ),
             child: TabBar(
               controller: _tabController,
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
               indicator: BoxDecoration(
-                color: widget
-                    .theme
-                    .colorScheme
-                    .primary, // Themed Active Tab Highlight
+                color: widget.theme.colorScheme.primary,
                 borderRadius: BorderRadius.circular(25),
               ),
-              labelColor: widget
-                  .theme
-                  .colorScheme
-                  .onPrimary, // Ensures text is visible on the blue tab
+              labelColor: widget.theme.colorScheme.onPrimary,
               unselectedLabelColor: widget.theme.colorScheme.onSurface
-                  .withValues(alpha: 0.6), // Themed Unselected text
+                  .withValues(alpha: 0.6),
               labelStyle: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
@@ -278,9 +264,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // TAB 1: PROFILE (DYNAMIC DATA OVERHAUL)
-  // ---------------------------------------------------------------------------
   Widget _buildProfileTab(ThemeData theme) {
     final statsAsync = ref.watch(profileStatsProvider);
 
@@ -313,7 +296,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
               );
             },
           ).animate().fade(duration: 600.ms).slideY(begin: 0.1),
-
           Padding(
             padding: const EdgeInsets.only(top: 28, bottom: 12),
             child: RichText(
@@ -340,7 +322,7 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
           Padding(
             padding: const EdgeInsets.only(bottom: 28),
             child: Text(
-              'Inner orbit tracks overall gamification. Outer orbit dynamically maps specific Neo4j topics as you master them.',
+              'Inner nodes track your overall gamification strands. Outer nodes are specific topics mastered through discovery.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -349,8 +331,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
               ),
             ),
           ),
-
-          // THE DYNAMIC STATS CARD
           statsAsync.when(
             loading: () => Center(
               child: CircularProgressIndicator(
@@ -367,8 +347,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                     .fade(duration: 600.ms, delay: 100.ms)
                     .slideY(begin: 0.1),
           ),
-
-          // 🚀 THE NEW DYNAMIC 2-TIER SKILL TREE
           statsAsync.when(
             loading: () => const SizedBox(height: 250),
             error: (e, s) => const SizedBox(),
@@ -384,7 +362,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                     .fade(duration: 600.ms, delay: 200.ms)
                     .slideY(begin: 0.1),
           ),
-
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child:
@@ -406,12 +383,12 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                     .fade(duration: 600.ms, delay: 300.ms)
                     .slideY(begin: 0.1),
           ),
-
           _ProfilePromoCard(
             theme: theme,
             borderColor: theme.colorScheme.primary.withValues(alpha: 0.35),
-            title: 'Expand Your Knowledge',
-            description: 'Scan new objects to add topics to your outer orbit!',
+            title: 'Expand Your Network',
+            description:
+                'Scan new objects to grow the branches of your skill tree!',
             buttonLabel: 'Start Discovery →',
             buttonColor: theme.colorScheme.secondary,
             onPressed: () => MainNavScope.maybeOf(context)?.goToTab(1),
@@ -421,9 +398,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // TAB 2: SETTINGS
-  // ---------------------------------------------------------------------------
   Widget _buildSettingsTab(ThemeData theme) {
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -462,7 +436,7 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                       ),
                     ),
                     value: isDarkMode,
-                    activeColor: theme.colorScheme.primary,
+                    activeThumbColor: theme.colorScheme.primary,
                     onChanged: (bool value) {
                       appThemeNotifier.value = value
                           ? ThemeMode.dark
@@ -488,13 +462,12 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                   ),
                 ),
                 value: true,
-                activeColor: theme.colorScheme.secondary,
+                activeThumbColor: theme.colorScheme.secondary,
                 onChanged: (bool value) {},
               ),
             ],
           ),
         ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
-
         Padding(
           padding: const EdgeInsets.only(top: 20, bottom: 10),
           child: Text(
@@ -506,7 +479,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
             ),
           ),
         ),
-
         Container(
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
@@ -546,9 +518,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // TAB 3: ABOUT
-  // ---------------------------------------------------------------------------
   Widget _buildAboutTab(ThemeData theme) {
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -614,7 +583,7 @@ class _StatsGridCard extends StatelessWidget {
                 child: _StatCell(
                   value: '${stats.progressToNextLevel}%',
                   label: 'To Level ${stats.currentLevel + 1}',
-                  valueColor: theme.colorScheme.secondary, // Orange
+                  valueColor: theme.colorScheme.secondary,
                   theme: theme,
                 ),
               ),
@@ -622,7 +591,7 @@ class _StatsGridCard extends StatelessWidget {
                 child: _StatCell(
                   value: '${stats.totalXp}',
                   label: 'Total EXP',
-                  valueColor: theme.colorScheme.primary, // Blue
+                  valueColor: theme.colorScheme.primary,
                   theme: theme,
                 ),
               ),
@@ -635,7 +604,7 @@ class _StatsGridCard extends StatelessWidget {
                 child: _StatCell(
                   value: '${stats.conceptsMastered}',
                   label: 'Concepts Mastered',
-                  valueColor: const Color(0xFF4CAF50), // Green
+                  valueColor: const Color(0xFF4CAF50),
                   theme: theme,
                 ),
               ),
@@ -643,7 +612,7 @@ class _StatsGridCard extends StatelessWidget {
                 child: _StatCell(
                   value: '${stats.currentLevel}',
                   label: 'Average Level',
-                  valueColor: theme.colorScheme.tertiary, // Purple
+                  valueColor: theme.colorScheme.tertiary,
                   theme: theme,
                 ),
               ),
@@ -698,324 +667,6 @@ class _StatCell extends StatelessWidget {
     );
   }
 }
-
-// =============================================================================
-// ADVANCED 2-TIER RADIAL SKILL TREE WIDGET
-// =============================================================================
-
-class _DynamicSkillTreeNetwork extends StatelessWidget {
-  final ThemeData theme;
-  final ProfileStats stats;
-
-  const _DynamicSkillTreeNetwork({required this.theme, required this.stats});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 380, // Very tall to fit both orbits
-            width: double.infinity,
-            child: CustomPaint(
-              painter: _AdvancedRadialPainter(theme: theme, stats: stats),
-              child: Container(),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.hub, size: 16, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
-              Text(
-                'Live Neo4j Graph Synchronization',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AdvancedRadialPainter extends CustomPainter {
-  final ThemeData theme;
-  final ProfileStats stats;
-
-  _AdvancedRadialPainter({required this.theme, required this.stats});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-
-    // Orbit Distances
-    final double innerRadius = 85.0; // 4 Main Strands
-    final double outerRadius = 150.0; // Neo4j Specific Topics
-
-    // Styles
-    final linePaint = Paint()
-      ..color = theme.colorScheme.onSurface.withValues(alpha: 0.15)
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    final outerLinePaint = Paint()
-      ..color = theme.colorScheme.primary.withValues(alpha: 0.2)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    // --- 1. PREPARE THE 4 STRANDS (Inner Orbit) ---
-    // Calculate levels based on overall gamification XP
-    final strandData = [
-      {
-        'name': 'STEM',
-        'level': stats.calculateBranchLevel(stats.stemXp),
-        'color': const Color(0xFF2196F3),
-        'angle': -math.pi * 0.75,
-      }, // Top Left
-      {
-        'name': 'ABM',
-        'level': stats.calculateBranchLevel(stats.abmXp),
-        'color': const Color(0xFFFF9800),
-        'angle': -math.pi * 0.25,
-      }, // Top Right
-      {
-        'name': 'HUMSS',
-        'level': stats.calculateBranchLevel(stats.humssXp),
-        'color': const Color(0xFF9C27B0),
-        'angle': math.pi * 0.75,
-      }, // Bottom Left
-      {
-        'name': 'TVL',
-        'level': stats.calculateBranchLevel(stats.tvlXp),
-        'color': const Color(0xFF4CAF50),
-        'angle': math.pi * 0.25,
-      }, // Bottom Right
-    ];
-
-    // --- 2. PREPARE NEO4J TOPICS (Outer Orbit) ---
-    final topics = stats.topSkills.entries.toList();
-    final int topicCount = topics.length;
-
-    final topicColors = [
-      Colors.cyanAccent.shade400,
-      Colors.pinkAccent.shade400,
-      Colors.amberAccent.shade400,
-      Colors.lightGreenAccent.shade400,
-      Colors.deepPurpleAccent.shade100,
-    ];
-
-    // DRAW LINES FIRST (So they stay behind nodes)
-    // Lines to inner strands
-    for (var strand in strandData) {
-      final angle = strand['angle'] as double;
-      final dx = center.dx + innerRadius * math.cos(angle);
-      final dy = center.dy + innerRadius * math.sin(angle);
-      canvas.drawLine(center, Offset(dx, dy), linePaint);
-    }
-
-    // Lines to outer topics
-    for (int i = 0; i < topicCount; i++) {
-      final angle = (2 * math.pi * i) / topicCount - (math.pi / 2); // Start top
-      final dx = center.dx + outerRadius * math.cos(angle);
-      final dy = center.dy + outerRadius * math.sin(angle);
-      canvas.drawLine(center, Offset(dx, dy), outerLinePaint);
-    }
-
-    // --- 3. DRAW OUTER ORBIT NODES (Neo4j Topics) ---
-    for (int i = 0; i < topicCount; i++) {
-      final topicName = topics[i].key;
-      final topicLevel = topics[i].value;
-
-      final angle = (2 * math.pi * i) / topicCount - (math.pi / 2);
-      final dx = center.dx + outerRadius * math.cos(angle);
-      final dy = center.dy + outerRadius * math.sin(angle);
-      final nodeCenter = Offset(dx, dy);
-      final nodeColor = topicColors[i % topicColors.length];
-
-      // Dynamic Node Size based on Neo4j level
-      final double nodeRadius = (18.0 + (topicLevel * 2.5)).clamp(18.0, 32.0);
-
-      // Glow
-      canvas.drawCircle(
-        nodeCenter,
-        nodeRadius + 3,
-        Paint()
-          ..color = nodeColor.withValues(alpha: 0.3)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
-      );
-      // Solid Background
-      canvas.drawCircle(
-        nodeCenter,
-        nodeRadius,
-        Paint()..color = theme.colorScheme.surface,
-      );
-      // Border
-      canvas.drawCircle(
-        nodeCenter,
-        nodeRadius,
-        Paint()
-          ..color = nodeColor
-          ..strokeWidth = 2.5
-          ..style = PaintingStyle.stroke,
-      );
-
-      // Topic Level Text
-      _drawText(
-        canvas,
-        'Lv.$topicLevel',
-        nodeCenter,
-        theme.colorScheme.onSurface,
-        11,
-        true,
-      );
-      // Topic Name Text (Below node)
-      _drawText(
-        canvas,
-        topicName,
-        Offset(dx, dy + nodeRadius + 12),
-        theme.colorScheme.onSurface,
-        10,
-        false,
-      );
-    }
-
-    // --- 4. DRAW INNER ORBIT NODES (4 Gamification Strands) ---
-    for (var strand in strandData) {
-      final name = strand['name'] as String;
-      final level = strand['level'] as int;
-      final color = strand['color'] as Color;
-      final angle = strand['angle'] as double;
-
-      final dx = center.dx + innerRadius * math.cos(angle);
-      final dy = center.dy + innerRadius * math.sin(angle);
-      final nodeCenter = Offset(dx, dy);
-      final double nodeRadius = 26.0;
-
-      // Solid Background
-      canvas.drawCircle(
-        nodeCenter,
-        nodeRadius,
-        Paint()..color = theme.colorScheme.surface,
-      );
-      // Border
-      canvas.drawCircle(
-        nodeCenter,
-        nodeRadius,
-        Paint()
-          ..color = color
-          ..strokeWidth = 3.5
-          ..style = PaintingStyle.stroke,
-      );
-
-      // Strand Level Text
-      _drawText(canvas, 'Lv.$level', Offset(dx, dy - 4), color, 12, true);
-      // Strand Name
-      _drawText(
-        canvas,
-        name,
-        Offset(dx, dy + 10),
-        theme.colorScheme.onSurface,
-        10,
-        true,
-      );
-    }
-
-    // --- 5. DRAW CORE NODE (Center) ---
-    canvas.drawCircle(center, 40, Paint()..color = theme.colorScheme.surface);
-    canvas.drawCircle(
-      center,
-      40,
-      Paint()
-        ..color = theme.colorScheme.primary
-        ..strokeWidth = 4
-        ..style = PaintingStyle.stroke,
-    );
-
-    final Rect coreRect = Rect.fromCircle(center: center, radius: 36);
-    canvas.drawCircle(
-      center,
-      36,
-      Paint()
-        ..shader = LinearGradient(
-          colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ).createShader(coreRect),
-    );
-
-    _drawText(
-      canvas,
-      'CORE',
-      Offset(center.dx, center.dy - 6),
-      Colors.white,
-      11,
-      true,
-    );
-    _drawText(
-      canvas,
-      'LV.${stats.currentLevel}',
-      Offset(center.dx, center.dy + 8),
-      Colors.white,
-      16,
-      true,
-    );
-  }
-
-  void _drawText(
-    Canvas canvas,
-    String text,
-    Offset offset,
-    Color color,
-    double fontSize,
-    bool isBold,
-  ) {
-    final textSpan = TextSpan(
-      text: text,
-      style: TextStyle(
-        color: color,
-        fontSize: fontSize,
-        fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-      ),
-    );
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    );
-    textPainter.layout();
-    textPainter.paint(
-      canvas,
-      Offset(
-        offset.dx - textPainter.width / 2,
-        offset.dy - textPainter.height / 2,
-      ),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _AdvancedRadialPainter oldDelegate) => true; // Always repaint on update to ensure animations/refreshes catch
-}
-
-// =============================================================================
-// REMAINING BOILERPLATE (EDIT DIALOGS)
-// =============================================================================
 
 class _ProfileHeaderCard extends StatelessWidget {
   final ThemeData theme;
@@ -1217,6 +868,444 @@ class _ProfilePromoCard extends StatelessWidget {
   }
 }
 
+// =============================================================================
+// DYNAMIC SKILL TREE NETWORK WIDGET (INLINE PREVIEW)
+// =============================================================================
+
+class _DynamicSkillTreeNetwork extends StatelessWidget {
+  final ThemeData theme;
+  final ProfileStats stats;
+
+  const _DynamicSkillTreeNetwork({required this.theme, required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          // 🚀 THE STATIC PREVIEW WITH TAP-TO-EXPAND
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            child: Stack(
+              children: [
+                SizedBox(
+                  height: 350,
+                  width: double.infinity,
+                  // Removed InteractiveViewer here to stop scroll conflicts!
+                  child: CustomPaint(
+                    size: const Size(double.infinity, 350),
+                    painter: _AdvancedInteractiveRadialPainter(
+                      theme: theme,
+                      stats: stats,
+                    ),
+                  ),
+                ),
+                // Expand Button Overlay
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: IconButton.filled(
+                    style: IconButton.styleFrom(
+                      backgroundColor: theme.colorScheme.surface.withValues(
+                        alpha: 0.8,
+                      ),
+                      foregroundColor: theme.colorScheme.primary,
+                    ),
+                    icon: const Icon(Icons.fullscreen),
+                    onPressed: () {
+                      // Open Full Screen Mode
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              _FullScreenSkillTree(theme: theme, stats: stats),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Footer Hint
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) =>
+                      _FullScreenSkillTree(theme: theme, stats: stats),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.02),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.zoom_out_map,
+                    size: 16,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tap to expand & explore interactively',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.1,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdvancedInteractiveRadialPainter extends CustomPainter {
+  final ThemeData theme;
+  final ProfileStats stats;
+
+  _AdvancedInteractiveRadialPainter({required this.theme, required this.stats});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    const double innerRadius = 90.0;
+    const double outerRadius = 175.0;
+
+    final innerLinePaint = Paint()
+      ..color = theme.colorScheme.onSurface.withValues(alpha: 0.15)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+
+    final outerLinePaint = Paint()
+      ..color = theme.colorScheme.primary.withValues(alpha: 0.25)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    final strandData = [
+      {
+        'name': 'STEM',
+        'level': stats.calculateBranchLevel(stats.stemXp),
+        'color': const Color(0xFF2196F3),
+        'angle': -math.pi * 0.75,
+      },
+      {
+        'name': 'ABM',
+        'level': stats.calculateBranchLevel(stats.abmXp),
+        'color': const Color(0xFFFF9800),
+        'angle': -math.pi * 0.25,
+      },
+      {
+        'name': 'HUMSS',
+        'level': stats.calculateBranchLevel(stats.humssXp),
+        'color': const Color(0xFF9C27B0),
+        'angle': math.pi * 0.75,
+      },
+      {
+        'name': 'TVL',
+        'level': stats.calculateBranchLevel(stats.tvlXp),
+        'color': const Color(0xFF4CAF50),
+        'angle': math.pi * 0.25,
+      },
+    ];
+
+    final topics = stats.topSkills.entries.toList();
+    final int topicCount = topics.length;
+
+    final topicColors = [
+      Colors.cyan.shade600,
+      Colors.pink.shade500,
+      Colors.amber.shade600,
+      Colors.lightGreen.shade600,
+      Colors.deepPurple.shade400,
+    ];
+
+    for (var strand in strandData) {
+      final angle = strand['angle'] as double;
+      final dx = center.dx + innerRadius * math.cos(angle);
+      final dy = center.dy + innerRadius * math.sin(angle);
+      canvas.drawLine(center, Offset(dx, dy), innerLinePaint);
+    }
+
+    for (int i = 0; i < topicCount; i++) {
+      final angle = (2 * math.pi * i) / topicCount - (math.pi / 2);
+      final tDx = center.dx + outerRadius * math.cos(angle);
+      final tDy = center.dy + outerRadius * math.sin(angle);
+      final topicPos = Offset(tDx, tDy);
+
+      Offset closestStrandPos = center;
+      double minDiff = double.infinity;
+
+      for (var strand in strandData) {
+        final sAngle = strand['angle'] as double;
+        final sPos =
+            center +
+            Offset(
+              innerRadius * math.cos(sAngle),
+              innerRadius * math.sin(sAngle),
+            );
+        final dist = (sPos - topicPos).distance;
+        if (dist < minDiff) {
+          minDiff = dist;
+          closestStrandPos = sPos;
+        }
+      }
+
+      canvas.drawLine(closestStrandPos, topicPos, outerLinePaint);
+    }
+
+    for (int i = 0; i < topicCount; i++) {
+      final topicName = topics[i].key;
+      final topicLevel = topics[i].value;
+
+      final angle = (2 * math.pi * i) / topicCount - (math.pi / 2);
+      final dx = center.dx + outerRadius * math.cos(angle);
+      final dy = center.dy + outerRadius * math.sin(angle);
+      final nodeCenter = Offset(dx, dy);
+      final nodeColor = topicColors[i % topicColors.length];
+
+      final double nodeRadius = (35.0 + (topicLevel * 2.0)).clamp(35.0, 48.0);
+
+      canvas.drawCircle(
+        nodeCenter,
+        nodeRadius + 3,
+        Paint()
+          ..color = nodeColor.withValues(alpha: 0.3)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+      );
+      canvas.drawCircle(
+        nodeCenter,
+        nodeRadius,
+        Paint()..color = theme.colorScheme.surface,
+      );
+      canvas.drawCircle(
+        nodeCenter,
+        nodeRadius,
+        Paint()
+          ..color = nodeColor
+          ..strokeWidth = 3.0
+          ..style = PaintingStyle.stroke,
+      );
+
+      String displayName = topicName.length > 12
+          ? '${topicName.substring(0, 10)}..'
+          : topicName;
+      _drawMultiLineText(
+        canvas,
+        'Lv.$topicLevel\n$displayName',
+        nodeCenter,
+        theme.colorScheme.onSurface,
+        10,
+        true,
+      );
+    }
+
+    for (var strand in strandData) {
+      final name = strand['name'] as String;
+      final level = strand['level'] as int;
+      final color = strand['color'] as Color;
+      final angle = strand['angle'] as double;
+
+      final dx = center.dx + innerRadius * math.cos(angle);
+      final dy = center.dy + innerRadius * math.sin(angle);
+      final nodeCenter = Offset(dx, dy);
+      const double nodeRadius = 32.0;
+
+      canvas.drawCircle(
+        nodeCenter,
+        nodeRadius,
+        Paint()..color = theme.colorScheme.surface,
+      );
+      canvas.drawCircle(
+        nodeCenter,
+        nodeRadius,
+        Paint()
+          ..color = color
+          ..strokeWidth = 3.5
+          ..style = PaintingStyle.stroke,
+      );
+
+      _drawMultiLineText(
+        canvas,
+        'Lv.$level\n$name',
+        nodeCenter,
+        theme.colorScheme.onSurface,
+        10,
+        true,
+      );
+    }
+
+    canvas.drawCircle(center, 45, Paint()..color = theme.colorScheme.surface);
+    canvas.drawCircle(
+      center,
+      45,
+      Paint()
+        ..color = theme.colorScheme.primary
+        ..strokeWidth = 4
+        ..style = PaintingStyle.stroke,
+    );
+
+    final Rect coreRect = Rect.fromCircle(center: center, radius: 40);
+    canvas.drawCircle(
+      center,
+      40,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(coreRect),
+    );
+
+    _drawMultiLineText(
+      canvas,
+      'CORE\nLV.${stats.currentLevel}',
+      center,
+      Colors.white,
+      12,
+      true,
+    );
+  }
+
+  void _drawMultiLineText(
+    Canvas canvas,
+    String text,
+    Offset centerOffset,
+    Color color,
+    double fontSize,
+    bool isBold,
+  ) {
+    final textSpan = TextSpan(
+      text: text,
+      style: TextStyle(
+        color: color,
+        fontSize: fontSize,
+        fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+        height: 1.2,
+      ),
+    );
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        centerOffset.dx - textPainter.width / 2,
+        centerOffset.dy - textPainter.height / 2,
+      ),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _AdvancedInteractiveRadialPainter oldDelegate) =>
+      true;
+}
+
+// =============================================================================
+// FULL SCREEN INTERACTIVE SKILL TREE
+// =============================================================================
+
+class _FullScreenSkillTree extends StatelessWidget {
+  final ThemeData theme;
+  final ProfileStats stats;
+
+  const _FullScreenSkillTree({required this.theme, required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: theme.colorScheme.primary,
+        title: const Text('Interactive Skill Tree'),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.pinch,
+                    size: 16,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Pinch to zoom • Drag to pan',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              // 🚀 FIX: Removed the massive 1200x1200 unconstrained box.
+              // Now it perfectly centers to your phone screen and allows panning in any direction!
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                boundaryMargin: const EdgeInsets.all(
+                  double.infinity,
+                ), // Allows infinite panning
+                child: SizedBox(
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: CustomPaint(
+                    painter: _AdvancedInteractiveRadialPainter(
+                      theme: theme,
+                      stats: stats,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// EDIT PROFILE SCREEN
+// =============================================================================
+
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
   @override
@@ -1294,7 +1383,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           .eq('id', userId);
                       ref.invalidate(appUserProvider);
                       ref.invalidate(profileStatsProvider);
-                      if (context.mounted) {
+                      if (mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -1305,13 +1394,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       }
                     }
                   } catch (e) {
-                    if (context.mounted)
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Error: $e'),
                           backgroundColor: theme.colorScheme.error,
                         ),
                       );
+                    }
                   }
                 }
               },
@@ -1378,7 +1468,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           .eq('id', userId);
                       ref.invalidate(appUserProvider);
                       ref.invalidate(profileStatsProvider);
-                      if (context.mounted) {
+                      if (mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -1389,16 +1479,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       }
                     }
                   } catch (e) {
-                    if (context.mounted)
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Error: $e'),
                           backgroundColor: theme.colorScheme.error,
                         ),
                       );
+                    }
                   }
                 } else {
-                  if (context.mounted) Navigator.pop(context);
+                  if (mounted) Navigator.pop(context);
                 }
               },
               child: const Text('Save'),
@@ -1464,7 +1555,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           .eq('id', userId);
                       ref.invalidate(appUserProvider);
                       ref.invalidate(profileStatsProvider);
-                      if (context.mounted) {
+                      if (mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -1475,16 +1566,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       }
                     }
                   } catch (e) {
-                    if (context.mounted)
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Error: $e'),
                           backgroundColor: theme.colorScheme.error,
                         ),
                       );
+                    }
                   }
                 } else {
-                  if (context.mounted) Navigator.pop(context);
+                  if (mounted) Navigator.pop(context);
                 }
               },
               child: const Text('Save'),
@@ -1497,7 +1589,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
   Future<void> _showEditEducationLevelDialog(String currentLevel) async {
     final theme = Theme.of(context);
-    final List<String> educationLevels = [
+    const List<String> educationLevels = [
       'Elementary',
       'High School',
       'Senior High School',
@@ -1594,7 +1686,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                                   .eq('id', userId);
                               ref.invalidate(appUserProvider);
                               ref.invalidate(profileStatsProvider);
-                              if (context.mounted) {
+                              if (mounted) {
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -1607,13 +1699,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                               }
                             }
                           } catch (e) {
-                            if (context.mounted)
+                            if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Error: $e'),
                                   backgroundColor: theme.colorScheme.error,
                                 ),
                               );
+                            }
                           }
                         }
                       : null,
@@ -1633,7 +1726,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, s) => const Center(child: Text("Error")),
       data: (appUser) {
-        if (appUser == null) return const Center(child: Text("Not logged in"));
+        if (appUser == null) {
+          return const Center(child: Text("Not logged in"));
+        }
         final profile = appUser.profile;
         final currentName = profile.fullName ?? 'Explorer';
         final currentCity = profile.city ?? '';
