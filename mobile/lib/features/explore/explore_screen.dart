@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart'; 
 import 'package:supabase_flutter/supabase_flutter.dart'; 
 import '../../core/widgets/gradient_scaffold.dart';
+import '../../core/services/scan_service.dart';
 
 /// Placeholder model until user uploads / API are wired.
 class _ExploreNotePlaceholder {
@@ -32,6 +33,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   bool _isLoadingLeaderboard = true;
   int _currentFilterIndex = 0; // 0 = Grade Level, 1 = All Users
 
+  // 🚀 ADDED SCAN HISTORY STATE VARIABLES
+  List<Map<String, dynamic>> _scanHistory = [];
+  bool _isLoadingScanHistory = true;
+  String _searchQuery = '';
+
   static const List<_ExploreNotePlaceholder> _placeholders = [
     _ExploreNotePlaceholder(title: 'Notebooks', subtitle: 'blahblah', tag: 'STEM'),
     _ExploreNotePlaceholder(title: 'Lab handout', subtitle: 'Scan from last week — review before quiz', tag: 'STEM'),
@@ -47,6 +53,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     
     // 🚀 3. FETCH DATA WHEN SCREEN LOADS
     _fetchLeaderboard();
+    _fetchScanHistory();
 
     // 🚀 4. RE-FETCH WHEN FILTER TAB CHANGES
     _filterTabController.addListener(() {
@@ -103,6 +110,40 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       debugPrint('Error fetching leaderboard: $e');
       if (mounted) setState(() => _isLoadingLeaderboard = false);
     }
+  }
+
+  // 🚀 FETCH SCAN HISTORY FROM SUPABASE
+  Future<void> _fetchScanHistory() async {
+    setState(() => _isLoadingScanHistory = true);
+    
+    try {
+      final scans = await ScanService.getUserScanHistory(limit: 100);
+      
+      if (mounted) {
+        setState(() {
+          _scanHistory = scans;
+          _isLoadingScanHistory = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching scan history: $e');
+      if (mounted) setState(() => _isLoadingScanHistory = false);
+    }
+  }
+
+  // Get filtered scans based on search query
+  List<Map<String, dynamic>> _getFilteredScans() {
+    if (_searchQuery.isEmpty) {
+      return _scanHistory;
+    }
+    
+    return _scanHistory
+        .where((scan) =>
+            (scan['object_name'] as String?)
+                ?.toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ??
+            false)
+        .toList();
   }
 
   // 🚀 6. HELPER TO COLOR TROPHIES GOLD, SILVER, BRONZE
@@ -236,6 +277,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       borderRadius: BorderRadius.circular(18),
       color: theme.colorScheme.surface, // Themed Input Surface
       child: TextField(
+        onChanged: (value) {
+          setState(() => _searchQuery = value);
+        },
         style: TextStyle(color: theme.colorScheme.onSurface), // Themed Input Text
         decoration: InputDecoration(
           hintText: 'Search your previously scanned stuff...',
@@ -256,18 +300,85 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   Widget _buildHistoryFeed(double bottomInset, ThemeData theme) {
+    // Show loading indicator
+    if (_isLoadingScanHistory) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: theme.colorScheme.secondary,
+        ),
+      );
+    }
+
+    // Get filtered scans
+    final filteredScans = _getFilteredScans();
+
+    // Show empty state if no scans
+    if (filteredScans.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.image_not_supported_outlined,
+              size: 64,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _searchQuery.isEmpty
+                  ? 'No scans yet'
+                  : 'No results for "$_searchQuery"',
+              style: TextStyle(
+                fontSize: 16,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Show real scan history
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset),
       physics: const BouncingScrollPhysics(),
-      itemCount: _placeholders.length,
+      itemCount: filteredScans.length,
       separatorBuilder: (_, _) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
-        final item = _placeholders[index];
-        return _NoteCard(
-          title: item.title,
-          subtitle: item.subtitle,
-          tag: item.tag,
-          accent: theme.colorScheme.secondary, // Themed Orange
+        final scan = filteredScans[index];
+        final objectName = scan['object_name'] as String? ?? 'Unknown Item';
+        final lens = scan['chosen_lens'] as String? ?? 'STEM';
+        final createdAt = scan['created_at'] as String?;
+        final imageUrl = scan['image_url'] as String?;
+
+        // Format date
+        String formattedDate = 'Recently';
+        if (createdAt != null) {
+          try {
+            final date = DateTime.parse(createdAt);
+            final now = DateTime.now();
+            final difference = now.difference(date);
+
+            if (difference.inDays == 0) {
+              formattedDate = 'Today';
+            } else if (difference.inDays == 1) {
+              formattedDate = 'Yesterday';
+            } else if (difference.inDays < 7) {
+              formattedDate = '${difference.inDays}d ago';
+            } else {
+              formattedDate = '${(difference.inDays / 7).toStringAsFixed(0)}w ago';
+            }
+          } catch (e) {
+            formattedDate = 'Recently';
+          }
+        }
+
+        return _ScanHistoryCard(
+          title: objectName,
+          subtitle: formattedDate,
+          tag: lens,
+          imageUrl: imageUrl,
+          accent: theme.colorScheme.secondary,
         )
         .animate()
         .fade(duration: 600.ms, delay: (100 * index).ms)
@@ -412,6 +523,125 @@ class _DiscovererRowCard extends StatelessWidget {
             ),
             if (rank <= 3) // Only show the trophy icon for the top 3!
               Icon(Icons.emoji_events, size: 30, color: trophyColor),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 🚀 NEW CARD FOR DISPLAYING REAL SCAN HISTORY WITH IMAGES
+class _ScanHistoryCard extends StatelessWidget {
+  const _ScanHistoryCard({
+    required this.title,
+    required this.subtitle,
+    required this.tag,
+    required this.imageUrl,
+    required this.accent,
+  });
+
+  final String title;
+  final String subtitle;
+  final String tag;
+  final String? imageUrl;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Material(
+      elevation: isDark ? 0 : 2,
+      shadowColor: theme.shadowColor.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(20),
+      color: theme.colorScheme.surface,
+      child: Container(
+        decoration: isDark
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border:
+                    Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+              )
+            : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+              child: Container(
+                height: 168,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                child: imageUrl != null && imageUrl!.isNotEmpty
+                    ? Image.network(
+                        imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.photo_outlined,
+                            size: 56,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                              color: theme.colorScheme.secondary,
+                            ),
+                          );
+                        },
+                      )
+                    : Icon(
+                        Icons.photo_outlined,
+                        size: 56,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                      ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    tag.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: accent,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
