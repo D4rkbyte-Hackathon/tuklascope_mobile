@@ -63,9 +63,10 @@ class RewardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isCompleted = data.progress == 100;
+    final theme = Theme.of(context); // Dynamically grab the theme
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F6F0), // Matching background in image
+      backgroundColor: theme.scaffoldBackgroundColor, // Themed Background
       body: Stack(
         children: [
           // 1. BACKGROUND IMAGE (Full Screen or half)
@@ -77,8 +78,8 @@ class RewardScreen extends StatelessWidget {
             // Fallback for dead Discord links so it doesn't crash
             errorBuilder: (context, error, stackTrace) => Container(
               height: MediaQuery.of(context).size.height * 0.6,
-              color: Colors.grey[300],
-              child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+              color: theme.colorScheme.surface.withValues(alpha: 0.5),
+              child: Icon(Icons.image_not_supported, size: 50, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
             ),
           ),
 
@@ -94,11 +95,11 @@ class RewardScreen extends StatelessWidget {
                     width: 130,
                     height: 130,
                     decoration: BoxDecoration(
-                      color: isCompleted ? Colors.green : Colors.grey[400],
+                      color: isCompleted ? Colors.green : theme.colorScheme.surface,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withOpacity(0.5), width: 6),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 6),
                     ),
-                    child: Icon(Icons.star_rounded, size: 70, color: isCompleted ? Colors.yellow : Colors.white70),
+                    child: Icon(Icons.star_rounded, size: 70, color: isCompleted ? Colors.yellow : theme.colorScheme.onSurface.withValues(alpha: 0.3)),
                   ),
                 ),
                 
@@ -107,16 +108,16 @@ class RewardScreen extends StatelessWidget {
                 Text(
                   data.title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1),
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1, shadows: [Shadow(color: Colors.black54, blurRadius: 10)]),
                 ),
                 
                 // 5. THE CONTENT BLOCK (Like image_1.png)
                 const SizedBox(height: 40),
                 Container(
                   padding: const EdgeInsets.all(25.0),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface, // Themed Surface
+                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,7 +128,7 @@ class RewardScreen extends StatelessWidget {
                             ? "Congratulations! You've completed the ${data.title} journey."
                             : "You have not completed this task yet. Track your milestones below.",
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 16, color: Colors.black87),
+                        style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.9)), // Themed Text
                       ),
                       
                       // POINTS & DATE BLOCK (Using a custom Widget class below)
@@ -136,9 +137,9 @@ class RewardScreen extends StatelessWidget {
 
                       // MILESTONES SECTION
                       const SizedBox(height: 30),
-                      const Text("Quest Milestones", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      _buildMilestone("Task A", true),
-                      _buildMilestone("Task B", false),
+                      Text("Quest Milestones", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)), // Themed Title
+                      _buildMilestone("Task A", true, theme),
+                      _buildMilestone("Task B", false, theme),
                     ],
                   ),
                 ),
@@ -152,6 +153,9 @@ class RewardScreen extends StatelessWidget {
             left: 10,
             child: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.black.withValues(alpha: 0.3), // Added slight background to ensure visibility over light images
+              ),
               onPressed: () {
                 if (Navigator.canPop(context)) {
                   Navigator.pop(context);
@@ -164,14 +168,14 @@ class RewardScreen extends StatelessWidget {
     );
   }
 
-  // Helper widget to keep things clean (like image_1.png)
-  Widget _buildMilestone(String title, bool isDone) {
+  // Helper widget to keep things clean
+  Widget _buildMilestone(String title, bool isDone, ThemeData theme) {
     return ListTile(
       leading: Icon(
         isDone ? Icons.check_circle : Icons.radio_button_unchecked,
-        color: isDone ? Colors.green : Colors.grey,
+        color: isDone ? Colors.green : theme.colorScheme.onSurface.withValues(alpha: 0.4), // Themed unchecked icon
       ),
-      title: Text(title, style: TextStyle(color: isDone ? Colors.black87 : Colors.black54)),
+      title: Text(title, style: TextStyle(color: isDone ? theme.colorScheme.onSurface : theme.colorScheme.onSurface.withValues(alpha: 0.6))), // Themed text
     );
   }
 }
@@ -183,12 +187,14 @@ class StatsBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Dynamically grab the theme
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9F6F0),
+        color: theme.scaffoldBackgroundColor, // Themed Background inside the card
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.black12, width: 0.5),
+        border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1), width: 1), // Themed Border
       ),
       child: IntrinsicHeight( // Crucial: Makes the vertical divider work
         child: Row(
@@ -197,7 +203,7 @@ class StatsBlock extends StatelessWidget {
             Expanded(
               child: Column(
                 children: [
-                  Text( data.progress == 100 ? "Completion Date" : "Current Progress", style: TextStyle(color: Colors.black54)),
+                  Text( data.progress == 100 ? "Completion Date" : "Current Progress", style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))), // Themed Label
                   Text(
                     data.progress == 100 ? "December 13, 2025" : "${data.progress}% Done",
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _getProgressColor(data.progress)),
@@ -207,14 +213,14 @@ class StatsBlock extends StatelessWidget {
             ),
             
             // The Specialized Vertical Divider
-            const VerticalDivider(width: 30, color: Colors.black26),
+            VerticalDivider(width: 30, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)), // Themed Divider
 
             // Right Side: Points
             Expanded(
               child: Column(
                 children: [
-                  const Text("Points", style: TextStyle(color: Colors.black54)),
-                  Text("${data.points}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Color(0xFF0D3B66))),
+                  Text("Points", style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))), // Themed Label
+                  Text("${data.points}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: theme.colorScheme.primary)), // Themed Blue
                 ],
               ),
             ),
@@ -231,50 +237,52 @@ class HeaderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Dynamically grab the theme
+
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Column(
         children: [
           // "Learning Pathways" with two colors
           RichText(
-            text: const TextSpan(
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            text: TextSpan(
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               children: [
                 TextSpan(
                   text: 'Learning ',
-                  style: TextStyle(color: Color(0xFF0D3B66)),
+                  style: TextStyle(color: theme.colorScheme.primary), // Themed Primary
                 ),
                 TextSpan(
                   text: 'Pathways',
-                  style: TextStyle(color: Colors.orange),
+                  style: TextStyle(color: theme.colorScheme.secondary), // Themed Secondary
                 ),
               ],
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             "Structured learning journeys that elevate the experience...",
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.black87),
+            style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.8)), // Themed Subtitle
           ),
           const SizedBox(height: 30),
           // Stats Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStat("($activePathways)", "Active Pathways", Colors.green),
-              _buildStat("$averageProgress%", "Average Progress", Colors.orange),
+              _buildStat("($activePathways)", "Active Pathways", Colors.green, theme),
+              _buildStat("$averageProgress%", "Average Progress", theme.colorScheme.secondary, theme), // Themed Secondary
             ],
           ),
           const SizedBox(height: 20),
-          _buildStat("($totalPoints)", "Total Points Earned", const Color(0xFF0D3B66)),
+          _buildStat("($totalPoints)", "Total Points Earned", theme.colorScheme.primary, theme), // Themed Primary
         ],
       ),
     );
   }
 
   // Helper method to keep things clean (like a small function in C)
-  Widget _buildStat(String value, String label, Color numcolor) {
+  Widget _buildStat(String value, String label, Color numcolor, ThemeData theme) {
     return Column(
       children: [
         Text(
@@ -287,9 +295,9 @@ class HeaderSection extends StatelessWidget {
         ),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: Colors.black54,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6), // Themed Label
           ),
         ),
       ],
@@ -325,9 +333,16 @@ class ProjectCard extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Dynamically grab the theme
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      color: theme.colorScheme.surface, // Themed Surface
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+        side: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.05), width: 1), // Subtle themed border
+      ),
+      elevation: theme.brightness == Brightness.dark ? 0 : 2, // Remove hard shadow in dark mode
       clipBehavior: Clip.antiAlias, // Ensures image corners are clipped
       child: InkWell(
         onTap: () {
@@ -351,14 +366,14 @@ class ProjectCard extends StatelessWidget {
             // I added a quick errorBuilder here too just so it doesn't crash your list if a discord link dies!
             errorBuilder: (context, error, stackTrace) => Container(
               height: 140,
-              color: Colors.grey[200],
-              child: const Icon(Icons.image_not_supported, color: Colors.grey),
+              color: theme.colorScheme.surface.withValues(alpha: 0.5),
+              child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
             ),
           ),
 
           // Bottom Half: Text Content
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(16.0), // Slightly increased padding for premium feel
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -368,14 +383,17 @@ class ProjectCard extends StatelessWidget {
                   children: [
                     Text(
                       data.difficulty,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue,
+                        color: theme.colorScheme.primary, // Themed Blue
                       ),
                     ),
                     Text(
                       "${data.points} Points",
-                      style: const TextStyle(color: Colors.orange),
+                      style: TextStyle(
+                        color: theme.colorScheme.secondary, // Themed Orange
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -383,21 +401,23 @@ class ProjectCard extends StatelessWidget {
                 // Line 2: Title
                 Text(
                   data.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface, // Themed Text
                   ),
                 ),
+                const SizedBox(height: 4), // Small spacing
                 // Line 3: Description
                 Text(
                   data.description,
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13), // Themed Description
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 // Line 4: Progress with fixed-width number
                 Row(
                   children: [
-                    const Text("Progress:"),
+                    Text("Progress:", style: TextStyle(color: theme.colorScheme.onSurface)), // Themed Label
                     const SizedBox(width: 8), // "m" space
                     SizedBox(
                       width: 30, // Reserved space for the number
@@ -426,7 +446,7 @@ final List<ProjectData> myProjects = [
   ProjectData(
     title: "Smiling Masterclass",
     description: "Smile no matter the situation you're in.",
-    image: "https://cdn.discordapp.com/attachments/515699608580521984/1490364058266763365/jonard_smile.png?ex=69d3c931&is=69d277b1&hm=8b9ae869d22d9e440b6419886f887ac650baaa0e051075656661581195b54aad",
+    image: "https://picsum.photos/id/10/400/200",
     difficulty: "Advanced",
     points: 670,
     progress: 100,

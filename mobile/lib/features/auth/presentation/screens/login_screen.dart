@@ -42,12 +42,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } on AuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          )
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An unexpected error occurred')),
+           SnackBar(
+            content: const Text('An unexpected error occurred'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
       }
     } finally {
@@ -60,9 +68,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (currentUser != null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('You are already signed in.'),
-            backgroundColor: Color(0xFF64B5F6),
+          SnackBar(
+            content: const Text('You are already signed in.'),
+            backgroundColor: Theme.of(context).colorScheme.primary, // Themed
           ),
         );
       }
@@ -75,9 +83,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (authResponse != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Successfully signed in with Google!'),
-            backgroundColor: Color(0xFF64B5F6),
+          SnackBar(
+            content: const Text('Successfully signed in with Google!'),
+            backgroundColor: Theme.of(context).colorScheme.primary, // Themed
           ),
         );
         Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
@@ -88,7 +96,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } on AuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Authentication Error: ${e.message}'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Authentication Error: ${e.message}'), 
+            backgroundColor: Theme.of(context).colorScheme.error, // Themed
+          ),
         );
       }
     } catch (e) {
@@ -98,14 +109,73 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           errorMessage = 'Google account has no email. Please use another account.';
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red, duration: const Duration(seconds: 4)),
+          SnackBar(
+            content: Text(errorMessage), 
+            backgroundColor: Theme.of(context).colorScheme.error, // Themed
+            duration: const Duration(seconds: 4)
+          ),
         );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+  //facebook sign in
+  Future<void> _signInWithFacebook() async {
+    final currentUser = ref.read(authStateProvider).value;
+    if (currentUser != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('You are already signed in.'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+      }
+      return;
+    }
 
+    setState(() => _isLoading = true);
+    try {
+      // Call the Facebook auth method from your controller
+      final authResponse = await ref.read(authControllerProvider.notifier).signInWithFacebook();
+
+      // Supabase OAuth usually handles redirects externally, but if it returns a response:
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Successfully signed in with Facebook!'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+          (route) => false,
+        );
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Authentication Error: ${e.message}'), 
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to sign in with Facebook'), 
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 4)
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
   // --- CUSTOM PAGE TRANSITION ---
   Route _createAnimatedRoute(Widget page) {
     return PageRouteBuilder(
@@ -135,6 +205,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache theme for cleaner code below
+
     return GradientScaffold(
       body: SafeArea(
         child: Center(
@@ -144,14 +216,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
+                Text(
                   'Login',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF0B3C6A),
-                    shadows: [Shadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
+                    color: theme.colorScheme.primary, // Themed
+                    shadows: [Shadow(color: theme.shadowColor.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
                   ),
                 ).animate().fade(duration: 600.ms, delay: 100.ms).slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
 
@@ -162,7 +234,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   label: 'Email',
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
-                  neonColor: const Color(0xFF64B5F6),
+                  neonColor: theme.colorScheme.primary, // Themed
                 ).animate().fade(duration: 600.ms, delay: 200.ms).slideX(begin: -0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
 
                 const SizedBox(height: 20),
@@ -172,9 +244,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   label: 'Password',
                   icon: Icons.lock_outline,
                   obscureText: _obscurePassword,
-                  neonColor: const Color(0xFF64B5F6),
+                  neonColor: theme.colorScheme.primary, // Themed
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey[600]),
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility, 
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5) // Themed
+                    ),
                     onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ).animate().fade(duration: 600.ms, delay: 300.ms).slideX(begin: -0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
@@ -182,7 +257,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 32),
 
                 if (_isLoading)
-                  const Center(child: CircularProgressIndicator(color: Color(0xFF64B5F6)))
+                  Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)) // Themed
                 else
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -192,16 +267,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(32),
                           boxShadow: [
-                            BoxShadow(color: const Color(0xFF64B5F6).withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5)),
+                            BoxShadow(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.4), // Themed
+                              blurRadius: 20, 
+                              spreadRadius: 2, 
+                              offset: const Offset(0, 5)
+                            ),
                           ],
-                          gradient: const LinearGradient(colors: [Color(0xFF64B5F6), Color(0xFF42A5F5)]),
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.colorScheme.primary, 
+                              theme.colorScheme.primary.withValues(alpha: 0.8) // Themed gradient
+                            ]
+                          ),
                         ),
                         child: ElevatedButton(
                           onPressed: _signIn,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
-                            foregroundColor: Colors.white,
+                            foregroundColor: theme.colorScheme.onPrimary, // Themed (Ensures text is visible)
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
                           ),
@@ -213,34 +298,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                       Row(
                         children: [
-                          Expanded(child: Divider(color: Colors.grey[400])),
+                          Expanded(child: Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.3))), // Themed
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('Or sign in with', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                            child: Text(
+                              'Or sign in with', 
+                              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14) // Themed
+                            ),
                           ),
-                          Expanded(child: Divider(color: Colors.grey[400])),
+                          Expanded(child: Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.3))), // Themed
                         ],
                       ).animate().fade(duration: 600.ms, delay: 500.ms),
 
                       const SizedBox(height: 24),
 
-                      _buildSocialButton(imagePath: 'assets/images/google.png', label: 'Google', onPressed: _signInWithGoogle)
-                          .animate().fade(duration: 600.ms, delay: 600.ms),
+                      _buildSocialButton(
+                        context: context, 
+                        imagePath: 'assets/images/google.png', 
+                        label: 'Google', 
+                        onPressed: _signInWithGoogle
+                      ).animate().fade(duration: 600.ms, delay: 600.ms),
 
                       const SizedBox(height: 16),
 
-                      _buildSocialButton(imagePath: 'assets/images/facebook.png', label: 'Facebook', onPressed: () {})
-                          .animate().fade(duration: 600.ms, delay: 700.ms),
+                      _buildSocialButton(
+                        context: context, 
+                        imagePath: 'assets/images/facebook.png', 
+                        label: 'Facebook', 
+                        onPressed: _signInWithFacebook
+                      ).animate().fade(duration: 600.ms, delay: 700.ms),
 
                       const SizedBox(height: 32),
 
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text("Don't have an account? ", style: TextStyle(color: Colors.grey[700], fontSize: 15)),
+                          Text(
+                            "Don't have an account? ", 
+                            style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 15) // Themed
+                          ),
                           GestureDetector(
                             onTap: () => Navigator.pushReplacement(context, _createAnimatedRoute(const SignupScreen())),
-                            child: const Text('Create Account', style: TextStyle(color: Color(0xFFFF6B2C), fontSize: 15, fontWeight: FontWeight.bold)),
+                            child: Text(
+                              'Create Account', 
+                              style: TextStyle(color: theme.colorScheme.secondary, fontSize: 15, fontWeight: FontWeight.bold) // Themed (Orange)
+                            ),
                           ),
                         ],
                       ).animate().fade(duration: 600.ms, delay: 800.ms),
@@ -254,20 +356,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildSocialButton({required String imagePath, required String label, required VoidCallback onPressed}) {
+  // Added context to access theme
+  Widget _buildSocialButton({required BuildContext context, required String imagePath, required String label, required VoidCallback onPressed}) {
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: theme.shadowColor.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: ElevatedButton.icon(
         onPressed: onPressed,
         icon: Image.asset(imagePath, width: 24, height: 24),
-        label: Text(label, style: const TextStyle(color: Color(0xFF0B3C6A), fontSize: 16, fontWeight: FontWeight.w600)),
+        label: Text(label, style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600)), // Themed text
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF0B3C6A),
+          backgroundColor: theme.colorScheme.surface, // Themed background
+          foregroundColor: theme.colorScheme.onSurface, // Themed splash
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32), side: BorderSide(color: Colors.grey[200]!, width: 1)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32), 
+            side: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.1), width: 1) // Themed border
+          ),
           elevation: 0,
         ),
       ),
@@ -318,6 +425,8 @@ class _NeonTextFieldState extends State<NeonTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache theme
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutQuart,
@@ -325,21 +434,21 @@ class _NeonTextFieldState extends State<NeonTextField> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: _isFocused
             ? [BoxShadow(color: widget.neonColor.withValues(alpha: 0.4), blurRadius: 15, spreadRadius: 2, offset: const Offset(0, 4))]
-            : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+            : [BoxShadow(color: theme.shadowColor.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))], // Themed shadow
       ),
       child: TextField(
         controller: widget.controller,
         focusNode: _focusNode,
         obscureText: widget.obscureText,
         keyboardType: widget.keyboardType,
-        style: const TextStyle(color: Color(0xFF0B3C6A)),
+        style: TextStyle(color: theme.colorScheme.onSurface), // Themed typed text
         decoration: InputDecoration(
           labelText: widget.label,
-          labelStyle: TextStyle(color: _isFocused ? widget.neonColor : Colors.grey[600]),
-          prefixIcon: Icon(widget.icon, color: _isFocused ? widget.neonColor : Colors.grey[400]),
+          labelStyle: TextStyle(color: _isFocused ? widget.neonColor : theme.colorScheme.onSurface.withValues(alpha: 0.6)), // Themed label
+          prefixIcon: Icon(widget.icon, color: _isFocused ? widget.neonColor : theme.colorScheme.onSurface.withValues(alpha: 0.4)), // Themed icon
           suffixIcon: widget.suffixIcon,
           filled: true,
-          fillColor: Colors.white.withValues(alpha: 0.9),
+          fillColor: theme.colorScheme.surface.withValues(alpha: 0.9), // Themed input background
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.transparent)),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: widget.neonColor, width: 2)),
         ),

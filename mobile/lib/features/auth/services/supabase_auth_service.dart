@@ -66,6 +66,18 @@ class SupabaseAuthService {
     }
   }
 
+  Future<AuthResponse?> signInWithFacebook() async {
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.facebook,
+        // Add this line exactly as you typed it in Supabase
+        redirectTo: 'io.supabase.tuklascope://login-callback', 
+      );
+      return null; 
+    } catch (e) {
+      rethrow;
+    }
+  }
   // Check if the current user is a Google sign-in user
   bool isGoogleUser() {
     final user = currentUser;

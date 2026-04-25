@@ -93,7 +93,7 @@ class MainNavigationState extends State<MainNavigation> {
 
     return MainNavScope(
       goToTab: goToTab,
-      isNavBarVisible: _isNavBarVisible, // <-- ADD THIS LINE HERE
+      isNavBarVisible: _isNavBarVisible, 
       child: Scaffold(
         extendBody: true,
         backgroundColor: Colors.transparent,
@@ -132,17 +132,14 @@ class MainNavigationState extends State<MainNavigation> {
                       child: Container(
                         height: 70,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF051325).withOpacity(0.85), 
+                          color: const Color(0xFF0D3B66).withOpacity(0.85), // Updated blue palette
                           borderRadius: BorderRadius.circular(35),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.08), 
-                            width: 1,
-                          ),
                           boxShadow: [
+                            // Performance optimization: Outer neon glow removed. 
+                            // Standard soft black drop shadow kept for depth against the background.
                             BoxShadow(
-                              color: activeNeonColor.withOpacity(0.15),
-                              blurRadius: 30,
-                              spreadRadius: -5,
+                              color: Colors.black.withOpacity(0.2), 
+                              blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
                           ],
@@ -237,32 +234,6 @@ class MainNavigationState extends State<MainNavigation> {
                     ],
                   ),
                 ).animate().scale(duration: 400.ms, curve: Curves.easeOutCubic),
-
-              // --- THE NEON BOTTOM BORDER INDICATOR ---
-              if (isSelected)
-                Positioned(
-                  bottom: 5, // Moved to the bottom
-                  child: Container(
-                    width: 30,
-                    height: 3,
-                    decoration: BoxDecoration(
-                      color: activeColor,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(5), // Curves on top now
-                        topRight: Radius.circular(5),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: activeColor,
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                  ).animate()
-                   .slideY(begin: 1, end: 0, duration: 250.ms, curve: Curves.easeOut) // Slides up from bottom
-                   .fadeIn(),
-                ),
 
               // The actual icon and text content
               content,

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from supabase import Client
 
-from app.schemas.pathfinder import PathfinderResponse
+from app.schemas.pathfinder import PathfinderResponse, SkillWebResponse
 from app.services.graph_service import get_user_skill_web
 from app.services.llm_service import generate_holistic_pathfinder
 from app.core.security import get_user_db_client
@@ -35,5 +35,25 @@ async def get_career_recommendations(
 
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/skills", response_model=SkillWebResponse)
+async def get_user_skills(
+    db_data: tuple[Client, str] = Depends(get_user_db_client)
+):
+    """
+    Returns the raw Neo4j Graph Data (Nodes and Levels) for the user's Skill Tree visualization.
+    """
+    try:
+        _, user_id = db_data
+        skill_web = await get_user_skill_web(user_id)
+
+        if not skill_web:
+            return SkillWebResponse(xp_distribution={}, top_skills={})
+
+        return SkillWebResponse(**skill_web)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

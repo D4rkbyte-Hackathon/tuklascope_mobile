@@ -16,3 +16,10 @@ class PathfinderResponse(BaseModel):
         ..., description="A one-sentence summary of the student's unique learning profile.")
     recommendations: list[CareerPath] = Field(
         ..., description="Exactly 3 recommendations following the 3-Tiered strategy.")
+
+
+class SkillWebResponse(BaseModel):
+    xp_distribution: dict[str, int] = Field(
+        default_factory=dict, description="Total XP per strand")
+    top_skills: dict[str, int] = Field(
+        default_factory=dict, description="Dictionary of specific mastered topics and their levels")

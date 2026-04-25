@@ -1,45 +1,150 @@
+// mobile/lib/features/profile/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:math' as math;
 
 import '../../core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../auth/providers/auth_controller.dart';
-import '../auth/services/supabase_auth_service.dart';
 import 'pathfinder_blueprint_sheet.dart';
+import '../../core/theme/theme_provider.dart';
+import '../../core/services/pathfinder_service.dart';
 
 import '../auth/presentation/widgets/auth_gate.dart';
+
+// =========================================================================
+// STATE MANAGEMENT: PROFILE STATS PROVIDER
+// =========================================================================
+
+class ProfileStats {
+  final int totalXp;
+  final int currentLevel;
+  final int conceptsMastered;
+
+  // 4 Main Gamification Strands
+  final int stemXp;
+  final int humssXp;
+  final int abmXp;
+  final int tvlXp;
+
+  // Neo4j Specific Topics & Levels
+  final Map<String, int> topSkills;
+
+  ProfileStats({
+    required this.totalXp,
+    required this.currentLevel,
+    required this.conceptsMastered,
+    required this.stemXp,
+    required this.humssXp,
+    required this.abmXp,
+    required this.tvlXp,
+    required this.topSkills,
+  });
+
+  int get progressToNextLevel {
+    final int xpIntoCurrentLevel = totalXp % 500;
+    return ((xpIntoCurrentLevel / 500) * 100).toInt();
+  }
+
+  int calculateBranchLevel(int xp) => 1 + (xp ~/ 500);
+}
+
+final profileStatsProvider = FutureProvider.autoDispose<ProfileStats>((
+  ref,
+) async {
+  final client = Supabase.instance.client;
+  final userId = client.auth.currentUser?.id;
+
+  if (userId == null) {
+    return ProfileStats(
+      totalXp: 0,
+      currentLevel: 1,
+      conceptsMastered: 0,
+      stemXp: 0,
+      humssXp: 0,
+      abmXp: 0,
+      tvlXp: 0,
+      topSkills: {},
+    );
+  }
+
+  final profileRes = await client
+      .from('profiles')
+      .select('total_xp, current_level')
+      .eq('id', userId)
+      .maybeSingle();
+
+  final treeRes = await client
+      .from('kaalaman_skill_tree')
+      .select()
+      .eq('user_id', userId)
+      .maybeSingle();
+
+  final scansRes = await client
+      .from('scans')
+      .select('id')
+      .eq('user_id', userId);
+
+  final neo4jData = await PathfinderService.getSkillWeb();
+  Map<String, int> parsedTopSkills = {};
+  if (neo4jData != null && neo4jData['top_skills'] != null) {
+    parsedTopSkills = Map<String, int>.from(neo4jData['top_skills']);
+  }
+
+  return ProfileStats(
+    totalXp: profileRes?['total_xp'] ?? 0,
+    currentLevel: profileRes?['current_level'] ?? 1,
+    conceptsMastered: (scansRes as List).length,
+    stemXp: treeRes?['agham_math_xp'] ?? 0,
+    humssXp: treeRes?['sining_wika_xp'] ?? 0,
+    abmXp: treeRes?['negosyo_pamamahala_xp'] ?? 0,
+    tvlXp: treeRes?['buhay_kasanayan_xp'] ?? 0,
+    topSkills: parsedTopSkills,
+  );
+});
+
+// =========================================================================
+// MAIN SCREEN
+// =========================================================================
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  static const Color _navy = Color(0xFF0D3B66);
-  static const Color _cream = Color(0xFFF9F6F0);
-  static const Color _linkBlue = Color(0xFF42A5F5);
-  static const Color _avgLevel = Color(0xFFE65100);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final appUserState = ref.watch(appUserProvider);
 
     return GradientScaffold(
       appBar: AppBar(
         title: const Text('Profile & Skill Tree'),
-        foregroundColor: _navy,
+        foregroundColor: theme.colorScheme.primary,
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
       body: appUserState.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: theme.colorScheme.primary),
+        ),
+        error: (err, stack) => Center(
+          child: Text(
+            'Error: $err',
+            style: TextStyle(color: theme.colorScheme.error),
+          ),
+        ),
         data: (appUser) {
           if (appUser == null) {
-            return const Center(child: Text('Please log in.'));
+            return Center(
+              child: Text(
+                'Please log in.',
+                style: TextStyle(color: theme.colorScheme.onSurface),
+              ),
+            );
           }
 
           final profile = appUser.profile;
-
           String location = '';
           final city = profile.city ?? '';
           final country = profile.country ?? '';
@@ -49,110 +154,19 @@ class ProfileScreen extends ConsumerWidget {
             location = city + country;
           }
 
-          final List<Widget> profileItems = [
-            _ProfileHeaderCard(
-              navy: _navy,
-              linkBlue: _linkBlue,
-              fullName: profile.fullName ?? 'New Explorer',
-              educationLevel: profile.educationLevel ?? 'Curious Mind',
-              location: location,
-              streak: profile.currentStreak,
-              onEditPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 28, bottom: 12),
-              child: RichText(
-                textAlign: TextAlign.center,
-                text: const TextSpan(
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    height: 1.15,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: 'Your ',
-                      style: TextStyle(color: _navy),
-                    ),
-                    TextSpan(
-                      text: 'Skill Tree',
-                      style: TextStyle(color: Colors.orange),
-                    ),
-                  ],
+          return Column(
+            children: [
+              Expanded(
+                child: _ProfileTabs(
+                  theme: theme,
+                  currentName: profile.fullName ?? 'New Explorer',
+                  currentEducationLevel:
+                      profile.educationLevel ?? 'Curious Mind',
+                  location: location,
+                  streak: profile.currentStreak,
                 ),
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 28),
-              child: Text(
-                'Watch your knowledge grow! Every discovery adds to your personal skill network and unlocks new learning pathways.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
-                  height: 1.35,
-                ),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 20),
-              child: _StatsGridCard(navy: _navy, avgLevelColor: _avgLevel),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: _SkillTreePlaceholderCard(),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _ProfilePromoCard(
-                borderColor: Colors.orange,
-                title: 'Open Your Blueprint',
-                description: 'From core principles to career path.',
-                buttonLabel: 'Open Pathfinder →',
-                buttonColor: _navy,
-                onPressed: () => showPathfinderBlueprintSheet(
-                  context,
-                  onNavigateToScan: () =>
-                      MainNavScope.maybeOf(context)?.goToTab(1),
-                ),
-              ),
-            ),
-            _ProfilePromoCard(
-              borderColor: _navy.withValues(alpha: 0.35),
-              title: 'Ready to expand your network?',
-              description:
-                  'Upload a photo of any object around you and discover the concepts behind it!',
-              buttonLabel: 'Start Discovery →',
-              buttonColor: Colors.orange,
-              onPressed: () => MainNavScope.maybeOf(context)?.goToTab(1),
-            ),
-          ];
-
-          return ListView.builder(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              8,
-              20,
-              MediaQuery.paddingOf(context).bottom + 88,
-            ),
-            itemCount: profileItems.length,
-            itemBuilder: (context, index) {
-              return profileItems[index]
-                  .animate()
-                  .fade(duration: 600.ms, delay: (100 * index).ms)
-                  .slideY(
-                    begin: 0.1,
-                    end: 0,
-                    duration: 600.ms,
-                    curve: Curves.easeOutCubic,
-                    delay: (100 * index).ms,
-                  );
-            },
+            ],
           );
         },
       ),
@@ -160,227 +174,425 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
-// HELPER WIDGETS BELOW
-// -----------------------------------------------------------------------------
+class _ProfileTabs extends ConsumerStatefulWidget {
+  final ThemeData theme;
+  final String currentName;
+  final String currentEducationLevel;
+  final String location;
+  final int streak;
 
-class _ProfilePromoCard extends StatelessWidget {
-  final Color borderColor;
-  final String title;
-  final String description;
-  final String buttonLabel;
-  final Color buttonColor;
-  final VoidCallback onPressed;
-
-  const _ProfilePromoCard({
-    required this.borderColor,
-    required this.title,
-    required this.description,
-    required this.buttonLabel,
-    required this.buttonColor,
-    required this.onPressed,
+  const _ProfileTabs({
+    required this.theme,
+    required this.currentName,
+    required this.currentEducationLevel,
+    required this.location,
+    required this.streak,
   });
 
   @override
+  ConsumerState<_ProfileTabs> createState() => _ProfileTabsState();
+}
+
+class _ProfileTabsState extends ConsumerState<_ProfileTabs>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F6F0),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0D3B66),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Center(
-            child: FilledButton(
-              onPressed: onPressed,
-              style: FilledButton.styleFrom(
-                backgroundColor: buttonColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 14,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Container(
+            height: 50,
+            decoration: BoxDecoration(
+              color: widget.theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(
+                color: widget.theme.colorScheme.onSurface.withValues(
+                  alpha: 0.1,
                 ),
-                shape: const StadiumBorder(),
+                width: 1,
               ),
-              child: Text(buttonLabel),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              indicator: BoxDecoration(
+                color: widget.theme.colorScheme.primary,
+                borderRadius: BorderRadius.circular(25),
+              ),
+              labelColor: widget.theme.colorScheme.onPrimary,
+              unselectedLabelColor: widget.theme.colorScheme.onSurface
+                  .withValues(alpha: 0.6),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+              tabs: const [
+                Tab(text: 'Profile'),
+                Tab(text: 'Settings'),
+                Tab(text: 'About'),
+              ],
             ),
           ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildProfileTab(widget.theme),
+              _buildSettingsTab(widget.theme),
+              _buildAboutTab(widget.theme),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileTab(ThemeData theme) {
+    final statsAsync = ref.watch(profileStatsProvider);
+
+    return RefreshIndicator(
+      color: theme.colorScheme.primary,
+      backgroundColor: theme.colorScheme.surface,
+      onRefresh: () async {
+        ref.invalidate(appUserProvider);
+        return ref.refresh(profileStatsProvider.future);
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          8,
+          20,
+          MediaQuery.paddingOf(context).bottom + 88,
+        ),
+        children: [
+          _ProfileHeaderCard(
+            theme: theme,
+            fullName: widget.currentName,
+            educationLevel: widget.currentEducationLevel,
+            location: widget.location,
+            streak: widget.streak,
+            onEditPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
+            },
+          ).animate().fade(duration: 600.ms).slideY(begin: 0.1),
+          Padding(
+            padding: const EdgeInsets.only(top: 28, bottom: 12),
+            child: RichText(
+              textAlign: TextAlign.center,
+              text: TextSpan(
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  height: 1.15,
+                ),
+                children: [
+                  TextSpan(
+                    text: 'Your ',
+                    style: TextStyle(color: theme.colorScheme.primary),
+                  ),
+                  TextSpan(
+                    text: 'Skill Tree',
+                    style: TextStyle(color: theme.colorScheme.secondary),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 28),
+            child: Text(
+              'Inner nodes track your overall gamification strands. Outer nodes are specific topics mastered through discovery.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                height: 1.35,
+              ),
+            ),
+          ),
+          statsAsync.when(
+            loading: () => Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            error: (e, s) => const Center(child: Text('Error loading stats')),
+            data: (stats) =>
+                Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: _StatsGridCard(theme: theme, stats: stats),
+                    )
+                    .animate()
+                    .fade(duration: 600.ms, delay: 100.ms)
+                    .slideY(begin: 0.1),
+          ),
+          statsAsync.when(
+            loading: () => const SizedBox(height: 250),
+            error: (e, s) => const SizedBox(),
+            data: (stats) =>
+                Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: _DynamicSkillTreeNetwork(
+                        theme: theme,
+                        stats: stats,
+                      ),
+                    )
+                    .animate()
+                    .fade(duration: 600.ms, delay: 200.ms)
+                    .slideY(begin: 0.1),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child:
+                _ProfilePromoCard(
+                      theme: theme,
+                      borderColor: theme.colorScheme.secondary,
+                      title: 'Open Your Blueprint',
+                      description:
+                          'See how your skills map to real-world careers.',
+                      buttonLabel: 'Open Pathfinder →',
+                      buttonColor: theme.colorScheme.primary,
+                      onPressed: () => showPathfinderBlueprintSheet(
+                        context,
+                        onNavigateToScan: () =>
+                            MainNavScope.maybeOf(context)?.goToTab(1),
+                      ),
+                    )
+                    .animate()
+                    .fade(duration: 600.ms, delay: 300.ms)
+                    .slideY(begin: 0.1),
+          ),
+          _ProfilePromoCard(
+            theme: theme,
+            borderColor: theme.colorScheme.primary.withValues(alpha: 0.35),
+            title: 'Expand Your Network',
+            description:
+                'Scan new objects to grow the branches of your skill tree!',
+            buttonLabel: 'Start Discovery →',
+            buttonColor: theme.colorScheme.secondary,
+            onPressed: () => MainNavScope.maybeOf(context)?.goToTab(1),
+          ).animate().fade(duration: 600.ms, delay: 400.ms).slideY(begin: 0.1),
         ],
       ),
     );
   }
-}
 
-class _ProfileHeaderCard extends StatelessWidget {
-  final Color navy;
-  final Color linkBlue;
-  final String fullName;
-  final String educationLevel;
-  final String location;
-  final int streak;
-  final VoidCallback onEditPressed;
-
-  const _ProfileHeaderCard({
-    required this.navy,
-    required this.linkBlue,
-    required this.fullName,
-    required this.educationLevel,
-    required this.location,
-    required this.streak,
-    required this.onEditPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget _buildSettingsTab(ThemeData theme) {
+    return ListView(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.black12, width: 0.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      physics: const BouncingScrollPhysics(),
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+            ),
+          ),
+          child: Column(
             children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: navy, width: 4),
-                ),
-                child: CircleAvatar(
-                  radius: 36,
-                  backgroundColor: Colors.grey[300],
-                  child: Icon(Icons.person, size: 40, color: Colors.grey[600]),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      fullName,
+              ValueListenableBuilder<ThemeMode>(
+                valueListenable: appThemeNotifier,
+                builder: (context, currentMode, child) {
+                  final isSystemDark =
+                      MediaQuery.platformBrightnessOf(context) ==
+                      Brightness.dark;
+                  final isDarkMode =
+                      currentMode == ThemeMode.dark ||
+                      (currentMode == ThemeMode.system && isSystemDark);
+
+                  return SwitchListTile(
+                    secondary: Icon(
+                      isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                      color: theme.colorScheme.primary,
+                    ),
+                    title: Text(
+                      'Dark Mode',
                       style: TextStyle(
-                        fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: navy,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      location.isNotEmpty
-                          ? '$educationLevel • $location'
-                          : educationLevel,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.orange[700],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text.rich(
-                      TextSpan(
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.black.withValues(alpha: 0.45),
-                        ),
-                        children: [
-                          const TextSpan(text: 'Daily Streak '),
-                          TextSpan(
-                            text: '$streak',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    value: isDarkMode,
+                    activeThumbColor: theme.colorScheme.primary,
+                    onChanged: (bool value) {
+                      appThemeNotifier.value = value
+                          ? ThemeMode.dark
+                          : ThemeMode.light;
+                    },
+                  );
+                },
+              ),
+              Divider(
+                height: 1,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+              ),
+              SwitchListTile(
+                secondary: Icon(
+                  Icons.vibration,
+                  color: theme.colorScheme.secondary,
+                ),
+                title: Text(
+                  'Vibration',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                value: true,
+                activeThumbColor: theme.colorScheme.secondary,
+                onChanged: (bool value) {},
+              ),
+            ],
+          ),
+        ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
+        Padding(
+          padding: const EdgeInsets.only(top: 20, bottom: 10),
+          child: Text(
+            'Account',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+            ),
+          ),
+          child: Column(
+            children: [
+              ListTile(
+                title: Text(
+                  'Sign Out',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+                trailing: Icon(Icons.logout, color: theme.colorScheme.error),
+                onTap: () async {
+                  await Supabase.instance.client.auth.signOut();
+                  if (context.mounted) {
+                    Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    ).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (context) => const AuthGate()),
+                      (route) => false,
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ).animate().fade(duration: 400.ms, delay: 200.ms).slideY(begin: 0.1),
+      ],
+    );
+  }
+
+  Widget _buildAboutTab(ThemeData theme) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      physics: const BouncingScrollPhysics(),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.school, size: 48, color: theme.colorScheme.primary),
+              const SizedBox(height: 16),
+              Text(
+                'Tuklascope is a modern learning companion that helps you discover, track, and engage with educational content.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                  height: 1.4,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: GestureDetector(
-              onTap: onEditPressed,
-              child: Text(
-                'Edit Profile →',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: linkBlue,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
+      ],
     );
   }
 }
 
-class _StatsGridCard extends StatelessWidget {
-  final Color navy;
-  final Color avgLevelColor;
+// -----------------------------------------------------------------------------
+// HELPER WIDGETS
+// -----------------------------------------------------------------------------
 
-  const _StatsGridCard({required this.navy, required this.avgLevelColor});
+class _StatsGridCard extends StatelessWidget {
+  final ThemeData theme;
+  final ProfileStats stats;
+
+  const _StatsGridCard({required this.theme, required this.stats});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.black12, width: 0.5),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: _StatCell(
-                  value: '67%',
-                  label: 'Total Progress',
-                  valueColor: Colors.orange,
+                  value: '${stats.progressToNextLevel}%',
+                  label: 'To Level ${stats.currentLevel + 1}',
+                  valueColor: theme.colorScheme.secondary,
+                  theme: theme,
                 ),
               ),
               Expanded(
                 child: _StatCell(
-                  value: '420',
+                  value: '${stats.totalXp}',
                   label: 'Total EXP',
-                  valueColor: navy,
+                  valueColor: theme.colorScheme.primary,
+                  theme: theme,
                 ),
               ),
             ],
@@ -388,18 +600,20 @@ class _StatsGridCard extends StatelessWidget {
           const SizedBox(height: 20),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: _StatCell(
-                  value: '33',
+                  value: '${stats.conceptsMastered}',
                   label: 'Concepts Mastered',
-                  valueColor: Colors.green,
+                  valueColor: const Color(0xFF4CAF50),
+                  theme: theme,
                 ),
               ),
               Expanded(
                 child: _StatCell(
-                  value: '1',
+                  value: '${stats.currentLevel}',
                   label: 'Average Level',
-                  valueColor: avgLevelColor,
+                  valueColor: theme.colorScheme.tertiary,
+                  theme: theme,
                 ),
               ),
             ],
@@ -414,11 +628,13 @@ class _StatCell extends StatelessWidget {
   final String value;
   final String label;
   final Color valueColor;
+  final ThemeData theme;
 
   const _StatCell({
     required this.value,
     required this.label,
     required this.valueColor,
+    required this.theme,
   });
 
   @override
@@ -440,10 +656,10 @@ class _StatCell extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Colors.black54,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -452,35 +668,126 @@ class _StatCell extends StatelessWidget {
   }
 }
 
-class _SkillTreePlaceholderCard extends StatelessWidget {
+class _ProfileHeaderCard extends StatelessWidget {
+  final ThemeData theme;
+  final String fullName;
+  final String educationLevel;
+  final String location;
+  final int streak;
+  final VoidCallback onEditPressed;
+
+  const _ProfileHeaderCard({
+    required this.theme,
+    required this.fullName,
+    required this.educationLevel,
+    required this.location,
+    required this.streak,
+    required this.onEditPressed,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.black12, width: 0.5),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+          width: 1,
+        ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: ColoredBox(
-                color: Colors.black,
-                child: CustomPaint(painter: _SkillTreeGraphPainter()),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: theme.colorScheme.primary,
+                    width: 4,
+                  ),
+                ),
+                child: CircleAvatar(
+                  radius: 36,
+                  backgroundColor: theme.colorScheme.onSurface.withValues(
+                    alpha: 0.1,
+                  ),
+                  child: Icon(
+                    Icons.person,
+                    size: 40,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fullName,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      location.isNotEmpty
+                          ? '$educationLevel • $location'
+                          : educationLevel,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.secondary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text.rich(
+                      TextSpan(
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                        children: [
+                          const TextSpan(text: 'Daily Streak '),
+                          TextSpan(
+                            text: '$streak',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.secondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          Text(
-            '(placeholder pic)',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.black.withValues(alpha: 0.45),
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: onEditPressed,
+              child: Text(
+                'Edit Profile →',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
             ),
           ),
         ],
@@ -489,77 +796,518 @@ class _SkillTreePlaceholderCard extends StatelessWidget {
   }
 }
 
-class _SkillTreeGraphPainter extends CustomPainter {
+class _ProfilePromoCard extends StatelessWidget {
+  final ThemeData theme;
+  final Color borderColor;
+  final String title;
+  final String description;
+  final String buttonLabel;
+  final Color buttonColor;
+  final VoidCallback onPressed;
+
+  const _ProfilePromoCard({
+    required this.theme,
+    required this.borderColor,
+    required this.title,
+    required this.description,
+    required this.buttonLabel,
+    required this.buttonColor,
+    required this.onPressed,
+  });
+
   @override
-  void paint(Canvas canvas, Size size) {
-    final linePaint = Paint()
-      ..color = Colors.white24
-      ..strokeWidth = 1.2;
-
-    final nodes = <Offset>[
-      Offset(size.width * 0.22, size.height * 0.28),
-      Offset(size.width * 0.48, size.height * 0.18),
-      Offset(size.width * 0.78, size.height * 0.32),
-      Offset(size.width * 0.35, size.height * 0.52),
-      Offset(size.width * 0.62, size.height * 0.48),
-      Offset(size.width * 0.28, size.height * 0.75),
-      Offset(size.width * 0.55, size.height * 0.82),
-      Offset(size.width * 0.82, size.height * 0.68),
-    ];
-
-    void edge(int a, int b) {
-      canvas.drawLine(nodes[a], nodes[b], linePaint);
-    }
-
-    edge(0, 1);
-    edge(1, 2);
-    edge(0, 3);
-    edge(1, 4);
-    edge(2, 4);
-    edge(3, 5);
-    edge(4, 6);
-    edge(4, 7);
-    edge(5, 6);
-
-    final colors = [
-      Colors.orange,
-      Colors.amber,
-      Colors.purpleAccent,
-      Colors.tealAccent,
-      Colors.orangeAccent,
-      Colors.deepPurpleAccent,
-      Colors.cyanAccent,
-      Colors.limeAccent,
-    ];
-
-    for (var i = 0; i < nodes.length; i++) {
-      canvas.drawCircle(
-        nodes[i],
-        5,
-        Paint()..color = colors[i % colors.length].withValues(alpha: 0.9),
-      );
-      canvas.drawCircle(
-        nodes[i],
-        5,
-        Paint()
-          ..color = Colors.white24
-          ..style = PaintingStyle.stroke,
-      );
-    }
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Center(
+            child: FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                backgroundColor: buttonColor,
+                foregroundColor: theme.colorScheme.onPrimary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 14,
+                ),
+                shape: const StadiumBorder(),
+              ),
+              child: Text(buttonLabel),
+            ),
+          ),
+        ],
+      ),
+    );
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // =============================================================================
-// NEW SCREEN: EDIT PROFILE SCREEN (WITH REFERENCE DATA)
+// DYNAMIC SKILL TREE NETWORK WIDGET (INLINE PREVIEW)
 // =============================================================================
 
-// CHANGED: Now a ConsumerStatefulWidget to listen to your appUserProvider
+class _DynamicSkillTreeNetwork extends StatelessWidget {
+  final ThemeData theme;
+  final ProfileStats stats;
+
+  const _DynamicSkillTreeNetwork({required this.theme, required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          // 🚀 THE STATIC PREVIEW WITH TAP-TO-EXPAND
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            child: Stack(
+              children: [
+                SizedBox(
+                  height: 350,
+                  width: double.infinity,
+                  // Removed InteractiveViewer here to stop scroll conflicts!
+                  child: CustomPaint(
+                    size: const Size(double.infinity, 350),
+                    painter: _AdvancedInteractiveRadialPainter(
+                      theme: theme,
+                      stats: stats,
+                    ),
+                  ),
+                ),
+                // Expand Button Overlay
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: IconButton.filled(
+                    style: IconButton.styleFrom(
+                      backgroundColor: theme.colorScheme.surface.withValues(
+                        alpha: 0.8,
+                      ),
+                      foregroundColor: theme.colorScheme.primary,
+                    ),
+                    icon: const Icon(Icons.fullscreen),
+                    onPressed: () {
+                      // Open Full Screen Mode
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              _FullScreenSkillTree(theme: theme, stats: stats),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Footer Hint
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) =>
+                      _FullScreenSkillTree(theme: theme, stats: stats),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.02),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.zoom_out_map,
+                    size: 16,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tap to expand & explore interactively',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.1,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdvancedInteractiveRadialPainter extends CustomPainter {
+  final ThemeData theme;
+  final ProfileStats stats;
+
+  _AdvancedInteractiveRadialPainter({required this.theme, required this.stats});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    const double innerRadius = 90.0;
+    const double outerRadius = 175.0;
+
+    final innerLinePaint = Paint()
+      ..color = theme.colorScheme.onSurface.withValues(alpha: 0.15)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+
+    final outerLinePaint = Paint()
+      ..color = theme.colorScheme.primary.withValues(alpha: 0.25)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    final strandData = [
+      {
+        'name': 'STEM',
+        'level': stats.calculateBranchLevel(stats.stemXp),
+        'color': const Color(0xFF2196F3),
+        'angle': -math.pi * 0.75,
+      },
+      {
+        'name': 'ABM',
+        'level': stats.calculateBranchLevel(stats.abmXp),
+        'color': const Color(0xFFFF9800),
+        'angle': -math.pi * 0.25,
+      },
+      {
+        'name': 'HUMSS',
+        'level': stats.calculateBranchLevel(stats.humssXp),
+        'color': const Color(0xFF9C27B0),
+        'angle': math.pi * 0.75,
+      },
+      {
+        'name': 'TVL',
+        'level': stats.calculateBranchLevel(stats.tvlXp),
+        'color': const Color(0xFF4CAF50),
+        'angle': math.pi * 0.25,
+      },
+    ];
+
+    final topics = stats.topSkills.entries.toList();
+    final int topicCount = topics.length;
+
+    final topicColors = [
+      Colors.cyan.shade600,
+      Colors.pink.shade500,
+      Colors.amber.shade600,
+      Colors.lightGreen.shade600,
+      Colors.deepPurple.shade400,
+    ];
+
+    for (var strand in strandData) {
+      final angle = strand['angle'] as double;
+      final dx = center.dx + innerRadius * math.cos(angle);
+      final dy = center.dy + innerRadius * math.sin(angle);
+      canvas.drawLine(center, Offset(dx, dy), innerLinePaint);
+    }
+
+    for (int i = 0; i < topicCount; i++) {
+      final angle = (2 * math.pi * i) / topicCount - (math.pi / 2);
+      final tDx = center.dx + outerRadius * math.cos(angle);
+      final tDy = center.dy + outerRadius * math.sin(angle);
+      final topicPos = Offset(tDx, tDy);
+
+      Offset closestStrandPos = center;
+      double minDiff = double.infinity;
+
+      for (var strand in strandData) {
+        final sAngle = strand['angle'] as double;
+        final sPos =
+            center +
+            Offset(
+              innerRadius * math.cos(sAngle),
+              innerRadius * math.sin(sAngle),
+            );
+        final dist = (sPos - topicPos).distance;
+        if (dist < minDiff) {
+          minDiff = dist;
+          closestStrandPos = sPos;
+        }
+      }
+
+      canvas.drawLine(closestStrandPos, topicPos, outerLinePaint);
+    }
+
+    for (int i = 0; i < topicCount; i++) {
+      final topicName = topics[i].key;
+      final topicLevel = topics[i].value;
+
+      final angle = (2 * math.pi * i) / topicCount - (math.pi / 2);
+      final dx = center.dx + outerRadius * math.cos(angle);
+      final dy = center.dy + outerRadius * math.sin(angle);
+      final nodeCenter = Offset(dx, dy);
+      final nodeColor = topicColors[i % topicColors.length];
+
+      final double nodeRadius = (35.0 + (topicLevel * 2.0)).clamp(35.0, 48.0);
+
+      canvas.drawCircle(
+        nodeCenter,
+        nodeRadius + 3,
+        Paint()
+          ..color = nodeColor.withValues(alpha: 0.3)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+      );
+      canvas.drawCircle(
+        nodeCenter,
+        nodeRadius,
+        Paint()..color = theme.colorScheme.surface,
+      );
+      canvas.drawCircle(
+        nodeCenter,
+        nodeRadius,
+        Paint()
+          ..color = nodeColor
+          ..strokeWidth = 3.0
+          ..style = PaintingStyle.stroke,
+      );
+
+      String displayName = topicName.length > 12
+          ? '${topicName.substring(0, 10)}..'
+          : topicName;
+      _drawMultiLineText(
+        canvas,
+        'Lv.$topicLevel\n$displayName',
+        nodeCenter,
+        theme.colorScheme.onSurface,
+        10,
+        true,
+      );
+    }
+
+    for (var strand in strandData) {
+      final name = strand['name'] as String;
+      final level = strand['level'] as int;
+      final color = strand['color'] as Color;
+      final angle = strand['angle'] as double;
+
+      final dx = center.dx + innerRadius * math.cos(angle);
+      final dy = center.dy + innerRadius * math.sin(angle);
+      final nodeCenter = Offset(dx, dy);
+      const double nodeRadius = 32.0;
+
+      canvas.drawCircle(
+        nodeCenter,
+        nodeRadius,
+        Paint()..color = theme.colorScheme.surface,
+      );
+      canvas.drawCircle(
+        nodeCenter,
+        nodeRadius,
+        Paint()
+          ..color = color
+          ..strokeWidth = 3.5
+          ..style = PaintingStyle.stroke,
+      );
+
+      _drawMultiLineText(
+        canvas,
+        'Lv.$level\n$name',
+        nodeCenter,
+        theme.colorScheme.onSurface,
+        10,
+        true,
+      );
+    }
+
+    canvas.drawCircle(center, 45, Paint()..color = theme.colorScheme.surface);
+    canvas.drawCircle(
+      center,
+      45,
+      Paint()
+        ..color = theme.colorScheme.primary
+        ..strokeWidth = 4
+        ..style = PaintingStyle.stroke,
+    );
+
+    final Rect coreRect = Rect.fromCircle(center: center, radius: 40);
+    canvas.drawCircle(
+      center,
+      40,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(coreRect),
+    );
+
+    _drawMultiLineText(
+      canvas,
+      'CORE\nLV.${stats.currentLevel}',
+      center,
+      Colors.white,
+      12,
+      true,
+    );
+  }
+
+  void _drawMultiLineText(
+    Canvas canvas,
+    String text,
+    Offset centerOffset,
+    Color color,
+    double fontSize,
+    bool isBold,
+  ) {
+    final textSpan = TextSpan(
+      text: text,
+      style: TextStyle(
+        color: color,
+        fontSize: fontSize,
+        fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+        height: 1.2,
+      ),
+    );
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        centerOffset.dx - textPainter.width / 2,
+        centerOffset.dy - textPainter.height / 2,
+      ),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _AdvancedInteractiveRadialPainter oldDelegate) =>
+      true;
+}
+
+// =============================================================================
+// FULL SCREEN INTERACTIVE SKILL TREE
+// =============================================================================
+
+class _FullScreenSkillTree extends StatelessWidget {
+  final ThemeData theme;
+  final ProfileStats stats;
+
+  const _FullScreenSkillTree({required this.theme, required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: theme.colorScheme.primary,
+        title: const Text('Interactive Skill Tree'),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.pinch,
+                    size: 16,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Pinch to zoom • Drag to pan',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              // 🚀 FIX: Removed the massive 1200x1200 unconstrained box.
+              // Now it perfectly centers to your phone screen and allows panning in any direction!
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                boundaryMargin: const EdgeInsets.all(
+                  double.infinity,
+                ), // Allows infinite panning
+                child: SizedBox(
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: CustomPaint(
+                    painter: _AdvancedInteractiveRadialPainter(
+                      theme: theme,
+                      stats: stats,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// EDIT PROFILE SCREEN
+// =============================================================================
+
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
-
   @override
   ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
 }
@@ -567,7 +1315,6 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  static const Color _navy = Color(0xFF0D3B66);
 
   @override
   void initState() {
@@ -581,8 +1328,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     super.dispose();
   }
 
-  // 🚀 NEW FUNCTION: Opens a dialog and updates Supabase
   Future<void> _showEditNameDialog(String currentName) async {
+    final theme = Theme.of(context);
     final TextEditingController nameController = TextEditingController(
       text: currentName,
     );
@@ -591,23 +1338,38 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Edit Full Name', style: TextStyle(color: _navy)),
+          backgroundColor: theme.colorScheme.surface,
+          title: Text(
+            'Edit Full Name',
+            style: TextStyle(color: theme.colorScheme.primary),
+          ),
           content: TextField(
             controller: nameController,
-            decoration: const InputDecoration(
+            style: TextStyle(color: theme.colorScheme.onSurface),
+            decoration: InputDecoration(
               hintText: 'Enter your new name',
+              hintStyle: TextStyle(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
               focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.orange),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
               ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.secondary,
+              ),
               onPressed: () async {
                 final newName = nameController.text.trim();
                 if (newName.isNotEmpty && newName != currentName) {
@@ -615,16 +1377,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                     final userId =
                         Supabase.instance.client.auth.currentUser?.id;
                     if (userId != null) {
-                      // 1. Send to Supabase
                       await Supabase.instance.client
                           .from('profiles')
                           .update({'full_name': newName})
                           .eq('id', userId);
-
-                      // 2. Tell Riverpod to refresh the data so the UI updates instantly!
                       ref.invalidate(appUserProvider);
-
-                      if (context.mounted) {
+                      ref.invalidate(profileStatsProvider);
+                      if (mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -635,11 +1394,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       }
                     }
                   } catch (e) {
-                    if (context.mounted) {
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Error updating profile: $e'),
-                          backgroundColor: Colors.red,
+                          content: Text('Error: $e'),
+                          backgroundColor: theme.colorScheme.error,
                         ),
                       );
                     }
@@ -654,8 +1413,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     );
   }
 
-  // 🚀 NEW FUNCTION: Edit city dialog
   Future<void> _showEditCityDialog(String currentCity) async {
+    final theme = Theme.of(context);
     final TextEditingController cityController = TextEditingController(
       text: currentCity,
     );
@@ -664,23 +1423,38 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Edit City', style: TextStyle(color: _navy)),
+          backgroundColor: theme.colorScheme.surface,
+          title: Text(
+            'Edit City',
+            style: TextStyle(color: theme.colorScheme.primary),
+          ),
           content: TextField(
             controller: cityController,
-            decoration: const InputDecoration(
+            style: TextStyle(color: theme.colorScheme.onSurface),
+            decoration: InputDecoration(
               hintText: 'Enter your city',
+              hintStyle: TextStyle(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
               focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.orange),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
               ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.secondary,
+              ),
               onPressed: () async {
                 final newCity = cityController.text.trim();
                 if (newCity != currentCity) {
@@ -692,10 +1466,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           .from('profiles')
                           .update({'city': newCity})
                           .eq('id', userId);
-
                       ref.invalidate(appUserProvider);
-
-                      if (context.mounted) {
+                      ref.invalidate(profileStatsProvider);
+                      if (mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -706,17 +1479,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       }
                     }
                   } catch (e) {
-                    if (context.mounted) {
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Error updating city: $e'),
-                          backgroundColor: Colors.red,
+                          content: Text('Error: $e'),
+                          backgroundColor: theme.colorScheme.error,
                         ),
                       );
                     }
                   }
                 } else {
-                  if (context.mounted) Navigator.pop(context);
+                  if (mounted) Navigator.pop(context);
                 }
               },
               child: const Text('Save'),
@@ -727,8 +1500,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     );
   }
 
-  // 🚀 NEW FUNCTION: Edit country dialog
   Future<void> _showEditCountryDialog(String currentCountry) async {
+    final theme = Theme.of(context);
     final TextEditingController countryController = TextEditingController(
       text: currentCountry,
     );
@@ -737,23 +1510,38 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Edit Country', style: TextStyle(color: _navy)),
+          backgroundColor: theme.colorScheme.surface,
+          title: Text(
+            'Edit Country',
+            style: TextStyle(color: theme.colorScheme.primary),
+          ),
           content: TextField(
             controller: countryController,
-            decoration: const InputDecoration(
+            style: TextStyle(color: theme.colorScheme.onSurface),
+            decoration: InputDecoration(
               hintText: 'Enter your country',
+              hintStyle: TextStyle(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
               focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.orange),
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
               ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.secondary,
+              ),
               onPressed: () async {
                 final newCountry = countryController.text.trim();
                 if (newCountry != currentCountry) {
@@ -765,10 +1553,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           .from('profiles')
                           .update({'country': newCountry})
                           .eq('id', userId);
-
                       ref.invalidate(appUserProvider);
-
-                      if (context.mounted) {
+                      ref.invalidate(profileStatsProvider);
+                      if (mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -779,17 +1566,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       }
                     }
                   } catch (e) {
-                    if (context.mounted) {
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Error updating country: $e'),
-                          backgroundColor: Colors.red,
+                          content: Text('Error: $e'),
+                          backgroundColor: theme.colorScheme.error,
                         ),
                       );
                     }
                   }
                 } else {
-                  if (context.mounted) Navigator.pop(context);
+                  if (mounted) Navigator.pop(context);
                 }
               },
               child: const Text('Save'),
@@ -800,14 +1587,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     );
   }
 
-  // 🚀 NEW FUNCTION: Edit education level dialog with better-styled dropdown
   Future<void> _showEditEducationLevelDialog(String currentLevel) async {
-    final List<String> educationLevels = [
+    final theme = Theme.of(context);
+    const List<String> educationLevels = [
       'Elementary',
       'High School',
       'Senior High School',
+      'Others',
     ];
-    String? selectedLevel = currentLevel.isNotEmpty && educationLevels.contains(currentLevel)
+    String? selectedLevel =
+        currentLevel.isNotEmpty && educationLevels.contains(currentLevel)
         ? currentLevel
         : null;
 
@@ -817,39 +1606,55 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Edit Education Level', style: TextStyle(color: _navy)),
+              backgroundColor: theme.colorScheme.surface,
+              title: Text(
+                'Edit Education Level',
+                style: TextStyle(color: theme.colorScheme.primary),
+              ),
               content: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.orange, width: 2),
+                  border: Border.all(
+                    color: theme.colorScheme.secondary,
+                    width: 2,
+                  ),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
+                    dropdownColor: theme.colorScheme.surface,
                     isExpanded: true,
-                    hint: const Text(
+                    hint: Text(
                       'Select your education level',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
                     ),
                     value: selectedLevel,
-                    icon: const Icon(Icons.arrow_drop_down, color: Colors.orange),
+                    icon: Icon(
+                      Icons.arrow_drop_down,
+                      color: theme.colorScheme.secondary,
+                    ),
                     items: educationLevels.map((String level) {
                       return DropdownMenuItem<String>(
                         value: level,
                         child: Text(
                           level,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
-                            color: _navy,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
                       );
                     }).toList(),
                     onChanged: (String? newValue) {
-                      setState(() {
-                        selectedLevel = newValue;
-                      });
+                      setState(() => selectedLevel = newValue);
                     },
                   ),
                 ),
@@ -857,11 +1662,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
                 ),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-                  onPressed: selectedLevel != null && selectedLevel != currentLevel
+                  style: FilledButton.styleFrom(
+                    backgroundColor: theme.colorScheme.secondary,
+                  ),
+                  onPressed:
+                      selectedLevel != null && selectedLevel != currentLevel
                       ? () async {
                           try {
                             final userId =
@@ -871,25 +1684,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                                   .from('profiles')
                                   .update({'education_level': selectedLevel})
                                   .eq('id', userId);
-
                               ref.invalidate(appUserProvider);
-
-                              if (context.mounted) {
+                              ref.invalidate(profileStatsProvider);
+                              if (mounted) {
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Education level updated successfully!'),
+                                    content: Text(
+                                      'Education updated successfully!',
+                                    ),
                                     backgroundColor: Colors.green,
                                   ),
                                 );
                               }
                             }
                           } catch (e) {
-                            if (context.mounted) {
+                            if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Error updating education level: $e'),
-                                  backgroundColor: Colors.red,
+                                  content: Text('Error: $e'),
+                                  backgroundColor: theme.colorScheme.error,
                                 ),
                               );
                             }
@@ -906,257 +1720,178 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     );
   }
 
-  // 🚀 NEW FUNCTION: Change password dialog
-  Future<void> _showChangePasswordDialog() async {
-    // Check if user is a Google sign-in user
-    final authService = ref.read(authServiceProvider);
-    if (authService.isGoogleUser()) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Google Sign-In users cannot change password. Please sign in with email and password to change your password.',
-            ),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 4),
-          ),
-        );
-      }
-      return;
-    }
-
-    final currentPasswordController = TextEditingController();
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
-    bool showCurrentPassword = false;
-    bool showNewPassword = false;
-    bool showConfirmPassword = false;
-    bool isLoading = false;
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Change Password', style: TextStyle(color: _navy)),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Current Password Field
-                    TextField(
-                      controller: currentPasswordController,
-                      obscureText: !showCurrentPassword,
-                      enabled: !isLoading,
-                      decoration: InputDecoration(
-                        hintText: 'Current password',
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.orange),
+  Widget _buildProfileTab(ThemeData theme) {
+    final appUserState = ref.watch(appUserProvider);
+    return appUserState.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, s) => const Center(child: Text("Error")),
+      data: (appUser) {
+        if (appUser == null) {
+          return const Center(child: Text("Not logged in"));
+        }
+        final profile = appUser.profile;
+        final currentName = profile.fullName ?? 'Explorer';
+        final currentCity = profile.city ?? '';
+        final currentCountry = profile.country ?? '';
+        final currentEducationLevel = profile.educationLevel ?? 'Not set';
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+          children: [
+            Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(
+                          Icons.person_outline,
+                          color: theme.colorScheme.primary,
                         ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            showCurrentPassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            color: Colors.grey,
+                        title: Text(
+                          'Full Name',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                            fontSize: 12,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              showCurrentPassword = !showCurrentPassword;
-                            });
-                          },
+                        ),
+                        subtitle: Text(
+                          currentName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.edit,
+                          color: theme.colorScheme.secondary,
+                          size: 20,
+                        ),
+                        onTap: () => _showEditNameDialog(currentName),
+                      ),
+                      Divider(
+                        height: 1,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.1,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    // New Password Field
-                    TextField(
-                      controller: newPasswordController,
-                      obscureText: !showNewPassword,
-                      enabled: !isLoading,
-                      decoration: InputDecoration(
-                        hintText: 'New password',
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.orange),
+                      ListTile(
+                        leading: Icon(
+                          Icons.location_on_outlined,
+                          color: theme.colorScheme.primary,
                         ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            showNewPassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            color: Colors.grey,
+                        title: Text(
+                          'City',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                            fontSize: 12,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              showNewPassword = !showNewPassword;
-                            });
-                          },
+                        ),
+                        subtitle: Text(
+                          currentCity.isNotEmpty ? currentCity : 'Not set',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.edit,
+                          color: theme.colorScheme.secondary,
+                          size: 20,
+                        ),
+                        onTap: () => _showEditCityDialog(currentCity),
+                      ),
+                      Divider(
+                        height: 1,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.1,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Confirm Password Field
-                    TextField(
-                      controller: confirmPasswordController,
-                      obscureText: !showConfirmPassword,
-                      enabled: !isLoading,
-                      decoration: InputDecoration(
-                        hintText: 'Confirm new password',
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.orange),
+                      ListTile(
+                        leading: Icon(
+                          Icons.public_outlined,
+                          color: theme.colorScheme.primary,
                         ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            showConfirmPassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            color: Colors.grey,
+                        title: Text(
+                          'Country',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                            fontSize: 12,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              showConfirmPassword = !showConfirmPassword;
-                            });
-                          },
+                        ),
+                        subtitle: Text(
+                          currentCountry.isNotEmpty
+                              ? currentCountry
+                              : 'Not set',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.edit,
+                          color: theme.colorScheme.secondary,
+                          size: 20,
+                        ),
+                        onTap: () => _showEditCountryDialog(currentCountry),
+                      ),
+                      Divider(
+                        height: 1,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.1,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isLoading ? null : () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-                ),
-                FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          final currentPassword =
-                              currentPasswordController.text.trim();
-                          final newPassword =
-                              newPasswordController.text.trim();
-                          final confirmPassword =
-                              confirmPasswordController.text.trim();
-
-                          // Validation
-                          if (currentPassword.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter your current password'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (newPassword.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter a new password'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (newPassword.length < 6) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'Password must be at least 6 characters'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (newPassword != confirmPassword) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Passwords do not match'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (newPassword == currentPassword) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'New password must be different from current password'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          setState(() => isLoading = true);
-
-                          try {
-                            // First, verify current password by signing in
-                            final userEmail =
-                                Supabase.instance.client.auth.currentUser?.email;
-                            if (userEmail == null) {
-                              throw Exception('User email not found');
-                            }
-
-                            // Verify current password
-                            await Supabase.instance.client.auth
-                                .signInWithPassword(
-                              email: userEmail,
-                              password: currentPassword,
-                            );
-
-                            // If verification succeeds, update password
-                            await authService.changePassword(newPassword);
-
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Password changed successfully!'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    e.toString().contains('Invalid login credentials')
-                                        ? 'Current password is incorrect'
-                                        : 'Error changing password: $e',
-                                  ),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          } finally {
-                            if (mounted) {
-                              setState(() => isLoading = false);
-                            }
-                          }
-                        },
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                      ListTile(
+                        leading: Icon(
+                          Icons.school_outlined,
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: Text(
+                          'Education Level',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                            fontSize: 12,
                           ),
-                        )
-                      : const Text('Change Password'),
-                ),
-              ],
-            );
-          },
+                        ),
+                        subtitle: Text(
+                          currentEducationLevel,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.edit,
+                          color: theme.colorScheme.secondary,
+                          size: 20,
+                        ),
+                        onTap: () => _showEditEducationLevelDialog(
+                          currentEducationLevel,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+                .animate()
+                .fade(duration: 400.ms, delay: 100.ms)
+                .slideY(begin: 0.1),
+          ],
         );
       },
     );
@@ -1164,38 +1899,39 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return GradientScaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
-        foregroundColor: _navy,
+        foregroundColor: theme.colorScheme.primary,
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
       body: Column(
         children: [
-          // THE CUSTOM PILL TAB-BAR
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Container(
               height: 50,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(25),
-                border: Border.all(color: Colors.black12, width: 1),
+                border: Border.all(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                  width: 1,
+                ),
               ),
               child: TabBar(
                 controller: _tabController,
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerColor: Colors.transparent,
                 indicator: BoxDecoration(
-                  color: _navy,
+                  color: theme.colorScheme.primary,
                   borderRadius: BorderRadius.circular(25),
                 ),
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.black54,
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                labelColor: theme.colorScheme.onPrimary,
+                unselectedLabelColor: theme.colorScheme.onSurface.withValues(
+                  alpha: 0.6,
                 ),
                 tabs: const [
                   Tab(text: 'Profile'),
@@ -1205,411 +1941,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
               ),
             ),
           ),
-
-          // THE TAB CONTENT VIEWS
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildProfileTab(),
-                _buildSettingsTab(),
-                _buildAboutTab(),
+                _buildProfileTab(theme),
+                const Center(child: Text("Settings")),
+                const Center(child: Text("About")),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // TAB 1: PROFILE
-  // ---------------------------------------------------------------------------
-  Widget _buildProfileTab() {
-    // 🚀 Watch the provider to get REAL data instead of hardcoded text
-    final appUserState = ref.watch(appUserProvider);
-
-    return appUserState.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => const Center(child: Text('Error loading profile')),
-      data: (appUser) {
-        if (appUser == null) return const Center(child: Text('Not logged in'));
-
-        final profile = appUser.profile;
-        final currentName = profile.fullName ?? 'Explorer';
-        final currentCity = profile.city ?? '';
-        final currentCountry = profile.country ?? '';
-        final currentEducationLevel = profile.educationLevel ?? 'Not set';
-        final email =
-            Supabase.instance.client.auth.currentUser?.email ?? 'No email';
-
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-          physics: const BouncingScrollPhysics(),
-          children: [
-            // Avatar Section
-            Center(
-              child: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.orange, width: 3),
-                    ),
-                    child: CircleAvatar(
-                      radius: 65,
-                      backgroundColor: Colors.grey[200],
-                      child: Icon(
-                        Icons.person,
-                        size: 70,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(color: Colors.black26, blurRadius: 4),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.orange,
-                          size: 22,
-                        ),
-                        onPressed: () {}, // Image picker logic goes here later
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
-
-            const SizedBox(height: 16),
-
-            // Edit Info Card
-            Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.black12),
-                  ),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.person_outline, color: _navy),
-                        title: const Text(
-                          'Full Name',
-                          style: TextStyle(color: Colors.black54, fontSize: 12),
-                        ),
-                        subtitle: Text(
-                          currentName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        trailing: const Icon(
-                          Icons.edit,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        // 🚀 Calls our new edit function
-                        onTap: () => _showEditNameDialog(currentName),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.email_outlined, color: _navy),
-                        title: const Text(
-                          'Email',
-                          style: TextStyle(color: Colors.black54, fontSize: 12),
-                        ),
-                        subtitle: Text(
-                          email,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.location_on_outlined, color: _navy),
-                        title: const Text(
-                          'City',
-                          style: TextStyle(color: Colors.black54, fontSize: 12),
-                        ),
-                        subtitle: Text(
-                          currentCity.isNotEmpty ? currentCity : 'Not set',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        trailing: const Icon(
-                          Icons.edit,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        onTap: () => _showEditCityDialog(currentCity),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.public_outlined, color: _navy),
-                        title: const Text(
-                          'Country',
-                          style: TextStyle(color: Colors.black54, fontSize: 12),
-                        ),
-                        subtitle: Text(
-                          currentCountry.isNotEmpty ? currentCountry : 'Not set',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        trailing: const Icon(
-                          Icons.edit,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        onTap: () => _showEditCountryDialog(currentCountry),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.school_outlined, color: _navy),
-                        title: const Text(
-                          'Education Level',
-                          style: TextStyle(color: Colors.black54, fontSize: 12),
-                        ),
-                        subtitle: Text(
-                          currentEducationLevel,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        trailing: const Icon(
-                          Icons.edit,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        onTap: () => _showEditEducationLevelDialog(currentEducationLevel),
-                      ),
-                    ],
-                  ),
-                )
-                .animate()
-                .fade(duration: 400.ms, delay: 100.ms)
-                .slideY(begin: 0.1),
-
-            const SizedBox(height: 16),
-          ],
-        );
-      },
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // TAB 2: SETTINGS
-  // ---------------------------------------------------------------------------
-  Widget _buildSettingsTab() {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      physics: const BouncingScrollPhysics(),
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.black12),
-          ),
-          child: Column(
-            children: [
-              SwitchListTile(
-                secondary: const Icon(Icons.dark_mode, color: Colors.orange),
-                title: const Text(
-                  'Dark Mode',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                value: false,
-                activeColor: Colors.orange,
-                onChanged: (bool value) {},
-              ),
-              const Divider(height: 1),
-              SwitchListTile(
-                secondary: const Icon(Icons.vibration, color: Colors.orange),
-                title: const Text(
-                  'Vibration',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                value: true,
-                activeColor: Colors.orange,
-                onChanged: (bool value) {},
-              ),
-            ],
-          ),
-        ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
-        // Account Actions
-        const Padding(
-          padding: EdgeInsets.only(top: 20, bottom: 10),
-          child: Text(
-            'Account',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: _navy,
-            ),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.black12),
-          ),
-          child: Column(
-            children: [
-              ListTile(
-                title: const Text(
-                  'Change Password',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                trailing: const Icon(Icons.lock_outline, color: Colors.orange),
-                onTap: () => _showChangePasswordDialog(),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                title: const Text(
-                  'Sign Out',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                  ),
-                ),
-                trailing: const Icon(Icons.logout, color: Colors.red),
-                onTap: () async {
-                  await Supabase.instance.client.auth.signOut();
-                  if (context.mounted) {
-                    // Properly destroy the current navigation stack and return to the AuthGate
-                    Navigator.of(
-                      context,
-                      rootNavigator: true,
-                    ).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (context) => const AuthGate()),
-                      (route) => false,
-                    );
-                  }
-                },
-              ),
-            ],
-          ),
-        ).animate().fade(duration: 400.ms, delay: 200.ms).slideY(begin: 0.1),
-      ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // TAB 3: ABOUT
-  // ---------------------------------------------------------------------------
-  Widget _buildAboutTab() {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      physics: const BouncingScrollPhysics(),
-      children: [
-        // App Info
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.black12),
-          ),
-          child: const Column(
-            children: [
-              Icon(Icons.school, size: 48, color: _navy),
-              SizedBox(height: 16),
-              Text(
-                'Tuklascope is a modern learning companion that helps you discover, track, and engage with educational content. Built with love and purpose to make learning accessible for everyone.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
-
-        const SizedBox(height: 20),
-
-        // Developers
-        const Text(
-          'Developed by:',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: _navy,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.black12),
-          ),
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text(
-                  'John Michael A. Nave',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text(
-                  'James Andrew S. Ologuin',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text(
-                  'John Peter D. Pestaño',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text(
-                  'Jordan A. Cabandon',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.code, color: Colors.orange),
-                title: const Text(
-                  'John Zachary N. Gillana',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy),
-                ),
-              ),
-            ],
-          ),
-        ).animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1),
-      ],
     );
   }
 }

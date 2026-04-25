@@ -45,9 +45,10 @@ class CompassResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache theme
     final persona = _getPersonaDetails(topAffinity);
-    final Color neonOrange = const Color(0xFFFF6B2C);
-    final Color darkBlue = const Color(0xFF0B3C6A);
+    final neonOrange = theme.colorScheme.secondary; // Themed Orange
+    final primaryColor = theme.colorScheme.primary; // Themed Blue
 
     return GradientScaffold(
       appBar: AppBar(
@@ -75,11 +76,11 @@ class CompassResultsScreen extends StatelessWidget {
                   children: [
                     TextSpan(
                       text: 'Your Journey\n',
-                      style: TextStyle(color: darkBlue),
+                      style: TextStyle(color: primaryColor), // Themed
                     ),
                     TextSpan(
                       text: 'Begins',
-                      style: TextStyle(color: neonOrange),
+                      style: TextStyle(color: neonOrange), // Themed
                     ),
                   ],
                 ),
@@ -102,7 +103,7 @@ class CompassResultsScreen extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: theme.colorScheme.surface.withValues(alpha: 0.85), // Themed Adaptive Glass
                         borderRadius: BorderRadius.circular(32),
                         border: Border.all(
                           color: neonOrange.withValues(alpha: 0.6),
@@ -139,7 +140,7 @@ class CompassResultsScreen extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.w900,
-                              color: darkBlue,
+                              color: primaryColor, // Themed
                             ),
                           ),
                           Text(
@@ -147,13 +148,13 @@ class CompassResultsScreen extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey[600],
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6), // Themed
                               letterSpacing: 1.5,
                             ),
                           ),
                           
                           const SizedBox(height: 20),
-                          const Divider(thickness: 1.5),
+                          Divider(thickness: 1.5, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)), // Themed
                           const Spacer(flex: 1),
 
                           // 2. 🚀 THE GAMIFIED DIAMOND STAT CHART 🚀
@@ -162,7 +163,7 @@ class CompassResultsScreen extends StatelessWidget {
                             child: TweenAnimationBuilder<double>(
                               tween: Tween<double>(begin: 0.0, end: 1.0),
                               duration: const Duration(milliseconds: 1500),
-                              curve: Curves.elasticOut, // Fixed Curve Name
+                              curve: Curves.elasticOut,
                               builder: (context, animValue, child) {
                                 return CustomPaint(
                                   size: const Size(double.infinity, double.infinity),
@@ -170,7 +171,9 @@ class CompassResultsScreen extends StatelessWidget {
                                     scores: affinityScores,
                                     animationValue: animValue,
                                     neonColor: neonOrange,
-                                    darkColor: darkBlue,
+                                    textColor: theme.colorScheme.onSurface, // Themed painter text
+                                    gridColor: theme.colorScheme.onSurface.withValues(alpha: 0.2), // Themed grid
+                                    surfaceColor: theme.colorScheme.surface, // Themed dots
                                   ),
                                 );
                               },
@@ -208,7 +211,7 @@ class CompassResultsScreen extends StatelessWidget {
                     )
                   ],
                   gradient: LinearGradient(
-                    colors: [const Color(0xFFFF9800), neonOrange],
+                    colors: [theme.colorScheme.tertiary, neonOrange], // Themed
                   ),
                 ),
                 child: ElevatedButton(
@@ -239,16 +242,17 @@ class CompassResultsScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
+                    foregroundColor: theme.colorScheme.onSecondary, // Themed splash
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Start Your Discovery Journey',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: theme.colorScheme.onSecondary, // Themed text
                       letterSpacing: 1.1,
                     ),
                   ),
@@ -275,13 +279,17 @@ class DiamondRadarPainter extends CustomPainter {
   final Map<Affinity, double> scores;
   final double animationValue;
   final Color neonColor;
-  final Color darkColor;
+  final Color textColor;
+  final Color gridColor;
+  final Color surfaceColor;
 
   DiamondRadarPainter({
     required this.scores,
     required this.animationValue,
     required this.neonColor,
-    required this.darkColor,
+    required this.textColor,
+    required this.gridColor,
+    required this.surfaceColor,
   });
 
   @override
@@ -294,7 +302,7 @@ class DiamondRadarPainter extends CustomPainter {
 
     // --- 1. DRAW BACKGROUND GRID (Spiderweb) ---
     final gridPaint = Paint()
-      ..color = Colors.grey.withValues(alpha: 0.3)
+      ..color = gridColor // Adaptive grid color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -348,7 +356,7 @@ class DiamondRadarPainter extends CustomPainter {
     canvas.drawPath(polygonPath, strokePaint);
 
     final dotPaint = Paint()
-      ..color = Colors.white
+      ..color = surfaceColor // Adaptive dot color
       ..style = PaintingStyle.fill;
       
     final dotStrokePaint = Paint()
@@ -362,7 +370,6 @@ class DiamondRadarPainter extends CustomPainter {
     }
 
     // --- 4. CALCULATE ANIMATED PERCENTAGES ---
-    // Multiplies the true score by the current animation tick to count up from 0 to 100
     final String stemPct = '${((scores[Affinity.stem] ?? 0) * animationValue * 100).toInt()}%';
     final String abmPct = '${((scores[Affinity.abm] ?? 0) * animationValue * 100).toInt()}%';
     final String humssPct = '${((scores[Affinity.humss] ?? 0) * animationValue * 100).toInt()}%';
@@ -382,7 +389,7 @@ class DiamondRadarPainter extends CustomPainter {
         TextSpan(
           text: '$title\n',
           style: TextStyle(
-            color: darkColor,
+            color: textColor, // Adaptive text color!
             fontWeight: FontWeight.w900,
             fontSize: 14,
             letterSpacing: 1.2,
@@ -391,7 +398,7 @@ class DiamondRadarPainter extends CustomPainter {
         TextSpan(
           text: percentage,
           style: TextStyle(
-            color: neonColor, // 🚀 Percentages are styled in Neon Orange!
+            color: neonColor, 
             fontWeight: FontWeight.w900,
             fontSize: 16,
           ),
@@ -401,7 +408,7 @@ class DiamondRadarPainter extends CustomPainter {
 
     final textPainter = TextPainter(
       text: textSpan,
-      textAlign: TextAlign.center, // Keeps the stacked text perfectly centered
+      textAlign: TextAlign.center, 
       textDirection: TextDirection.ltr,
     );
     

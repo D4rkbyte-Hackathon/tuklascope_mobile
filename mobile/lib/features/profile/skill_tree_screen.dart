@@ -38,21 +38,16 @@ class KaalamanSkillTreeScreen extends StatefulWidget {
 }
 
 class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen> with SingleTickerProviderStateMixin {
-  static const Color _navy = Color(0xFF0D3B66);
-  static const Color _cream = Color(0xFFF9F6F0);
-
   late final List<SkillNode> nodes;
   SkillNode? _selectedNode;
 
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeNodes();
-    _selectedNode = nodes.firstWhere((n) => n.id == 'root');
-
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000), 
@@ -66,22 +61,33 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen> with 
     _animationController.forward();
   }
 
+  // 🚀 MOVED INITIALIZATION HERE TO ACCESS THE THEME!
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      final theme = Theme.of(context);
+      _initializeNodes(theme);
+      _selectedNode = nodes.firstWhere((n) => n.id == 'root');
+      _isInitialized = true;
+    }
+  }
+
   @override
   void dispose() {
     _animationController.dispose(); 
     super.dispose();
   }
 
-  void _initializeNodes() {
+  void _initializeNodes(ThemeData theme) {
     final stemColor = Colors.green[600]!;
     final humssColor = Colors.orange[600]!;
     final abmColor = Colors.blue[600]!;
     final tvlColor = Colors.red[500]!;
 
-    // 🚀 FIX 1: REDUCED RADII AND PERFECTLY SPACED COORDINATES
     nodes = [
-      // ROOT
-      SkillNode(id: 'root', title: 'You', description: 'The roots of your journey.', career: 'Explorer', xp: 0, color: Colors.white, position: const Offset(0.50, 0.90), radius: 35.0),
+      // ROOT - Now dynamically uses the theme's surface color
+      SkillNode(id: 'root', title: 'You', description: 'The roots of your journey.', career: 'Explorer', xp: 0, color: theme.colorScheme.surface, position: const Offset(0.50, 0.90), radius: 35.0),
       
       // --- STEM BRANCH ---
       SkillNode(id: 'stem', title: 'STEM', description: 'Science, Tech, Engineering & Math.', career: 'Engineer, Scientist', xp: 120, color: stemColor, position: const Offset(0.20, 0.72), radius: 30.0),
@@ -131,12 +137,18 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen> with 
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Cache Theme
+
+    if (!_isInitialized) {
+      return Scaffold(backgroundColor: theme.scaffoldBackgroundColor); // Wait for nodes
+    }
+
     return Scaffold(
-      backgroundColor: _navy,
+      backgroundColor: theme.scaffoldBackgroundColor, // Themed Map Background
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.white,
+        foregroundColor: theme.colorScheme.onSurface, // Themed Icons/Text
         title: const Text('Kaalaman Skill Tree', style: TextStyle(fontWeight: FontWeight.bold)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
@@ -150,7 +162,6 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen> with 
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final size = Size(constraints.maxWidth, constraints.maxHeight);
-                // 🚀 FIX 2: ADDED INTERACTIVE VIEWER FOR PINCH-TO-ZOOM AND PANNING!
                 return InteractiveViewer(
                   boundaryMargin: const EdgeInsets.all(80),
                   minScale: 0.8,
@@ -163,6 +174,7 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen> with 
                         return CustomPaint(
                           size: size,
                           painter: _OrganicTreePainter(
+                            theme: theme, // Pass theme to painter
                             nodes: nodes,
                             selectedNodeId: _selectedNode?.id,
                             scale: _scaleAnimation.value,
@@ -182,27 +194,40 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen> with 
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: _cream,
+                color: theme.colorScheme.surface, // Themed Info Panel Background
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.shadowColor.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -5)
+                  )
+                ]
               ),
               child: _selectedNode == null 
-                  ? const Center(child: Text('Tap a leaf or branch to explore.'))
+                  ? Center(child: Text('Tap a leaf or branch to explore.', style: TextStyle(color: theme.colorScheme.onSurface)))
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
                             CircleAvatar(
-                              backgroundColor: _selectedNode!.color,
+                              backgroundColor: _selectedNode!.id == 'root' 
+                                  ? theme.colorScheme.primary.withValues(alpha: 0.1) 
+                                  : _selectedNode!.color,
                               radius: 16,
                               child: _selectedNode!.icon != null 
-                                ? Icon(_selectedNode!.icon, color: Colors.white, size: 18)
+                                ? Icon(
+                                    _selectedNode!.icon, 
+                                    color: _selectedNode!.id == 'root' ? theme.colorScheme.primary : Colors.white, 
+                                    size: 18
+                                  )
                                 : null,
                             ),
                             const SizedBox(width: 12),
                             Text(
                               _selectedNode!.title,
-                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _navy),
+                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: theme.colorScheme.primary), // Themed Title
                             ),
                             const Spacer(),
                             Column(
@@ -210,21 +235,27 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen> with 
                               children: [
                                 Text(
                                   'Level ${_selectedNode!.level}',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16),
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary, fontSize: 16), // Themed Blue
                                 ),
                                 Text(
                                   '${_selectedNode!.xp} XP',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange[800]),
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.secondary), // Themed Orange
                                 ),
                               ],
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
-                        Text(_selectedNode!.description, style: const TextStyle(fontSize: 16)),
+                        Text(
+                          _selectedNode!.description, 
+                          style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.8)) // Themed Desc
+                        ),
                         const SizedBox(height: 12),
-                        const Text('Plausible Path:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
-                        Text(_selectedNode!.career, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: _navy)),
+                        Text('Plausible Path:', style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+                        Text(
+                          _selectedNode!.career, 
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.colorScheme.primary) // Themed Career Text
+                        ),
                       ],
                     ),
             ),
@@ -236,11 +267,12 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen> with 
 }
 
 class _OrganicTreePainter extends CustomPainter {
+  final ThemeData theme;
   final List<SkillNode> nodes;
   final String? selectedNodeId;
   final double scale;
 
-  _OrganicTreePainter({required this.nodes, this.selectedNodeId, required this.scale});
+  _OrganicTreePainter({required this.theme, required this.nodes, this.selectedNodeId, required this.scale});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -310,18 +342,34 @@ class _OrganicTreePainter extends CustomPainter {
       if (currentRadius <= 0) continue;
 
       if (isSelected) {
-        canvas.drawCircle(center, currentRadius + 6, Paint()..color = Colors.white.withValues(alpha: 0.3));
+        // Selection Halo adapts to surface color
+        canvas.drawCircle(center, currentRadius + 6, Paint()..color = theme.colorScheme.onSurface.withValues(alpha: 0.2));
       }
 
+      // Draw the main node circle
       canvas.drawCircle(center, currentRadius, Paint()..color = node.color);
-      canvas.drawCircle(center, currentRadius, Paint()..color = isSelected ? Colors.white : Colors.black26..style = PaintingStyle.stroke..strokeWidth = isSelected ? 3.0 : 2.0);
+      
+      // Draw the border stroke
+      canvas.drawCircle(
+        center, 
+        currentRadius, 
+        Paint()
+          ..color = isSelected ? theme.colorScheme.onSurface : theme.colorScheme.onSurface.withValues(alpha: 0.2) // Adaptive Border
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = isSelected ? 3.0 : 2.0
+      );
 
       if (scale > 0.5) {
         if (node.icon != null) {
           TextPainter iconPainter = TextPainter(
             text: TextSpan(
               text: String.fromCharCode(node.icon!.codePoint),
-              style: TextStyle(fontSize: currentRadius * 1.1, fontFamily: node.icon!.fontFamily, package: node.icon!.fontPackage, color: Colors.white),
+              style: TextStyle(
+                fontSize: currentRadius * 1.1, 
+                fontFamily: node.icon!.fontFamily, 
+                package: node.icon!.fontPackage, 
+                color: Colors.white
+              ),
             ),
             textDirection: TextDirection.ltr,
           )..layout();
@@ -331,7 +379,11 @@ class _OrganicTreePainter extends CustomPainter {
           TextPainter levelPainter = TextPainter(
             text: TextSpan(
               text: 'Lv.${node.level}',
-              style: TextStyle(color: Colors.white, fontSize: 10 * scale, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: theme.colorScheme.onSurface, // Ensures level is visible above/below the node
+                fontSize: 10 * scale, 
+                fontWeight: FontWeight.bold
+              ),
             ),
             textDirection: TextDirection.ltr,
           )..layout();
@@ -341,7 +393,11 @@ class _OrganicTreePainter extends CustomPainter {
           final textPainter = TextPainter(
             text: TextSpan(
               text: node.title,
-              style: TextStyle(color: node.id == 'root' ? Colors.black : Colors.white, fontSize: 12 * scale.clamp(0.5, 1.0), fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: node.id == 'root' ? theme.colorScheme.onSurface : Colors.white, // Root text adapts to dark mode!
+                fontSize: 12 * scale.clamp(0.5, 1.0), 
+                fontWeight: FontWeight.bold
+              ),
             ),
             textDirection: TextDirection.ltr,
           );
