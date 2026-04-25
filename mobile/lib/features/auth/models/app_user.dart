@@ -11,6 +11,8 @@ class UserProfile {
   final int currentLevel;
   final int currentStreak;
   final DateTime? lastActionDate;
+  final String? bio;
+  final String? profilePictureUrl;
 
   UserProfile({
     required this.id,
@@ -23,6 +25,8 @@ class UserProfile {
     required this.currentLevel,
     required this.currentStreak,
     this.lastActionDate,
+    this.bio,
+    this.profilePictureUrl,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -39,6 +43,8 @@ class UserProfile {
       lastActionDate: json['last_action_date'] != null
           ? DateTime.parse(json['last_action_date'])
           : null,
+      bio: json['bio'],
+      profilePictureUrl: json['profile_picture_url'],
     );
   }
 }

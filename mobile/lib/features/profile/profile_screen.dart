@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:math' as math;
 
 import '../../core/navigation/main_nav_scope.dart';
@@ -11,6 +12,7 @@ import '../auth/providers/auth_controller.dart';
 import 'pathfinder_blueprint_sheet.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/services/pathfinder_service.dart';
+import 'services/profile_service.dart';
 
 import '../auth/presentation/widgets/auth_gate.dart';
 
@@ -164,6 +166,8 @@ class ProfileScreen extends ConsumerWidget {
                       profile.educationLevel ?? 'Curious Mind',
                   location: location,
                   streak: profile.currentStreak,
+                  profilePictureUrl: profile.profilePictureUrl,
+                  bio: profile.bio,
                 ),
               ),
             ],
@@ -180,6 +184,8 @@ class _ProfileTabs extends ConsumerStatefulWidget {
   final String currentEducationLevel;
   final String location;
   final int streak;
+  final String? profilePictureUrl;
+  final String? bio;
 
   const _ProfileTabs({
     required this.theme,
@@ -187,6 +193,8 @@ class _ProfileTabs extends ConsumerStatefulWidget {
     required this.currentEducationLevel,
     required this.location,
     required this.streak,
+    this.profilePictureUrl,
+    this.bio,
   });
 
   @override
@@ -289,11 +297,15 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
             educationLevel: widget.currentEducationLevel,
             location: widget.location,
             streak: widget.streak,
+            profilePictureUrl: widget.profilePictureUrl,
             onEditPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-              );
+              ).then((_) {
+                // Refresh profile data after returning from edit
+                ref.invalidate(appUserProvider);
+              });
             },
           ).animate().fade(duration: 600.ms).slideY(begin: 0.1),
           Padding(
@@ -674,6 +686,7 @@ class _ProfileHeaderCard extends StatelessWidget {
   final String educationLevel;
   final String location;
   final int streak;
+  final String? profilePictureUrl;
   final VoidCallback onEditPressed;
 
   const _ProfileHeaderCard({
@@ -682,6 +695,7 @@ class _ProfileHeaderCard extends StatelessWidget {
     required this.educationLevel,
     required this.location,
     required this.streak,
+    this.profilePictureUrl,
     required this.onEditPressed,
   });
 
@@ -717,11 +731,16 @@ class _ProfileHeaderCard extends StatelessWidget {
                   backgroundColor: theme.colorScheme.onSurface.withValues(
                     alpha: 0.1,
                   ),
-                  child: Icon(
-                    Icons.person,
-                    size: 40,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                  ),
+                  backgroundImage: profilePictureUrl?.isNotEmpty == true
+                      ? NetworkImage(profilePictureUrl!)
+                      : null,
+                  child: profilePictureUrl?.isEmpty ?? true
+                      ? Icon(
+                          Icons.person,
+                          size: 40,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                        )
+                      : null,
                 ),
               ),
               const SizedBox(width: 16),
@@ -1720,6 +1739,151 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     );
   }
 
+  Future<void> _showEditBioDialog(String currentBio) async {
+    final theme = Theme.of(context);
+    final TextEditingController bioController = TextEditingController(
+      text: currentBio,
+    );
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: theme.colorScheme.surface,
+          title: Text(
+            'Edit Bio',
+            style: TextStyle(color: theme.colorScheme.primary),
+          ),
+          content: TextField(
+            controller: bioController,
+            maxLines: 4,
+            style: TextStyle(color: theme.colorScheme.onSurface),
+            decoration: InputDecoration(
+              hintText: 'Tell us about yourself',
+              hintStyle: TextStyle(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: theme.colorScheme.secondary),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.secondary,
+              ),
+              onPressed: () async {
+                try {
+                  await ref.read(profileServiceProvider).updateBio(bioController.text.trim());
+                  ref.invalidate(appUserProvider);
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Bio updated successfully!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: theme.colorScheme.error,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _changeProfilePicture() async {
+    final theme = Theme.of(context);
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      
+      if (pickedFile != null) {
+        // Store dialog context for closing later
+        BuildContext? dialogContext;
+        
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) {
+              dialogContext = ctx;
+              return Dialog(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: theme.colorScheme.primary),
+                      const SizedBox(height: 20),
+                      const Text('Uploading profile picture...'),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        }
+
+        // Upload the image
+        await ref.read(profileServiceProvider).uploadProfilePicture(pickedFile.path);
+        
+        // Close dialog using the saved context
+        if (mounted && dialogContext != null && dialogContext!.mounted) {
+          Navigator.of(dialogContext!).pop();
+        }
+
+        // Refresh UI
+        if (mounted) {
+          ref.invalidate(appUserProvider);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile picture updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Try to close dialog
+      if (mounted) {
+        try {
+          Navigator.of(context).pop();
+        } catch (e) {
+          // Dialog might not be open
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading picture: $e'),
+            backgroundColor: theme.colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildProfileTab(ThemeData theme) {
     final appUserState = ref.watch(appUserProvider);
     return appUserState.when(
@@ -1737,6 +1901,104 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
           children: [
+            // 🚀 Circular Profile Picture at Top
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: theme.colorScheme.secondary,
+                        width: 3,
+                      ),
+                      color: theme.colorScheme.surface,
+                    ),
+                    child: profile.profilePictureUrl?.isNotEmpty == true
+                        ? ClipOval(
+                            child: Image.network(
+                              profile.profilePictureUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Center(
+                                  child: Icon(
+                                    Icons.person,
+                                    size: 60,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : Center(
+                            child: Icon(
+                              Icons.person,
+                              size: 60,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Action Buttons
+                  if (profile.profilePictureUrl?.isNotEmpty == true)
+                    GestureDetector(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => Dialog(
+                            child: SizedBox(
+                              width: 300,
+                              height: 300,
+                              child: Image.network(
+                                profile.profilePictureUrl!,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.visibility, color: theme.colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'See profile picture',
+                            style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (profile.profilePictureUrl?.isNotEmpty == true)
+                    const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: _changeProfilePicture,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.image, color: theme.colorScheme.secondary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Choose profile picture',
+                          style: TextStyle(
+                            color: theme.colorScheme.secondary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
             Container(
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
@@ -1883,6 +2145,49 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                         ),
                         onTap: () => _showEditEducationLevelDialog(
                           currentEducationLevel,
+                        ),
+                      ),
+                      Divider(
+                        height: 1,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.1,
+                        ),
+                      ),
+                      ListTile(
+                        leading: Icon(
+                          Icons.description_outlined,
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: Text(
+                          'Bio',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                            fontSize: 12,
+                          ),
+                        ),
+                        subtitle: Text(
+                          profile.bio?.isNotEmpty == true ? profile.bio! : 'Not set',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.edit,
+                          color: theme.colorScheme.secondary,
+                          size: 20,
+                        ),
+                        onTap: () => _showEditBioDialog(profile.bio ?? ''),
+                      ),
+                      Divider(
+                        height: 1,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.1,
                         ),
                       ),
                     ],
