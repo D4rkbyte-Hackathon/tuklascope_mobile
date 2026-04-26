@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class MainNavScope extends InheritedWidget {
   final void Function(int index) goToTab;
   final bool isNavBarVisible; // 1. Added visibility state
+  final void Function(bool visible) setNavBarVisibility; // Added callback to control nav bar
 
   const MainNavScope({
     super.key, 
     required this.goToTab, 
     required this.isNavBarVisible, // 2. Added to constructor
+    required this.setNavBarVisibility,
     required super.child,
   });
 

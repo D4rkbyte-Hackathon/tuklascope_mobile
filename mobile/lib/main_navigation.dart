@@ -62,6 +62,16 @@ class MainNavigationState extends State<MainNavigation> {
     });
   }
 
+  // New method to control nav bar visibility from child screens
+  void _setNavBarVisibility(bool visible) {
+    if (mounted) {
+      setState(() => _isNavBarVisible = visible);
+    }
+    if (visible) {
+      _startInactivityTimer(); // Reset timer when showing nav bar
+    }
+  }
+
   // 2. REFACTORED GOTOTAB LOGIC
   void goToTab(int index) async {
     if (index >= 0 && index < _screens.length && _currentIndex != index) {
@@ -94,7 +104,8 @@ class MainNavigationState extends State<MainNavigation> {
 
     return MainNavScope(
       goToTab: goToTab,
-      isNavBarVisible: _isNavBarVisible, 
+      isNavBarVisible: _isNavBarVisible,
+      setNavBarVisibility: _setNavBarVisibility,
       child: Scaffold(
         extendBody: true,
         backgroundColor: Colors.transparent,

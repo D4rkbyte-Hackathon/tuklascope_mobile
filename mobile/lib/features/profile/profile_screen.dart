@@ -11,10 +11,12 @@ import 'dart:math' as math;
 import '../../core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../auth/providers/auth_controller.dart';
+import '../auth/services/supabase_auth_service.dart';
 import 'pathfinder_blueprint_sheet.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/services/pathfinder_service.dart';
 import 'services/profile_service.dart';
+import 'screens/change_password_screen.dart';
 
 import '../auth/presentation/widgets/auth_gate.dart';
 
@@ -413,6 +415,8 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
   }
 
   Widget _buildSettingsTab(ThemeData theme) {
+    final isEmailUser = ref.watch(isEmailPasswordUserProvider);
+
     return ListView(
       padding: const EdgeInsets.all(20),
       physics: const BouncingScrollPhysics(),
@@ -503,6 +507,106 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
           ),
           child: Column(
             children: [
+              // ===== CHANGE PASSWORD (Email Users Only) =====
+              if (isEmailUser)
+                Container(
+                  margin: const EdgeInsets.all(8),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChangePasswordScreen(),
+                        ),
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.colorScheme.primary.withValues(alpha: 0.1),
+                              theme.colorScheme.primary.withValues(alpha: 0.05),
+                            ],
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.lock_outline,
+                                color: theme.colorScheme.primary,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Change Password',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Update your security',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                ListTile(
+                  leading: Icon(
+                    Icons.lock_outline,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  ),
+                  title: Text(
+                    'Change Password',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Not available for OAuth accounts (Google/Facebook)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  enabled: false,
+                ),
+              if (isEmailUser)
+                Divider(
+                  height: 1,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                ),
               ListTile(
                 title: Text(
                   'Sign Out',
