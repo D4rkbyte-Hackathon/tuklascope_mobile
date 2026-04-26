@@ -1,4 +1,6 @@
 // mobile/lib/features/profile/profile_screen.dart
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -1132,7 +1134,7 @@ class _AdvancedInteractiveRadialPainter extends CustomPainter {
           ..style = PaintingStyle.stroke,
       );
 
-      String displayName = topicName.length > 12
+      final String displayName = topicName.length > 12
           ? '${topicName.substring(0, 10)}..'
           : topicName;
       _drawMultiLineText(

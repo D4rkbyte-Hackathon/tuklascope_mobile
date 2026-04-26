@@ -62,7 +62,7 @@ class RewardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isCompleted = data.progress == 100;
+    final bool isCompleted = data.progress == 100;
     final theme = Theme.of(context); // Dynamically grab the theme
 
     return Scaffold(

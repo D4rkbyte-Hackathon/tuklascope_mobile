@@ -82,7 +82,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final statsAsync = ref.watch(homeStatsProvider);
 
     // Dynamic brand colors for specific feature cards
-    final mainGreen = const Color(0xFF4CAF50); // From your color palette
+    const mainGreen = Color(0xFF4CAF50); // From your color palette
     final adaptivePurple = isDark
         ? const Color(0xFFCE93D8)
         : const Color(0xFF8E24AA); // Lightens in dark mode
@@ -172,7 +172,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         borderColor: mainGreen,
         buttonText: 'View Pathfinder →',
         buttonTextColor: mainGreen,
-        iconArea: Icon(Icons.account_tree_outlined, size: 64, color: mainGreen),
+        iconArea: const Icon(Icons.account_tree_outlined, size: 64, color: mainGreen),
         onTap: () => MainNavScope.maybeOf(context)?.goToTab(3),
       ),
       const SizedBox(height: 24),
