@@ -8,6 +8,7 @@ class ScanHistoryCard extends StatelessWidget {
     required this.tag,
     required this.imageUrl,
     required this.accent,
+    this.onTap,
   });
 
   final String title;
@@ -15,18 +16,21 @@ class ScanHistoryCard extends StatelessWidget {
   final String tag;
   final String? imageUrl;
   final Color accent;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Material(
-      elevation: isDark ? 0 : 2,
-      shadowColor: theme.shadowColor.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(20),
-      color: theme.colorScheme.surface,
-      child: Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Material(
+        elevation: isDark ? 0 : 2,
+        shadowColor: theme.shadowColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        color: theme.colorScheme.surface,
+        child: Container(
         decoration: isDark
             ? BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
@@ -89,6 +93,7 @@ class ScanHistoryCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

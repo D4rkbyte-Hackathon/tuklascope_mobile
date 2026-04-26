@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart'; 
 import '../../../../core/services/scan_service.dart';
 import 'scan_history_card.dart';
+import '../screens/scan_detail_screen.dart';
 
 class ExploreHistoryTab extends StatefulWidget {
   const ExploreHistoryTab({super.key});
@@ -172,6 +173,20 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
           tag: lens,
           imageUrl: imageUrl,
           accent: theme.colorScheme.secondary,
+          onTap: () {
+            final scanId = scan['id'] as String? ?? '';
+            if (scanId.isNotEmpty) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ScanDetailScreen(
+                    scanId: scanId,
+                    objectName: objectName,
+                    imagUrl: imageUrl ?? '',
+                  ),
+                ),
+              );
+            }
+          },
         )
         .animate()
         .fade(duration: 600.ms, delay: (100 * index).ms)
