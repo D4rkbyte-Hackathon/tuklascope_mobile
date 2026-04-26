@@ -61,7 +61,7 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
         _isTyping = false; // Hide typing indicator
         
         // Grab the next response in the queue, looping back to start if we run out
-        String aiReply = _placeholderResponses[_aiResponseIndex % _placeholderResponses.length];
+        final String aiReply = _placeholderResponses[_aiResponseIndex % _placeholderResponses.length];
         _messages.add(ChatMessage(text: aiReply, isAI: true));
         
         _aiResponseIndex++;

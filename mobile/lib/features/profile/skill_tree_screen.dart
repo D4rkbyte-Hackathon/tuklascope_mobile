@@ -361,7 +361,7 @@ class _OrganicTreePainter extends CustomPainter {
 
       if (scale > 0.5) {
         if (node.icon != null) {
-          TextPainter iconPainter = TextPainter(
+          final TextPainter iconPainter = TextPainter(
             text: TextSpan(
               text: String.fromCharCode(node.icon!.codePoint),
               style: TextStyle(
@@ -376,7 +376,7 @@ class _OrganicTreePainter extends CustomPainter {
           
           iconPainter.paint(canvas, center - Offset(iconPainter.width / 2, iconPainter.height / 2));
 
-          TextPainter levelPainter = TextPainter(
+          final TextPainter levelPainter = TextPainter(
             text: TextSpan(
               text: 'Lv.${node.level}',
               style: TextStyle(

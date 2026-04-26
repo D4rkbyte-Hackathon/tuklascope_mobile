@@ -21,13 +21,10 @@ class ScanService {
           .order('created_at', ascending: false)
           .limit(limit);
 
-      if (response is List) {
-        debugPrint('✅ Fetched ${response.length} scans');
-        return List<Map<String, dynamic>>.from(response);
-      } else {
-        debugPrint('❌ Unexpected response format');
-        return [];
-      }
+      // response is guaranteed to be a List, so we can safely cast and return it
+      debugPrint('✅ Fetched ${response.length} scans');
+      return List<Map<String, dynamic>>.from(response);
+      
     } catch (e) {
       debugPrint('🚨 Error fetching scan history: $e');
       return [];
@@ -55,12 +52,10 @@ class ScanService {
           .order('created_at', ascending: false)
           .limit(limit);
 
-      if (response is List) {
-        debugPrint('✅ Fetched ${response.length} scans for lens: $lens');
-        return List<Map<String, dynamic>>.from(response);
-      } else {
-        return [];
-      }
+      // response is guaranteed to be a List, so we can safely cast and return it
+      debugPrint('✅ Fetched ${response.length} scans for lens: $lens');
+      return List<Map<String, dynamic>>.from(response);
+      
     } catch (e) {
       debugPrint('🚨 Error fetching scans by lens: $e');
       return [];
@@ -76,6 +71,7 @@ class ScanService {
           .eq('id', scanId)
           .maybeSingle();
 
+      // We KEEP this check because .maybeSingle() CAN return null 
       if (response != null) {
         debugPrint('✅ Fetched scan: $scanId');
         return response;

@@ -61,6 +61,7 @@ class SupabaseAuthService {
         // 🚀 V7 FIX: We completely removed the accessToken parameter here.
       );
     } catch (e) {
+      // ignore: avoid_print
       print('Google Sign-In Exception: $e');
       rethrow;
     }
@@ -84,7 +85,7 @@ class SupabaseAuthService {
     if (user == null) return false;
     
     // Check if 'google' is in the list of providers for this user
-    final providers = user.appMetadata?['providers'] as List?;
+    final providers = user.appMetadata['providers'] as List?;
     return providers?.contains('google') ?? false;
   }
 
