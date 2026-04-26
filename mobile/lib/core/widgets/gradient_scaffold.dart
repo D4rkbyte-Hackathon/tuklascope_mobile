@@ -19,34 +19,47 @@ class GradientScaffold extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
+        // 2. Your existing gradient acts as the base layer
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          // 2. Apply the correct gradient based on the theme
           colors: isDarkMode 
             ? const [
-                Color(0xFF121212), // Top Color: Your primary dark background
-                Color(0xFF050505), // Bottom Color: A subtle darker shade for depth
+                Color(0xFF121212),
+                Color(0xFF050505),
               ]
             : const [
-                Color(0xFFFFFDF4), // Top Color: Original light background
-                Color(0xFFD9D7CE), // Bottom Color: Original light bottom shade
+                Color(0xFFFFFDF4),
+                Color(0xFFD9D7CE),
               ],
         ),
+        // 3. Add the texture image overlay here
+        image: const DecorationImage(
+          image: AssetImage('assets/images/background.png'),
+          // Use BoxFit.cover if it's a full-screen image. 
+          // If it's a small seamless texture tile, change this to:
+          // repeat: ImageRepeat.repeat,
+          fit: BoxFit.cover, 
+          
+          // 4. Lower the opacity to make it a subtle texture (0.0 to 1.0)
+          opacity: 0.1, 
+          
+          // Optional: If you want Photoshop-like blending (e.g., Multiply, Overlay)
+          // instead of simple opacity, uncomment the colorFilter below:
+          // colorFilter: ColorFilter.mode(Colors.grey, BlendMode.overlay),
+        ),
       ),
-      // 3. We wrap the Scaffold in a Theme
+      // 5. We wrap the Scaffold in a Theme
       child: Theme(
-        // 4. We copy the current app theme, but force the AppBar to be transparent!
         data: Theme.of(context).copyWith(
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.transparent,
-            elevation: 0, // Removes the drop shadow
-            scrolledUnderElevation: 0, // Prevents color change when scrolling
+            elevation: 0, 
+            scrolledUnderElevation: 0, 
           ),
         ),
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          // 5. Now we can just pass the appBar directly without errors!
           appBar: appBar,
           body: body,
           bottomNavigationBar: bottomNavigationBar,
