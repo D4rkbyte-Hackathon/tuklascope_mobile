@@ -1,7 +1,7 @@
-import 'dart:async'; 
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart'; 
+import 'package:flutter_animate/flutter_animate.dart';
 
 import 'core/navigation/main_nav_scope.dart';
 import 'features/home/home_screen.dart';
@@ -26,12 +26,12 @@ class MainNavigationState extends State<MainNavigation> {
   bool _isNavBarVisible = true;
   bool _isProgrammaticScroll = false; // 1. Added anti-glitch lock
 
-  final List<Widget> _screens = [
-    const TabWrapper(rootScreen: HomeScreen()),
-    const TabWrapper(rootScreen: LiveFeedScreen()),
-    const TabWrapper(rootScreen: PathwaysScreen()),
-    const TabWrapper(rootScreen: ProfileScreen()),
-    const TabWrapper(rootScreen: ExploreScreen()),
+  final List<Widget> _screens = const [
+    TabWrapper(rootScreen: HomeScreen()),
+    TabWrapper(rootScreen: LiveFeedScreen()),
+    TabWrapper(rootScreen: PathwaysScreen()),
+    TabWrapper(rootScreen: ProfileScreen()),
+    TabWrapper(rootScreen: ExploreScreen()),
   ];
 
   @override
@@ -89,7 +89,8 @@ class MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
-    final activeNeonColor = const Color(0xFFFF9800); // Your signature color
+    
+    // We remove activeNeonColor from here since it was unused!
 
     return MainNavScope(
       goToTab: goToTab,
@@ -132,13 +133,12 @@ class MainNavigationState extends State<MainNavigation> {
                       child: Container(
                         height: 70,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0D3B66).withOpacity(0.85), // Updated blue palette
+                          // Use values() instead of withOpacity() to allow const where possible
+                          color: const Color(0xFF0D3B66).withValues(alpha: 0.85), 
                           borderRadius: BorderRadius.circular(35),
                           boxShadow: [
-                            // Performance optimization: Outer neon glow removed. 
-                            // Standard soft black drop shadow kept for depth against the background.
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2), 
+                              color: Colors.black.withValues(alpha: 0.2), 
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -167,9 +167,9 @@ class MainNavigationState extends State<MainNavigation> {
 
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isSelected = _currentIndex == index;
-    final activeColor = const Color(0xFFFF9800); 
-    final activeTextColor = const Color(0xFFFFFDF4); // The new text color
-    final inactiveColor = const Color(0xFFE0E0E0).withOpacity(0.4); 
+    const activeColor = Color(0xFFFF9800); 
+    const activeTextColor = Color(0xFFFFFDF4); 
+    final inactiveColor = const Color(0xFFE0E0E0).withValues(alpha: 0.4); 
 
     Widget content = Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -179,7 +179,7 @@ class MainNavigationState extends State<MainNavigation> {
           color: isSelected ? activeColor : inactiveColor, 
           size: isSelected ? 26 : 24,
           shadows: isSelected 
-              ? [BoxShadow(color: activeColor.withOpacity(0.8), blurRadius: 12)] 
+              ? [BoxShadow(color: activeColor.withValues(alpha: 0.8), blurRadius: 12)] 
               : null, 
         ),
         
@@ -189,11 +189,11 @@ class MainNavigationState extends State<MainNavigation> {
             child: Text(
               label,
               style: TextStyle(
-                color: activeTextColor, // Applied new text color
+                color: activeTextColor, 
                 fontSize: 10, 
                 fontWeight: FontWeight.bold,
                 shadows: [
-                  Shadow(color: activeTextColor.withOpacity(0.6), blurRadius: 6) // Glowing with the new text color
+                  Shadow(color: activeTextColor.withValues(alpha: 0.6), blurRadius: 6) 
                 ]
               ),
             ).animate().fade(duration: 200.ms).slideY(begin: 0.2, end: 0),
@@ -227,7 +227,7 @@ class MainNavigationState extends State<MainNavigation> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: activeColor.withOpacity(0.2),
+                        color: activeColor.withValues(alpha: 0.2),
                         blurRadius: 15,
                         spreadRadius: 5,
                       ),

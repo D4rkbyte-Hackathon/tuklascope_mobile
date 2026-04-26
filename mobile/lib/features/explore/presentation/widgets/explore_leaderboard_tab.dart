@@ -98,12 +98,6 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     );
   }
 
-  Color _getTrophyColor(int index, ThemeData theme) {
-    if (index == 0) return Colors.amber; 
-    if (index == 1) return Colors.blueGrey[300]!; 
-    if (index == 2) return const Color(0xFFCD7F32); 
-    return theme.colorScheme.onSurface.withValues(alpha: 0.3); 
-  }
 
   @override
   void dispose() {
