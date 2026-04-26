@@ -114,7 +114,7 @@ class DiscoveryService {
         'learning_deck': learningDeck,
         'xp_awarded': 50,
         'is_aligned_with_compass':
-            false, // TODO: Wire this to actual compass logic later
+            false,
       };
 
       final response = await ApiClient.post(

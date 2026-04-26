@@ -44,7 +44,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
 
   void _submitAnswers() {
     if (_isAllAnswered) {
-      Map<Affinity, int> scores = {
+      final Map<Affinity, int> scores = {
         Affinity.stem: 0, Affinity.abm: 0, Affinity.humss: 0, Affinity.tvl: 0,
       };
 
@@ -52,8 +52,8 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
         scores[option.affinity] = (scores[option.affinity] ?? 0) + 1;
       }
 
-      int totalQuestions = _activeQuestions.length;
-      Map<Affinity, double> percentages = {
+      final int totalQuestions = _activeQuestions.length;
+      final Map<Affinity, double> percentages = {
         for (var key in scores.keys) key: scores[key]! / totalQuestions,
       };
 

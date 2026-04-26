@@ -86,7 +86,7 @@ class ApiClient {
       // 🚀 CRITICAL FIX: Remove the JSON content-type because this is an image upload!
       finalHeaders.remove('Content-Type');
 
-      var request = http.MultipartRequest('POST', Uri.parse(url));
+      final request = http.MultipartRequest('POST', Uri.parse(url));
 
       // Attach our secure headers (including the JWT token!)
       request.headers.addAll(finalHeaders);
@@ -97,7 +97,7 @@ class ApiClient {
       // Attach the image
       request.files.add(file);
 
-      var streamedResponse = await request.send();
+      final streamedResponse = await request.send();
       return await http.Response.fromStream(streamedResponse);
     } catch (e) {
       throw Exception('Multipart network request failed: $e');
