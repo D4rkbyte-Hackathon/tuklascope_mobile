@@ -146,3 +146,18 @@ final appUserProvider = StreamProvider<AppUser?>((ref) async* {
   },
 );
 });
+// ==========================================
+// 4. AUTH METHOD PROVIDERS (OAuth vs Email/Password)
+// ==========================================
+
+/// Check if current user is email/password based
+final isEmailPasswordUserProvider = Provider<bool>((ref) {
+  final authService = ref.watch(authServiceProvider);
+  return authService.isEmailPasswordUser();
+});
+
+/// Check if current user is OAuth based (Google or Facebook)
+final isOAuthUserProvider = Provider<bool>((ref) {
+  final authService = ref.watch(authServiceProvider);
+  return authService.isOAuthUser();
+});

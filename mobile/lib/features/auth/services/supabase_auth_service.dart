@@ -89,11 +89,47 @@ class SupabaseAuthService {
     return providers?.contains('google') ?? false;
   }
 
-  // Change user password (only for email/password users)
+  /// Check if user is email/password based (not OAuth)
+  bool isEmailPasswordUser() {
+    final user = currentUser;
+    if (user == null) return false;
+    
+    final providers = user.appMetadata['providers'] as List?;
+    // If ONLY 'email' is in providers (no google/facebook), it's email user
+    return (providers != null && 
+            providers.contains('email') && 
+            !providers.contains('google') && 
+            !providers.contains('facebook'));
+  }
+
+  /// Check if user is OAuth user (Google or Facebook)
+  bool isOAuthUser() {
+    final user = currentUser;
+    if (user == null) return false;
+    
+    final providers = user.appMetadata['providers'] as List?;
+    return (providers != null && 
+            (providers.contains('google') || providers.contains('facebook')));
+  }
+
+  /// Change user password (only for email/password users)
   Future<void> changePassword(String newPassword) async {
-    await _supabase.auth.updateUser(
-      UserAttributes(password: newPassword),
-    );
+    if (!isEmailPasswordUser()) {
+      throw Exception(
+        'Password change is only available for email/password accounts. '
+        'OAuth users (Google/Facebook) cannot change password.',
+      );
+    }
+
+    try {
+      await _supabase.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+      print('✓ Password changed successfully');
+    } catch (e) {
+      print('✗ Error changing password: $e');
+      rethrow;
+    }
   }
 
   Future<void> signOut() async {
