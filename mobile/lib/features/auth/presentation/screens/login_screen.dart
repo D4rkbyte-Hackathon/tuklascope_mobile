@@ -114,6 +114,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // --- NEW LOGO ADDED HERE ---
+                Image.asset(
+                  'assets/images/logo-clear.png',
+                  height: 100, // You can adjust this height as needed
+                  fit: BoxFit.contain,
+                ).animate()
+                 .fade(duration: 600.ms)
+                 .scaleXY(begin: 0.8, end: 1.0, duration: 600.ms, curve: Curves.easeOutBack),
+                
+                const SizedBox(height: 16), // Spacing between logo and text
+                
                 Text(
                   'Login',
                   textAlign: TextAlign.center,
