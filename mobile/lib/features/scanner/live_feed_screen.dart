@@ -2,8 +2,10 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuklascope_mobile/core/services/discovery_service.dart';
 import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
+import 'package:tuklascope_mobile/features/auth/providers/auth_controller.dart';
 import 'teaser_doors_screen.dart';
 
 class LiveFeedScreen extends StatefulWidget {
@@ -26,7 +28,6 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
     _initCamera();
   }
 
-  // Initializes the device's hardware cameras
   Future<void> _initCamera() async {
     _cameras = await availableCameras();
     if (_cameras != null && _cameras!.isNotEmpty) {
@@ -38,7 +39,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
     _controller = CameraController(
       _cameras![index],
       ResolutionPreset.max,
-      enableAudio: false, // We only need visual for scanning
+      enableAudio: false,
     );
 
     _controller!
@@ -69,23 +70,19 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
     _setCamera(_selectedCameraIndex);
   }
 
-  // This is our real photo capture logic!
   Future<void> _takePictureAndScan() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
-    if (_controller!.value.isTakingPicture) return; // Prevent double-taps
+    if (_controller!.value.isTakingPicture) return;
 
     try {
-      // 1. Snap the physical photo
       final XFile rawImage = await _controller!.takePicture();
       final File imageFile = File(rawImage.path);
 
-      // 2. Open the modal and pass the image into it
       if (!mounted) return;
       showDialog(
         context: context,
         barrierColor: Colors.black.withValues(alpha: 0.7),
-        barrierDismissible:
-            false, // Prevents them from tapping outside to cancel
+        barrierDismissible: false,
         builder: (context) => ScanningModal(imageFile: imageFile),
       );
     } catch (e) {
@@ -101,56 +98,44 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Cache theme
+    final theme = Theme.of(context);
 
     if (!_isCameraInitialized || _controller == null) {
       return Scaffold(
-        backgroundColor: Colors.black, // Always black behind camera
+        backgroundColor: Colors.black,
         body: Center(
           child: CircularProgressIndicator(color: theme.colorScheme.primary),
-        ), // Themed Loader
+        ),
       );
     }
 
-    // 🚀 1. Grab the visibility state from the inherited scope
     final navScope = MainNavScope.maybeOf(context);
     final isNavBarVisible = navScope?.isNavBarVisible ?? true;
-
-    // 🚀 2. Calculate dynamic padding (90 gives clearance for 70px navbar + padding)
     final extraBottomPadding = isNavBarVisible ? 100.0 : 20.0;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. THE CAMERA PREVIEW
           Positioned.fill(
             child: ClipRect(
-              // Keeps the camera from bleeding off-screen
               child: FittedBox(
-                fit: BoxFit.cover, // Zooms in just enough to hide black bars
+                fit: BoxFit.cover,
                 child: SizedBox(
-                  width: 100, // Arbitrary base width
-                  // THE MAGIC: Multiplying by the camera's raw landscape ratio
-                  // forces this box into a perfect Portrait ratio!
+                  width: 100,
                   height: 100 * _controller!.value.aspectRatio,
                   child: CameraPreview(_controller!),
                 ),
               ),
             ),
           ),
-
-          // 2. TOP BLURRED BAR
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: ClipRect(
               child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: 10.0,
-                  sigmaY: 10.0,
-                ), // The Blur Magic
+                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
                 child: Container(
                   padding: EdgeInsets.only(
                     top: MediaQuery.of(context).padding.top + 10,
@@ -158,16 +143,12 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                     left: 20,
                     right: 20,
                   ),
-                  color: Colors.black.withValues(
-                    alpha: 0.4,
-                  ), // Camera HUD stays dark
+                  color: Colors.black.withValues(alpha: 0.4),
                   child: Row(
                     children: [
                       Icon(
                         Icons.fiber_manual_record,
-                        color: theme
-                            .colorScheme
-                            .secondary, // Themed "Recording" dot (Orange)
+                        color: theme.colorScheme.secondary,
                         size: 16,
                       ),
                       const SizedBox(width: 8),
@@ -185,7 +166,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                           _isFlashOn ? Icons.flash_on : Icons.flash_off,
                           color: _isFlashOn
                               ? theme.colorScheme.secondary
-                              : Colors.white, // Themed active flash
+                              : Colors.white,
                         ),
                         onPressed: _toggleFlash,
                       ),
@@ -195,8 +176,6 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
               ),
             ),
           ),
-
-          // 3. BOTTOM BLURRED BAR
           Positioned(
             bottom: 0,
             left: 0,
@@ -205,10 +184,8 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
                 child: AnimatedContainer(
-                  duration: const Duration(
-                    milliseconds: 400,
-                  ), // Matches navbar speed
-                  curve: Curves.easeOutQuint, // Matches navbar curve
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOutQuint,
                   padding: EdgeInsets.only(
                     top: 20,
                     bottom:
@@ -217,13 +194,10 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                     left: 40,
                     right: 40,
                   ),
-                  color: Colors.black.withValues(
-                    alpha: 0.5,
-                  ), // Camera HUD stays dark
+                  color: Colors.black.withValues(alpha: 0.5),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // GALLERY BUTTON (Still mocked for now)
                       IconButton(
                         iconSize: 32,
                         icon: const Icon(
@@ -232,8 +206,6 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                         ),
                         onPressed: () {},
                       ),
-
-                      // THE SHUTTER BUTTON (Triggers camera)
                       GestureDetector(
                         onTap: _takePictureAndScan,
                         child: Container(
@@ -248,14 +220,12 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
                             child: Container(
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Colors.white, // The inner solid circle
+                                color: Colors.white,
                               ),
                             ),
                           ),
                         ),
                       ),
-
-                      // FLIP CAMERA BUTTON
                       IconButton(
                         iconSize: 32,
                         icon: const Icon(
@@ -276,57 +246,77 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
   }
 }
 
-// --- 3.2 THE ANALYZING MODAL ---
-class ScanningModal extends StatefulWidget {
-  final File imageFile; // The modal now requires the photo
+// 🚀 FIX: Changed to ConsumerStatefulWidget to access Riverpod
+class ScanningModal extends ConsumerStatefulWidget {
+  final File imageFile;
 
   const ScanningModal({super.key, required this.imageFile});
 
   @override
-  State<ScanningModal> createState() => _ScanningModalState();
+  ConsumerState<ScanningModal> createState() => _ScanningModalState();
 }
 
-class _ScanningModalState extends State<ScanningModal> {
+class _ScanningModalState extends ConsumerState<ScanningModal> {
   @override
   void initState() {
     super.initState();
-    _uploadAndAnalyze(); // Trigger actual API call
+    _uploadAndAnalyze();
   }
 
-  // The actual backend communication logic
   Future<void> _uploadAndAnalyze() async {
-    // Call our backend using the named parameter!
+    // Fetch real grade level securely from Riverpod state
+    final appUser = ref.read(appUserProvider).value;
+    final String rawGrade = appUser?.profile.educationLevel ?? '';
+
+    // 🚀 FIX: Safely map UI dropdown values to strict backend Pydantic Enum strings
+    String apiSafeGradeLevel;
+    switch (rawGrade) {
+      case 'Elementary':
+        apiSafeGradeLevel =
+            'Elementary (Grades 1-6)'; // Adjust if your backend expects different
+        break;
+      case 'Senior High School':
+        apiSafeGradeLevel = 'SHS (Grades 11-12)';
+        break;
+      case 'College':
+      case 'Others':
+        apiSafeGradeLevel = 'College/Undergrad';
+        break;
+      case 'High School':
+      default:
+        apiSafeGradeLevel = 'JHS (Grades 7-10)'; // Our known 100% safe fallback
+        break;
+    }
+
     final aiResult = await DiscoveryService.analyzeImage(
       imageFile: widget.imageFile,
+      gradeLevel: apiSafeGradeLevel, // Pass the strictly validated string!
     );
 
     if (!mounted) return;
 
-    // 1. Close the Analyzing Modal
     Navigator.pop(context);
 
     if (aiResult != null) {
-      // SUCCESS!
       debugPrint("🎯 AI RESPONSE: $aiResult");
 
-      // Go to the Teaser Doors and pass the JSON data AND the image path!
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => TeaserDoorsScreen(
             aiData: aiResult,
             imagePath: widget.imageFile.path,
+            gradeLevel: apiSafeGradeLevel, // Pass to next screen
           ),
         ),
       );
     } else {
-      // FAILURE: Show an error to the user
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
             'Failed to analyze image. Ensure you have internet and try again.',
           ),
-          backgroundColor: Theme.of(context).colorScheme.error, // Themed Error
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -334,7 +324,7 @@ class _ScanningModalState extends State<ScanningModal> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Cache theme
+    final theme = Theme.of(context);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -344,13 +334,11 @@ class _ScanningModalState extends State<ScanningModal> {
         height: 320,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: theme
-              .colorScheme
-              .surface, // Themed Adaptive Surface (White/Dark Grey)
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: theme.shadowColor.withValues(alpha: 0.1), // Themed Shadow
+              color: theme.shadowColor.withValues(alpha: 0.1),
               blurRadius: 20,
               spreadRadius: 5,
             ),
@@ -368,7 +356,7 @@ class _ScanningModalState extends State<ScanningModal> {
                   child: CircularProgressIndicator(
                     strokeWidth: 6,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      theme.colorScheme.secondary, // Themed Spinner (Orange)
+                      theme.colorScheme.secondary,
                     ),
                   ),
                 ),
@@ -376,15 +364,13 @@ class _ScanningModalState extends State<ScanningModal> {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(
-                      alpha: 0.1,
-                    ), // Themed Circle Bg
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.document_scanner_rounded,
                     size: 36,
-                    color: theme.colorScheme.primary, // Themed Icon
+                    color: theme.colorScheme.primary,
                   ),
                 ),
               ],
@@ -395,7 +381,7 @@ class _ScanningModalState extends State<ScanningModal> {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary, // Themed Title
+                color: theme.colorScheme.primary,
               ),
             ),
             const SizedBox(height: 10),
@@ -403,9 +389,7 @@ class _ScanningModalState extends State<ScanningModal> {
               'Cross-referencing historical databases',
               style: TextStyle(
                 fontSize: 14,
-                color: theme.colorScheme.onSurface.withValues(
-                  alpha: 0.7,
-                ), // Themed Subtitle
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ],

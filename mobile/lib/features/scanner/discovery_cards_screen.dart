@@ -1,17 +1,15 @@
-// mobile/lib/features/scanner/discovery_cards_screen.dart
 import 'package:flutter/material.dart';
 import 'package:tuklascope_mobile/features/home/providers/home_provider.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
 import '../../core/services/discovery_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../home/home_screen.dart';
 
 class DiscoveryCardsScreen extends ConsumerStatefulWidget {
   final String objectName;
   final String gradeLevel;
   final String selectedLens;
-  final String imagePath; // 🚀 NEW: The path to the compressed image
+  final String imagePath;
 
   const DiscoveryCardsScreen({
     super.key,
@@ -28,11 +26,12 @@ class DiscoveryCardsScreen extends ConsumerStatefulWidget {
 
 class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   int _selectedIndex = 0;
-
-  // State variables for network handling
   bool _isLoading = true;
   String? _error;
   Map<String, dynamic>? _deckData;
+
+  // 🚀 Gamification Constant
+  final int baseRewardXp = 50;
 
   @override
   void initState() {
@@ -48,7 +47,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
 
     final data = await LearnService.generateDeck(
       objectName: widget.objectName,
-      gradeLevel: widget.gradeLevel,
+      gradeLevel: widget.gradeLevel, // Now using real grade!
       selectedLens: widget.selectedLens,
     );
 
@@ -71,7 +70,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Cache theme
+    final theme = Theme.of(context);
 
     return GradientScaffold(
       appBar: AppBar(
@@ -91,14 +90,12 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(
-                    color: theme.colorScheme.primary,
-                  ), // Themed Loader
+                  CircularProgressIndicator(color: theme.colorScheme.primary),
                   const SizedBox(height: 16),
                   Text(
                     'Generating custom lesson...',
                     style: TextStyle(
-                      color: theme.colorScheme.primary, // Themed Loader Text
+                      color: theme.colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -114,23 +111,20 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                   children: [
                     Icon(
                       Icons.error_outline,
-                      color: theme.colorScheme.error, // Themed Error
+                      color: theme.colorScheme.error,
                       size: 48,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       _error!,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: theme.colorScheme.error,
-                      ), // Themed Error
+                      style: TextStyle(color: theme.colorScheme.error),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _fetchLearningDeck,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            theme.colorScheme.primary, // Themed Button
+                        backgroundColor: theme.colorScheme.primary,
                         foregroundColor: theme.colorScheme.onPrimary,
                       ),
                       child: const Text('Try Again'),
@@ -144,7 +138,6 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   }
 
   Widget _buildContent(ThemeData theme) {
-    final xpReward = _deckData?['xp_reward']?.toString() ?? '50';
     final imageUrl =
         _deckData?['image_url'] ??
         'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?q=80&w=1000&auto=format&fit=crop';
@@ -175,8 +168,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                           colors: [
                             Colors.black.withValues(alpha: 0.45),
                             Colors.transparent,
-                            theme
-                                .scaffoldBackgroundColor, // Adaptive Fade to Background!
+                            theme.scaffoldBackgroundColor,
                           ],
                           stops: const [0.0, 0.4, 1.0],
                         ),
@@ -202,8 +194,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w900,
-                                color:
-                                    theme.colorScheme.primary, // Themed Title
+                                color: theme.colorScheme.primary,
                                 height: 1.1,
                               ),
                             ),
@@ -214,28 +205,22 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: theme
-                                  .colorScheme
-                                  .secondary, // Themed XP Pill (Orange)
+                              color: theme.colorScheme.secondary,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               children: [
                                 Icon(
                                   Icons.star,
-                                  color: theme
-                                      .colorScheme
-                                      .onSecondary, // Matches XP Text
+                                  color: theme.colorScheme.onSecondary,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '+$xpReward XP',
+                                  '+$baseRewardXp XP', // 🚀 Gamification strict sync
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: theme
-                                        .colorScheme
-                                        .onSecondary, // Themed XP Text
+                                    color: theme.colorScheme.onSecondary,
                                   ),
                                 ),
                               ],
@@ -288,9 +273,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.secondary.withValues(
-              alpha: 0.4,
-            ), // Themed Shadow
+            color: theme.colorScheme.secondary.withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -299,8 +282,8 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
       child: ElevatedButton(
         onPressed: _showChallengeModal,
         style: ElevatedButton.styleFrom(
-          backgroundColor: theme.colorScheme.secondary, // Themed Orange
-          foregroundColor: theme.colorScheme.onSecondary, // Themed White
+          backgroundColor: theme.colorScheme.secondary,
+          foregroundColor: theme.colorScheme.onSecondary,
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -344,14 +327,14 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        final theme = Theme.of(context); // Get theme inside builder
+        final theme = Theme.of(context);
 
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             return Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface, // Themed Modal Background
+                color: theme.colorScheme.surface,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(32),
                 ),
@@ -369,7 +352,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                           decoration: BoxDecoration(
                             color: theme.colorScheme.onSurface.withValues(
                               alpha: 0.3,
-                            ), // Themed Handle
+                            ),
                             borderRadius: const BorderRadius.all(
                               Radius.circular(10),
                             ),
@@ -381,9 +364,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                         'TUKLAS CHALLENGE',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: theme
-                              .colorScheme
-                              .secondary, // Themed Challenge Title
+                          color: theme.colorScheme.secondary,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.5,
                         ),
@@ -394,9 +375,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
-                          color: theme
-                              .colorScheme
-                              .onSurface, // Themed Question Text
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -405,7 +384,6 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                         final bool isThisSelected = selectedOption == option;
                         final bool isThisCorrect = option == correctAnswer;
 
-                        // Base Option Colors (Themed)
                         Color buttonColor = theme.colorScheme.surface;
                         Color textColor = theme.colorScheme.onSurface;
                         Color borderColor = theme.colorScheme.onSurface
@@ -413,18 +391,15 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
 
                         if (hasAnswered) {
                           if (isThisCorrect) {
-                            // Correct Answer Colors (Safe for Dark Mode)
                             buttonColor = Colors.green.withValues(alpha: 0.15);
                             borderColor = Colors.green;
                             textColor = Colors.green;
                           } else if (isThisSelected && !isThisCorrect) {
-                            // Wrong Answer Colors (Safe for Dark Mode)
                             buttonColor = Colors.red.withValues(alpha: 0.15);
                             borderColor = Colors.red;
                             textColor = Colors.red;
                           }
                         } else if (isThisSelected) {
-                          // Selected but not answered yet
                           buttonColor = theme.colorScheme.primary.withValues(
                             alpha: 0.15,
                           );
@@ -496,9 +471,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: theme
-                                .colorScheme
-                                .primary, // Themed Submit Button
+                            backgroundColor: theme.colorScheme.primary,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -507,9 +480,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                           child: Text(
                             'SUBMIT ANSWER',
                             style: TextStyle(
-                              color: theme
-                                  .colorScheme
-                                  .onPrimary, // Themed Submit Text
+                              color: theme.colorScheme.onPrimary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -543,9 +514,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                                   Navigator.pop(context);
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: theme
-                                      .colorScheme
-                                      .secondary, // Themed Claim XP Button
+                                  backgroundColor: theme.colorScheme.secondary,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
                                     horizontal: 32,
@@ -557,9 +526,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                                 child: Text(
                                   'CLAIM XP & CONTINUE',
                                   style: TextStyle(
-                                    color: theme
-                                        .colorScheme
-                                        .onSecondary, // Themed Claim Text
+                                    color: theme.colorScheme.onSecondary,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -580,18 +547,18 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   Future<void> _saveProgressToBackend() async {
     if (_deckData == null) return;
 
-    // Show a loading indicator if you want, or just let it save in the background
     final success = await DiscoveryService.saveDiscovery(
       objectName: widget.objectName,
       chosenLens: widget.selectedLens,
       imagePath: widget.imagePath,
       learningDeck: _deckData!,
+      // 🚀 ENFORCING ARCHITECTURE: The UI simply passes the constant
+      // The backend PostgreSQL handles all multipliers or penalties!
+      xpAwarded: baseRewardXp,
     );
 
     if (success) {
       if (mounted) {
-        // Tell Riverpod to throw away the old cached Home stats!
-        // When the user returns to the Home tab, it will automatically fetch the new 1/3 score.
         ref.invalidate(homeStatsProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('XP Claimed and Discovery Saved!')),
@@ -627,14 +594,12 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
           decoration: BoxDecoration(
             color: isSelected
                 ? theme.colorScheme.secondary
-                : Colors.transparent, // Themed BG
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
                   ? theme.colorScheme.secondary
-                  : theme.colorScheme.onSurface.withValues(
-                      alpha: 0.2,
-                    ), // Themed Border
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.2),
               width: 1.5,
             ),
           ),
@@ -644,7 +609,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                 icon,
                 color: isSelected
                     ? theme.colorScheme.onSecondary
-                    : theme.colorScheme.onSurface, // Themed Tab Icon
+                    : theme.colorScheme.onSurface,
                 size: 24,
               ),
               const SizedBox(height: 4),
@@ -656,7 +621,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                   fontWeight: FontWeight.bold,
                   color: isSelected
                       ? theme.colorScheme.onSecondary
-                      : theme.colorScheme.onSurface, // Themed Tab Text
+                      : theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -676,7 +641,10 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
         realWorldCard['fun_fact'] ??
         "A fascinating fact about this artifact is currently hidden.";
 
-    final concept =
+    // Extract domain & skill for the UI Badge
+    final String domain = conceptCard['domain'] ?? 'General';
+    final String skill = conceptCard['skill'] ?? 'Concept';
+    final String lessonText =
         conceptCard['lesson_text'] ??
         "The underlying principles are still waiting to be discovered.";
 
@@ -688,7 +656,12 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
       case 0:
         return _buildGlassSection('Quick Fact', quickFact, theme);
       case 1:
-        return _buildGlassSection('Concepts', concept, theme);
+        return _buildGlassSection(
+          'Concepts',
+          lessonText,
+          theme,
+          badgeText: '$domain: $skill',
+        );
       case 2:
         return _buildGlassSection('Hands-on Project', handsOn, theme);
       default:
@@ -696,22 +669,25 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
     }
   }
 
-  Widget _buildGlassSection(String title, String content, ThemeData theme) {
+  Widget _buildGlassSection(
+    String title,
+    String content,
+    ThemeData theme, {
+    String? badgeText,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(
-          alpha: 0.85,
-        ), // Themed Adaptive Glass Background
+        color: theme.colorScheme.surface.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
           width: 2,
-        ), // Themed subtle border
+        ),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.05), // Themed shadow
+            color: theme.shadowColor.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -720,23 +696,55 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title.toUpperCase(),
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.secondary, // Themed Label (Orange)
-              letterSpacing: 1.2,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.secondary,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              // The Dynamic UI Badge
+              if (badgeText != null)
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    margin: const EdgeInsets.only(left: 12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      badgeText.toUpperCase(),
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.primary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             content,
             style: TextStyle(
               fontSize: 16,
-              color: theme.colorScheme.onSurface.withValues(
-                alpha: 0.9,
-              ), // Themed Description
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
               height: 1.6,
             ),
           ),

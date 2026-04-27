@@ -1,17 +1,17 @@
-// mobile/lib/features/scanner/teaser_doors_screen.dart
 import 'package:flutter/material.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import 'discovery_cards_screen.dart';
 
 class TeaserDoorsScreen extends StatefulWidget {
   final Map<String, dynamic> aiData;
-  final String
-      imagePath; // 🚀 NEW: We need to receive this from the Camera/LiveFeed
+  final String imagePath;
+  final String gradeLevel; // 🚀 NEW: Receive from Scanner Modal
 
   const TeaserDoorsScreen({
     super.key,
     required this.aiData,
-    required this.imagePath, // 🚀 NEW
+    required this.imagePath,
+    required this.gradeLevel,
   });
 
   @override
@@ -51,7 +51,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
     }
   }
 
-  // TECH LEAD: We keep these specific colors as they represent specific pathways!
   Color _getColorForStrand(String lens) {
     switch (lens.toUpperCase()) {
       case 'STEM':
@@ -69,7 +68,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Cache the theme
+    final theme = Theme.of(context);
 
     if (_teaserDoors.isEmpty) {
       return GradientScaffold(
@@ -83,12 +82,12 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
         title: Text(
           _objectName,
           style: TextStyle(
-            color: theme.colorScheme.primary, // Themed AppBar Title
+            color: theme.colorScheme.primary,
             fontWeight: FontWeight.w900,
           ),
         ),
         centerTitle: true,
-        iconTheme: IconThemeData(color: theme.colorScheme.primary), // Themed Back Button
+        iconTheme: IconThemeData(color: theme.colorScheme.primary),
       ),
       body: SafeArea(
         child: Column(
@@ -105,11 +104,11 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                 children: [
                   TextSpan(
                     text: 'Open a ',
-                    style: TextStyle(color: theme.colorScheme.primary), // Themed Primary
+                    style: TextStyle(color: theme.colorScheme.primary),
                   ),
                   TextSpan(
                     text: 'Door',
-                    style: TextStyle(color: theme.colorScheme.secondary), // Themed Orange
+                    style: TextStyle(color: theme.colorScheme.secondary),
                   ),
                 ],
               ),
@@ -122,7 +121,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed Subtitle
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
               ),
@@ -155,7 +154,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                         scale: scale,
                         child: Opacity(
                           opacity: opacity,
-                          // Pass theme into builder for performance
                           child: _buildMagicalDoor(context, index, theme),
                         ),
                       );
@@ -176,7 +174,9 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
     final lens = door['lens'] ?? 'Unknown';
     final title = door['title'] ?? 'Mysterious Path';
     final teaser = door['teaser_text'] ?? '';
-    final xp = door['estimated_xp'] ?? 50;
+
+    // 🚀 FIX: Gamification integrity. Lock base XP to 50 instead of AI hallucination.
+    const int xp = 50;
 
     final Color strandColor = _getColorForStrand(lens);
     final IconData icon = _getIconForStrand(lens);
@@ -184,7 +184,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface, // Themed Surface Background!
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(40),
         border: Border.all(color: strandColor.withValues(alpha: 0.3), width: 2),
         boxShadow: [
@@ -218,7 +218,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary, // Themed Blue XP Pill
+                    color: theme.colorScheme.primary,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -232,7 +232,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                       Text(
                         '+$xp XP',
                         style: TextStyle(
-                          color: theme.colorScheme.onPrimary, // Ensures contrast on the primary color
+                          color: theme.colorScheme.onPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -261,12 +261,15 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary, // Themed Card Title
+                color: theme.colorScheme.primary,
                 height: 1.2,
               ),
             ),
             const SizedBox(height: 16),
-            Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.1), thickness: 2), // Themed Divider
+            Divider(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+              thickness: 2,
+            ),
             const SizedBox(height: 16),
             Expanded(
               child: SingleChildScrollView(
@@ -276,7 +279,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8), // Themed Teaser Text
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                     height: 1.5,
                   ),
                 ),
@@ -289,7 +292,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: strandColor,
-                  foregroundColor: Colors.white, // Kept white to pop on the vibrant strand colors
+                  foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -301,7 +304,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                     MaterialPageRoute(
                       builder: (context) => DiscoveryCardsScreen(
                         objectName: _objectName,
-                        gradeLevel: widget.aiData['grade_level'] ?? '',
+                        gradeLevel:
+                            widget.gradeLevel, // 🚀 FIX: Passed real grade
                         selectedLens: lens,
                         imagePath: widget.imagePath,
                       ),
