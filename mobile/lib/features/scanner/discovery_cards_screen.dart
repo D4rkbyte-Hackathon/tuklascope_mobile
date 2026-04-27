@@ -1,5 +1,6 @@
 // mobile/lib/features/scanner/discovery_cards_screen.dart
 import 'package:flutter/material.dart';
+import 'package:tuklascope_mobile/features/home/providers/home_provider.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
 import '../../core/services/discovery_service.dart';

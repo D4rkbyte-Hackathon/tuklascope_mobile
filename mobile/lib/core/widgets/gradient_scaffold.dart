@@ -4,12 +4,16 @@ class GradientScaffold extends StatelessWidget {
   final Widget body;
   final PreferredSizeWidget? appBar; // We keep the generic type
   final Widget? bottomNavigationBar;
+  
+  // 1. Add the floatingActionButton field
+  final Widget? floatingActionButton;
 
   const GradientScaffold({
     super.key,
     required this.body,
     this.appBar,
     this.bottomNavigationBar,
+    this.floatingActionButton, // 2. Add to constructor
   });
 
   @override
@@ -63,6 +67,7 @@ class GradientScaffold extends StatelessWidget {
           appBar: appBar,
           body: body,
           bottomNavigationBar: bottomNavigationBar,
+          floatingActionButton: floatingActionButton, // 3. Pass it to the actual Scaffold
         ),
       ),
     );
