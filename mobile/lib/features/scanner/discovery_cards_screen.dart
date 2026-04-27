@@ -4,6 +4,7 @@ import '../../core/widgets/gradient_scaffold.dart';
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
 import '../../core/services/discovery_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'tuklas_tutor_sheet.dart';
 
 class DiscoveryCardsScreen extends ConsumerStatefulWidget {
   final String objectName;
@@ -73,18 +74,32 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
     final theme = Theme.of(context);
 
     return GradientScaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-          shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
-        ),
-        actions: [
-          IconButton(icon: const Icon(Icons.favorite_border), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.share), onPressed: () {}),
-        ],
-      ),
+      appBar: AppBar(/* ... existing ... */),
+      // 🚀 NEW: Add the floating action button here!
+      floatingActionButton: _deckData != null
+          ? FloatingActionButton.extended(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text(
+                'Ask Tutor',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                // Extract whatever text the user is currently reading
+                final conceptCard =
+                    _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
+                final lessonText = conceptCard['lesson_text'] ?? '';
+
+                showTuklasTutorSheet(
+                  context,
+                  objectName: widget.objectName,
+                  strand: widget.selectedLens,
+                  currentCardContent: lessonText,
+                );
+              },
+            )
+          : null,
       body: _isLoading
           ? Center(
               child: Column(
