@@ -6,6 +6,10 @@ import '../../core/services/pathfinder_service.dart';
 /// Opens a near-full-screen sheet that can be dragged down from the top to dismiss.
 Future<void> showPathfinderBlueprintSheet(
   BuildContext context, {
+  required int stemXp,
+  required int humssXp,
+  required int abmXp,
+  required int tvlXp,
   required VoidCallback onNavigateToScan,
 }) {
   return showModalBottomSheet<void>(
@@ -13,16 +17,32 @@ Future<void> showPathfinderBlueprintSheet(
     isScrollControlled: true,
     useSafeArea: false,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black54,
-    builder: (context) =>
-        PathfinderBlueprintSheet(onNavigateToScan: onNavigateToScan),
+    barrierColor: Colors.black87, // Darker for better contrast
+    builder: (context) => PathfinderBlueprintSheet(
+      stemXp: stemXp,
+      humssXp: humssXp,
+      abmXp: abmXp,
+      tvlXp: tvlXp,
+      onNavigateToScan: onNavigateToScan,
+    ),
   );
 }
 
 class PathfinderBlueprintSheet extends StatefulWidget {
+  final int stemXp;
+  final int humssXp;
+  final int abmXp;
+  final int tvlXp;
   final VoidCallback onNavigateToScan;
 
-  const PathfinderBlueprintSheet({super.key, required this.onNavigateToScan});
+  const PathfinderBlueprintSheet({
+    super.key,
+    required this.stemXp,
+    required this.humssXp,
+    required this.abmXp,
+    required this.tvlXp,
+    required this.onNavigateToScan,
+  });
 
   @override
   State<PathfinderBlueprintSheet> createState() =>
@@ -35,7 +55,6 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
   @override
   void initState() {
     super.initState();
-    // Trigger the API call to Render when the sheet opens
     _analysisFuture = PathfinderService.analyzePaths();
   }
 
@@ -49,51 +68,51 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
       builder: (context, snapshot) {
         // 1. Loading State
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
-            ),
+          return _buildStaticSheetShell(
+            theme,
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: theme.colorScheme.primary),
-                  const SizedBox(height: 16),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 24),
                   Text(
-                    'Analyzing your Skill Tree...',
-                    style: TextStyle(color: theme.colorScheme.onSurface),
-                  ),
+                        'Analyzing Neo4j Skill Graph...',
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
+                        ),
+                      )
+                      .animate(onPlay: (controller) => controller.repeat())
+                      .shimmer(
+                        duration: 1500.ms,
+                        color: theme.colorScheme.secondary,
+                      ),
                 ],
               ),
             ),
           );
         }
 
-        // 2. Error or Null State
+        // 2. Error State
         if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
-          return Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
-            ),
+          return _buildStaticSheetShell(
+            theme,
             child: Center(
               child: Text(
-                'Failed to generate blueprint. Please try again later.',
+                'Uplink failed. Please check your connection and try again.',
                 style: TextStyle(color: theme.colorScheme.error),
               ),
             ),
           );
         }
 
-        // 3. Success State - Parse the Pydantic JSON
+        // 3. Success State
         final data = snapshot.data!;
         final String profileSummary =
-            data['profile_summary'] ?? 'Your learning journey is unique!';
+            data['profile_summary'] ??
+            'Your learning journey is uniquely yours.';
         final List<dynamic> recommendations = data['recommendations'] ?? [];
 
         return DraggableScrollableSheet(
@@ -108,74 +127,113 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
               // Drag Handle
               Center(
                 child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 14),
+                  width: 48,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 24),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
-              // Title
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      height: 1.25,
+
+              // Header
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    height: 1.2,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: 'TUKLASCOPE\n',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
+                        fontSize: 12,
+                        letterSpacing: 2.0,
+                      ),
                     ),
-                    children: [
-                      TextSpan(
-                        text: 'Your Blueprint:\n',
-                        style: TextStyle(color: theme.colorScheme.primary),
-                      ),
-                      TextSpan(
-                        text: 'From Core Principles To Career Paths',
-                        style: TextStyle(color: theme.colorScheme.secondary),
-                      ),
-                    ],
-                  ),
+                    TextSpan(
+                      text: 'Career Blueprint',
+                      style: TextStyle(color: theme.colorScheme.primary),
+                    ),
+                  ],
                 ),
               ),
-              // Dynamic AI Summary
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: Text(
-                  profileSummary,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              // Strongest Fields Card
-              const Padding(
-                padding: EdgeInsets.only(bottom: 20),
-                child: _StrongestFieldsCard(),
-              ),
+              const SizedBox(height: 16),
 
-              // Dynamic AI Recommendations
+              // AI Profile Summary
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      color: theme.colorScheme.secondary,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        profileSummary,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.9,
+                          ),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Real-time Fields Card
+              _StrongestFieldsCard(
+                stemXp: widget.stemXp,
+                humssXp: widget.humssXp,
+                abmXp: widget.abmXp,
+                tvlXp: widget.tvlXp,
+              ),
+              const SizedBox(height: 32),
+
+              Text(
+                'AI Recommendations',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Dynamic Career Cards
               ...recommendations.map((rec) {
-                // Alternating colors based on index or path type
-                final color = rec['path_type'] == 'The Specialist'
-                    ? const Color(0xFF4CAF50)
-                    : const Color(0xFFFF9800);
-
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: _CollegeProgramCard(
-                    borderColor: color,
-                    title: rec['title'] ?? 'Unknown Career',
-                    subtitle: rec['description'] ?? 'No description provided.',
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _CareerRecommendationCard(
+                    title: rec['title'] ?? 'Unknown',
+                    description: rec['description'] ?? '',
+                    pathType: rec['path_type'] ?? 'General',
+                    matchConfidence: rec['match_confidence'] ?? 0,
                   ),
                 );
               }),
+
+              const SizedBox(height: 16),
 
               // CTA Bottom Card
               _BlueprintCtaCard(
@@ -188,22 +246,22 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
 
             return ClipRRect(
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
+                top: Radius.circular(24),
               ),
               child: Material(
                 color: theme.colorScheme.surface,
                 child: ListView.builder(
                   controller: scrollController,
-                  padding: EdgeInsets.fromLTRB(20, 10, 20, bottomInset + 88),
+                  padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 40),
                   itemCount: sheetItems.length,
                   itemBuilder: (context, index) {
                     return sheetItems[index]
                         .animate()
-                        .fade(duration: 600.ms, delay: (100 * index).ms)
+                        .fade(duration: 500.ms, delay: (50 * index).ms)
                         .slideY(
                           begin: 0.1,
                           end: 0,
-                          duration: 600.ms,
+                          duration: 500.ms,
                           curve: Curves.easeOutCubic,
                         );
                   },
@@ -215,64 +273,90 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
       },
     );
   }
+
+  Widget _buildStaticSheetShell(ThemeData theme, {required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: child,
+    );
+  }
 }
 
 // -----------------------------------------------------------------------------
-// HELPER WIDGETS BELOW
+// RE-ENGINEERED HELPER WIDGETS
 // -----------------------------------------------------------------------------
 
 class _StrongestFieldsCard extends StatelessWidget {
-  const _StrongestFieldsCard();
+  final int stemXp;
+  final int humssXp;
+  final int abmXp;
+  final int tvlXp;
+
+  const _StrongestFieldsCard({
+    required this.stemXp,
+    required this.humssXp,
+    required this.abmXp,
+    required this.tvlXp,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Cache Theme
+    final theme = Theme.of(context);
+
+    // Mathematical Calculation for Real Data
+    final total = stemXp + humssXp + abmXp + tvlXp;
+    final double stemPct = total == 0 ? 0 : stemXp / total;
+    final double humssPct = total == 0 ? 0 : humssXp / total;
+    final double abmPct = total == 0 ? 0 : abmXp / total;
+    final double tvlPct = total == 0 ? 0 : tvlXp / total;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 22),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface, // Themed Card Surface
-        borderRadius: BorderRadius.circular(15),
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.3),
-          width: 1,
-        ), // Themed Border
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Your Strongest Fields',
-            textAlign: TextAlign.center,
+            'Your Graph Distribution',
             style: TextStyle(
-              fontSize: 17,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary, // Themed Primary
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              letterSpacing: 1.1,
             ),
           ),
-          const SizedBox(height: 18),
-          const _FieldProgressRow(
-            label: 'Agham at Math (STEM)',
-            value: 0.4,
-            fillColor: Color(0xFF4CAF50), // Safe Green
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
           _FieldProgressRow(
-            label: 'Sining at Wika (HUMSS)',
-            value: 0.3,
-            fillColor: theme.colorScheme.secondary, // Themed Orange
+            label: 'STEM',
+            value: stemPct,
+            color: const Color(0xFF4CAF50),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           _FieldProgressRow(
-            label: 'Teknikal (TVL)',
-            value: 0.2,
-            fillColor: theme.colorScheme.secondary, // Themed Orange
+            label: 'HUMSS',
+            value: humssPct,
+            color: const Color(0xFF9C27B0),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           _FieldProgressRow(
-            label: 'Negosyo (ABM)',
-            value: 0.1,
-            fillColor: theme.colorScheme.secondary, // Themed Orange
+            label: 'ABM',
+            value: abmPct,
+            color: const Color(0xFF2196F3),
+          ),
+          const SizedBox(height: 16),
+          _FieldProgressRow(
+            label: 'TVL',
+            value: tvlPct,
+            color: const Color(0xFFFF9800),
           ),
         ],
       ),
@@ -283,63 +367,63 @@ class _StrongestFieldsCard extends StatelessWidget {
 class _FieldProgressRow extends StatelessWidget {
   final String label;
   final double value;
-  final Color fillColor;
+  final Color color;
 
   const _FieldProgressRow({
     required this.label,
     required this.value,
-    required this.fillColor,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Cache Theme
+    final theme = Theme.of(context);
     final pct = (value * 100).round();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface, // Themed Label
-                ),
-              ),
+        SizedBox(
+          width: 60,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
             ),
-            Text(
-              '$pct%',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface.withValues(
-                  alpha: 0.6,
-                ), // Themed Percentage
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: SizedBox(
-            height: 10,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                ColoredBox(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-                ), // Themed Empty Track
-                FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: value.clamp(0.0, 1.0),
-                  child: ColoredBox(color: fillColor),
-                ),
-              ],
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              height: 8,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ColoredBox(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                  ),
+                  FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: value.clamp(0.0, 1.0),
+                    child: ColoredBox(color: color),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 40,
+          child: Text(
+            '$pct%',
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ),
@@ -348,86 +432,121 @@ class _FieldProgressRow extends StatelessWidget {
   }
 }
 
-class _CollegeProgramCard extends StatelessWidget {
-  final Color borderColor;
+class _CareerRecommendationCard extends StatelessWidget {
   final String title;
-  final String subtitle;
+  final String description;
+  final String pathType;
+  final int matchConfidence;
 
-  const _CollegeProgramCard({
-    required this.borderColor,
+  const _CareerRecommendationCard({
     required this.title,
-    required this.subtitle,
+    required this.description,
+    required this.pathType,
+    required this.matchConfidence,
   });
+
+  Color _getPathColor(ThemeData theme) {
+    if (pathType.contains('Specialist')) return const Color(0xFF4CAF50);
+    if (pathType.contains('Interdisciplinary')) return const Color(0xFF2196F3);
+    return const Color(0xFFFF9800);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Cache Theme
+    final theme = Theme.of(context);
+    final pathColor = _getPathColor(theme);
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(top: 10),
-          padding: const EdgeInsets.fromLTRB(18, 28, 18, 36),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface, // Themed Background
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(
-              color: borderColor.withValues(alpha: 0.6),
-              width: 1.5,
-            ),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: pathColor.withValues(alpha: 0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: pathColor.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Row: Badge & Match Score
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary, // Themed Title
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: pathColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  pathType.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.0,
+                    color: pathColor,
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: theme.colorScheme.onSurface.withValues(
-                    alpha: 0.7,
-                  ), // Themed Subtitle
-                  height: 1.35,
-                ),
+              Row(
+                children: [
+                  Text(
+                    '$matchConfidence%',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      value: matchConfidence / 100,
+                      strokeWidth: 3,
+                      backgroundColor: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.1,
+                      ),
+                      color: pathColor,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ),
-        Positioned(
-          top: 0,
-          left: 20,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface, // Themed Badge BG
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: borderColor.withValues(alpha: 0.6),
-                width: 1,
-              ),
-            ),
-            child: Text(
-              'College Program',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color:
-                    borderColor, // Directly use the passed border color for highest adaptive visibility
-              ),
+          const SizedBox(height: 16),
+
+          // Title
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.primary,
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+
+          // Description
+          Text(
+            description,
+            style: TextStyle(
+              fontSize: 14,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -439,52 +558,55 @@ class _BlueprintCtaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Cache Theme
+    final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface, // Themed Background
-        borderRadius: BorderRadius.circular(15),
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.secondary.withValues(alpha: 0.1),
+            theme.colorScheme.primary.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.3),
-          width: 1,
-        ), // Themed Border
+          color: theme.colorScheme.secondary.withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Icon(Icons.radar, size: 32, color: theme.colorScheme.secondary),
+          const SizedBox(height: 12),
           Text(
-            'Want more personalized guidance?',
-            textAlign: TextAlign.center,
+            'Keep Evolving',
             style: TextStyle(
-              fontSize: 17,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary, // Themed Title
+              color: theme.colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
-            'Upload a photo of any object around you and discover the concepts behind it!',
+            'Scan new objects to alter your trajectory and unlock new career paths.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14,
-              color: theme.colorScheme.onSurface.withValues(
-                alpha: 0.7,
-              ), // Themed Description
-              height: 1.35,
+              fontSize: 13,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
-          const SizedBox(height: 18),
-          FilledButton(
+          const SizedBox(height: 20),
+          FilledButton.icon(
             onPressed: onStartDiscovery,
+            icon: const Icon(Icons.camera_alt, size: 18),
+            label: const Text('Resume Discovery'),
             style: FilledButton.styleFrom(
-              backgroundColor: theme.colorScheme.secondary, // Themed Orange
-              foregroundColor: theme.colorScheme.onSecondary, // Themed White
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: const StadiumBorder(),
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
-            child: const Text('Start Discovery →'),
           ),
         ],
       ),

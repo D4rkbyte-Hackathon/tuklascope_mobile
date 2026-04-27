@@ -380,24 +380,28 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child:
-                _ProfilePromoCard(
-                      theme: theme,
-                      borderColor: theme.colorScheme.secondary,
-                      title: 'Open Your Blueprint',
-                      description:
-                          'See how your skills map to real-world careers.',
-                      buttonLabel: 'Open Pathfinder →',
-                      buttonColor: theme.colorScheme.primary,
-                      onPressed: () => showPathfinderBlueprintSheet(
-                        context,
-                        onNavigateToScan: () =>
-                            MainNavScope.maybeOf(context)?.goToTab(1),
-                      ),
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 300.ms)
-                    .slideY(begin: 0.1),
+            child: _ProfilePromoCard(
+              theme: theme,
+              borderColor: theme.colorScheme.secondary,
+              title: 'Open Your Blueprint',
+              description: 'See how your skills map to real-world careers.',
+              buttonLabel: 'Open Pathfinder →',
+              buttonColor: theme.colorScheme.primary,
+              onPressed: () {
+                // Safely grab the current stats value, or default to 0 if still loading
+                final currentStats = statsAsync.value;
+
+                showPathfinderBlueprintSheet(
+                  context,
+                  stemXp: currentStats?.stemXp ?? 0,
+                  humssXp: currentStats?.humssXp ?? 0,
+                  abmXp: currentStats?.abmXp ?? 0,
+                  tvlXp: currentStats?.tvlXp ?? 0,
+                  onNavigateToScan: () =>
+                      MainNavScope.maybeOf(context)?.goToTab(1),
+                );
+              },
+            ).animate().fade(duration: 600.ms, delay: 300.ms).slideY(begin: 0.1),
           ),
           _ProfilePromoCard(
             theme: theme,
@@ -522,7 +526,10 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                       ),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           gradient: LinearGradient(
@@ -537,7 +544,9 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.15,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
@@ -563,7 +572,8 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                                     'Update your security',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ],
@@ -844,7 +854,9 @@ class _ProfileHeaderCard extends StatelessWidget {
                       ? Icon(
                           Icons.person,
                           size: 40,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.4,
+                          ),
                         )
                       : null,
                 ),
@@ -1890,7 +1902,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
               ),
               onPressed: () async {
                 try {
-                  await ref.read(profileServiceProvider).updateBio(bioController.text.trim());
+                  await ref
+                      .read(profileServiceProvider)
+                      .updateBio(bioController.text.trim());
                   ref.invalidate(appUserProvider);
                   if (mounted) {
                     Navigator.pop(context);
@@ -1925,11 +1939,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     try {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-      
+
       if (pickedFile != null) {
         // Store dialog context for closing later
         BuildContext? dialogContext;
-        
+
         if (mounted) {
           showDialog(
             context: context,
@@ -1942,7 +1956,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(color: theme.colorScheme.primary),
+                      CircularProgressIndicator(
+                        color: theme.colorScheme.primary,
+                      ),
                       const SizedBox(height: 20),
                       const Text('Uploading profile picture...'),
                     ],
@@ -1954,8 +1970,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
         }
 
         // Upload the image
-        await ref.read(profileServiceProvider).uploadProfilePicture(pickedFile.path);
-        
+        await ref
+            .read(profileServiceProvider)
+            .uploadProfilePicture(pickedFile.path);
+
         // Close dialog using the saved context
         if (mounted && dialogContext != null && dialogContext!.mounted) {
           Navigator.of(dialogContext!).pop();
@@ -2068,7 +2086,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.visibility, color: theme.colorScheme.primary),
+                          Icon(
+                            Icons.visibility,
+                            color: theme.colorScheme.primary,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'See profile picture',
@@ -2274,7 +2295,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           ),
                         ),
                         subtitle: Text(
-                          profile.bio?.isNotEmpty == true ? profile.bio! : 'Not set',
+                          profile.bio?.isNotEmpty == true
+                              ? profile.bio!
+                              : 'Not set',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
