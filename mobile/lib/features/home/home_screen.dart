@@ -24,21 +24,15 @@ class HomeScreen extends ConsumerWidget {
     final xp = statsAsync.value?.totalPoints ?? 0;
     final streak = statsAsync.value?.dailyStreak ?? 0;
     final avatarUrl = statsAsync.value?.avatarUrl;
+    
+    final branchXp = statsAsync.value?.branchXp ?? {'STEM': 0, 'HUMSS': 0, 'ABM': 0, 'TVL': 0};
+    final userRank = statsAsync.value?.userRank;
+    final totalUsers = statsAsync.value?.totalUsers ?? 0;
+    
+    // 🚀 Extract Recent Scans
+    final recentScans = statsAsync.value?.recentScans ?? [];
 
     return GradientScaffold(
-      // 5. Wrap the FAB in Padding to push it ABOVE your custom navigation bar!
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 90.0), 
-        child: FloatingActionButton.extended(
-          onPressed: () => Navigator.push(
-            context, MaterialPageRoute(builder: (_) => const TuklasTutorScreen()),
-          ),
-          backgroundColor: theme.colorScheme.primary,
-          icon: const Icon(Icons.auto_awesome, color: Colors.white),
-          label: const Text("Ask Tutor", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        ).animate().scale(delay: 500.ms, duration: 400.ms, curve: Curves.easeOutBack),
-      ),
-      
       body: SafeArea(
         child: RefreshIndicator(
           color: theme.colorScheme.primary,
@@ -48,39 +42,40 @@ class HomeScreen extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverPadding(
-                // Added extra bottom padding so the last item isn't hidden by the navbar
-                padding: EdgeInsets.fromLTRB(16.0, 20.0, 16.0, MediaQuery.paddingOf(context).bottom + 120),
+                padding: EdgeInsets.fromLTRB(16.0, 20.0, 16.0, MediaQuery.paddingOf(context).bottom + 80),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     
-                    HomeHeader(
-                      userName: userName, 
-                      heroTitle: heroTitle, 
-                      xp: xp,
-                      avatarUrl: avatarUrl,
-                    ),
+                    HomeHeader(userName: userName, heroTitle: heroTitle, xp: xp, avatarUrl: avatarUrl),
                     const SizedBox(height: 24),
 
-                    // Daily motivation no longer needs scans count
                     DailyMotivation(streak: streak),
                     const SizedBox(height: 48),
 
                     const HeroScanButton(),
                     const SizedBox(height: 48),
 
+                    // 🚀 Added the Recent Discoveries Widget here!
+                    RecentDiscoveriesSection(recentScans: recentScans),
+                    if (recentScans.isNotEmpty) const SizedBox(height: 32),
+
                     const QuickRecommendationCard(),
                     const SizedBox(height: 24),
 
-                    const MiniSkillTreeCard(),
+                    MiniSkillTreeCard(branchXp: branchXp),
                     const SizedBox(height: 24),
 
                     Row(
-                      children: const [
-                        Expanded(child: QuestBoardPreview()),
-                        SizedBox(width: 16),
-                        Expanded(child: LeaderboardTeaser()),
+                      children: [
+                        const Expanded(child: QuestBoardPreview()),
+                        const SizedBox(width: 16),
+                        Expanded(child: LeaderboardTeaser(rank: userRank, totalUsers: totalUsers)),
                       ],
                     ),
+                    const SizedBox(height: 32),
+
+                    _buildStaticTutorBanner(context, theme),
+
                   ]),
                 ),
               ),
@@ -89,5 +84,51 @@ class HomeScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildStaticTutorBanner(BuildContext context, ThemeData theme) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const TuklasTutorScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(color: theme.colorScheme.primary.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Stuck on a concept?", style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  const Text("Ask TuklasTutor", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: Icon(Icons.arrow_forward_ios_rounded, size: 16, color: theme.colorScheme.primary),
+            )
+          ],
+        ),
+      ),
+    ).animate().fade(delay: 600.ms).slideY(begin: 0.1);
   }
 }
