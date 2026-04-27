@@ -1,5 +1,7 @@
+// mobile/lib/features/profile/pathfinder_blueprint_sheet.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart'; // 1. IMPORT ADDED
+import 'package:flutter_animate/flutter_animate.dart';
+import '../../core/services/pathfinder_service.dart';
 
 /// Opens a near-full-screen sheet that can be dragged down from the top to dismiss.
 Future<void> showPathfinderBlueprintSheet(
@@ -17,150 +19,198 @@ Future<void> showPathfinderBlueprintSheet(
   );
 }
 
-class PathfinderBlueprintSheet extends StatelessWidget {
+class PathfinderBlueprintSheet extends StatefulWidget {
   final VoidCallback onNavigateToScan;
 
   const PathfinderBlueprintSheet({super.key, required this.onNavigateToScan});
 
   @override
+  State<PathfinderBlueprintSheet> createState() =>
+      _PathfinderBlueprintSheetState();
+}
+
+class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
+  Future<Map<String, dynamic>?>? _analysisFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger the API call to Render when the sheet opens
+    _analysisFuture = PathfinderService.analyzePaths();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Cache theme
+    final theme = Theme.of(context);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.96,
-      minChildSize: 0.42,
-      maxChildSize: 0.98,
-      snap: true,
-      snapSizes: const [0.42, 0.96],
-      builder: (context, scrollController) {
-        
-        // 2. Group elements into a list & swap SizedBoxes for Padding
-        final List<Widget> sheetItems = [
-          // Drag Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 14),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.2), // Themed Handle
-                borderRadius: BorderRadius.circular(2),
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _analysisFuture,
+      builder: (context, snapshot) {
+        // 1. Loading State
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
               ),
             ),
-          ),
-          // Title
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  height: 1.25,
-                ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextSpan(
-                    text: 'Your Blueprint:\n',
-                    style: TextStyle(color: theme.colorScheme.primary), // Themed Primary
-                  ),
-                  TextSpan(
-                    text: 'From Core Principles To Career Paths',
-                    style: TextStyle(color: theme.colorScheme.secondary), // Themed Secondary
+                  CircularProgressIndicator(color: theme.colorScheme.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Analyzing your Skill Tree...',
+                    style: TextStyle(color: theme.colorScheme.onSurface),
                   ),
                 ],
               ),
             ),
-          ),
-          // Intro Text
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Text(
-              'Kamusta! Your skill tree shows how your interests connect across tracks—here are field strengths and program ideas tailored for you.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.85), // Themed Subtitle
-                height: 1.4,
-              ),
-            ),
-          ),
-          // Timestamp
-          Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: Text(
-              'Last Updated 8/7/30',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.4), // Themed Timestamp
-              ),
-            ),
-          ),
-          // Strongest Fields Card
-          const Padding(
-            padding: EdgeInsets.only(bottom: 20),
-            child: _StrongestFieldsCard(),
-          ),
-          // Programs
-          const Padding(
-            padding: EdgeInsets.only(bottom: 20),
-            child: _CollegeProgramCard(
-              borderColor: Color(0xFF4CAF50), // Safe Green
-              title: 'BS Gwapo Engineering',
-              subtitle: 'Blahblah [AI generated stuff]',
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(bottom: 20),
-            child: _CollegeProgramCard(
-              borderColor: Color(0xFFFF9800), // Safe Orange
-              title: 'BS Rizzler Engineering',
-              subtitle: 'Blahblah [AI generated stuff]',
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(bottom: 20),
-            child: _CollegeProgramCard(
-              borderColor: Color(0xFFFF9800), // Safe Orange
-              title: 'BS Alpha Wolf Engineering',
-              subtitle: 'Blahblah [AI generated stuff]',
-            ),
-          ),
-          // CTA Bottom Card
-          _BlueprintCtaCard(
-            onStartDiscovery: () {
-              Navigator.of(context).pop();
-              onNavigateToScan();
-            },
-          ),
-        ];
+          );
+        }
 
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          child: Material(
-            color: theme.colorScheme.surface, // Themed Surface Background
-            child: ListView.builder( 
-              controller: scrollController, // Crucial for bottom sheet dragging
-              padding: EdgeInsets.fromLTRB(20, 10, 20, bottomInset + 88),
-              itemCount: sheetItems.length,
-              itemBuilder: (context, index) {
-                // 4. Staggered Animation applied
-                return sheetItems[index]
-                    .animate()
-                    .fade(duration: 600.ms, delay: (100 * index).ms)
-                    .slideY(
-                      begin: 0.1, 
-                      end: 0, 
-                      duration: 600.ms, 
-                      curve: Curves.easeOutCubic, 
-                      delay: (100 * index).ms
-                    );
-              },
+        // 2. Error or Null State
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+          return Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
             ),
-          ),
+            child: Center(
+              child: Text(
+                'Failed to generate blueprint. Please try again later.',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ),
+          );
+        }
+
+        // 3. Success State - Parse the Pydantic JSON
+        final data = snapshot.data!;
+        final String profileSummary =
+            data['profile_summary'] ?? 'Your learning journey is unique!';
+        final List<dynamic> recommendations = data['recommendations'] ?? [];
+
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.96,
+          minChildSize: 0.42,
+          maxChildSize: 0.98,
+          snap: true,
+          snapSizes: const [0.42, 0.96],
+          builder: (context, scrollController) {
+            final List<Widget> sheetItems = [
+              // Drag Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // Title
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      height: 1.25,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'Your Blueprint:\n',
+                        style: TextStyle(color: theme.colorScheme.primary),
+                      ),
+                      TextSpan(
+                        text: 'From Core Principles To Career Paths',
+                        style: TextStyle(color: theme.colorScheme.secondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Dynamic AI Summary
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: Text(
+                  profileSummary,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              // Strongest Fields Card
+              const Padding(
+                padding: EdgeInsets.only(bottom: 20),
+                child: _StrongestFieldsCard(),
+              ),
+
+              // Dynamic AI Recommendations
+              ...recommendations.map((rec) {
+                // Alternating colors based on index or path type
+                final color = rec['path_type'] == 'The Specialist'
+                    ? const Color(0xFF4CAF50)
+                    : const Color(0xFFFF9800);
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: _CollegeProgramCard(
+                    borderColor: color,
+                    title: rec['title'] ?? 'Unknown Career',
+                    subtitle: rec['description'] ?? 'No description provided.',
+                  ),
+                );
+              }),
+
+              // CTA Bottom Card
+              _BlueprintCtaCard(
+                onStartDiscovery: () {
+                  Navigator.of(context).pop();
+                  widget.onNavigateToScan();
+                },
+              ),
+            ];
+
+            return ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+              child: Material(
+                color: theme.colorScheme.surface,
+                child: ListView.builder(
+                  controller: scrollController,
+                  padding: EdgeInsets.fromLTRB(20, 10, 20, bottomInset + 88),
+                  itemCount: sheetItems.length,
+                  itemBuilder: (context, index) {
+                    return sheetItems[index]
+                        .animate()
+                        .fade(duration: 600.ms, delay: (100 * index).ms)
+                        .slideY(
+                          begin: 0.1,
+                          end: 0,
+                          duration: 600.ms,
+                          curve: Curves.easeOutCubic,
+                        );
+                  },
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -168,7 +218,7 @@ class PathfinderBlueprintSheet extends StatelessWidget {
 }
 
 // -----------------------------------------------------------------------------
-// HELPER WIDGETS BELOW 
+// HELPER WIDGETS BELOW
 // -----------------------------------------------------------------------------
 
 class _StrongestFieldsCard extends StatelessWidget {
@@ -183,7 +233,10 @@ class _StrongestFieldsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface, // Themed Card Surface
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3), width: 1), // Themed Border
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1,
+        ), // Themed Border
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -263,7 +316,9 @@ class _FieldProgressRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6), // Themed Percentage
+                color: theme.colorScheme.onSurface.withValues(
+                  alpha: 0.6,
+                ), // Themed Percentage
               ),
             ),
           ],
@@ -276,7 +331,9 @@ class _FieldProgressRow extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                ColoredBox(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)), // Themed Empty Track
+                ColoredBox(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                ), // Themed Empty Track
                 FractionallySizedBox(
                   alignment: Alignment.centerLeft,
                   widthFactor: value.clamp(0.0, 1.0),
@@ -316,7 +373,10 @@ class _CollegeProgramCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: theme.colorScheme.surface, // Themed Background
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: borderColor.withValues(alpha: 0.6), width: 1.5),
+            border: Border.all(
+              color: borderColor.withValues(alpha: 0.6),
+              width: 1.5,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,7 +394,9 @@ class _CollegeProgramCard extends StatelessWidget {
                 subtitle,
                 style: TextStyle(
                   fontSize: 14,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed Subtitle
+                  color: theme.colorScheme.onSurface.withValues(
+                    alpha: 0.7,
+                  ), // Themed Subtitle
                   height: 1.35,
                 ),
               ),
@@ -349,14 +411,18 @@ class _CollegeProgramCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: theme.colorScheme.surface, // Themed Badge BG
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: borderColor.withValues(alpha: 0.6), width: 1),
+              border: Border.all(
+                color: borderColor.withValues(alpha: 0.6),
+                width: 1,
+              ),
             ),
             child: Text(
               'College Program',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: borderColor, // Directly use the passed border color for highest adaptive visibility
+                color:
+                    borderColor, // Directly use the passed border color for highest adaptive visibility
               ),
             ),
           ),
@@ -380,7 +446,10 @@ class _BlueprintCtaCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface, // Themed Background
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3), width: 1), // Themed Border
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1,
+        ), // Themed Border
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -399,9 +468,11 @@ class _BlueprintCtaCard extends StatelessWidget {
             'Upload a photo of any object around you and discover the concepts behind it!',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14, 
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7), // Themed Description
-              height: 1.35
+              fontSize: 14,
+              color: theme.colorScheme.onSurface.withValues(
+                alpha: 0.7,
+              ), // Themed Description
+              height: 1.35,
             ),
           ),
           const SizedBox(height: 18),
