@@ -16,6 +16,7 @@ Future<void> main() async {
   await dotenv.load(fileName: ".env");
 
   // 3. Initialize the Supabase connection
+  // Session persistence is automatic - tokens are stored in secure storage
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
