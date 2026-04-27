@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../../core/navigation/main_nav_scope.dart';
 
 class HomeHeader extends StatelessWidget {
   final String userName;
   final String heroTitle;
   final int xp;
+  final String? avatarUrl;
 
   const HomeHeader({
     super.key,
     required this.userName,
     required this.heroTitle,
     required this.xp,
+    this.avatarUrl,
   });
 
   @override
@@ -19,10 +22,30 @@ class HomeHeader extends StatelessWidget {
     
     return Row(
       children: [
-        CircleAvatar(
-          radius: 28,
-          backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-          child: Icon(Icons.person, size: 32, color: theme.colorScheme.primary),
+        // 2. Clickable Profile Icon -> Jumps to Tab 3 (Pathfinder)
+        GestureDetector(
+          onTap: () => MainNavScope.maybeOf(context)?.goToTab(3),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: theme.colorScheme.primary, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withOpacity(0.3),
+                  blurRadius: 10,
+                )
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 28,
+              backgroundColor: theme.colorScheme.surface,
+              // 1. Display fetched image if available, otherwise show Icon
+              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl!) : null,
+              child: avatarUrl == null 
+                  ? Icon(Icons.person, size: 32, color: theme.colorScheme.primary) 
+                  : null,
+            ),
+          ),
         ),
         const SizedBox(width: 16),
         Expanded(

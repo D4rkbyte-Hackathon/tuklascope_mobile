@@ -5,12 +5,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../scanner/tuklas_tutor_screen.dart';
 
-// Import our new extracted components
 import 'providers/home_provider.dart';
 import 'widgets/home_header.dart';
 import 'widgets/daily_motivation.dart';
 import 'widgets/hero_scan_button.dart';
-// Note: Assumes you put the Recommendation, Skill Tree, and Leaderboard widgets into 'home_preview_cards.dart'
 import 'widgets/home_preview_cards.dart'; 
 
 class HomeScreen extends ConsumerWidget {
@@ -19,26 +17,27 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    
-    // Watch our newly separated provider
     final statsAsync = ref.watch(homeStatsProvider);
 
-    // Extract values safely
     final userName = statsAsync.value?.userName ?? '...';
     final heroTitle = statsAsync.value?.heroTitle ?? '...';
     final xp = statsAsync.value?.totalPoints ?? 0;
     final streak = statsAsync.value?.dailyStreak ?? 0;
-    final scans = statsAsync.value?.todayScansCount ?? 0;
+    final avatarUrl = statsAsync.value?.avatarUrl;
 
     return GradientScaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(
-          context, MaterialPageRoute(builder: (_) => const TuklasTutorScreen()),
-        ),
-        backgroundColor: theme.colorScheme.primary,
-        icon: const Icon(Icons.auto_awesome, color: Colors.white),
-        label: const Text("Ask Tutor", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      ).animate().scale(delay: 500.ms, duration: 400.ms, curve: Curves.easeOutBack),
+      // 5. Wrap the FAB in Padding to push it ABOVE your custom navigation bar!
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 90.0), 
+        child: FloatingActionButton.extended(
+          onPressed: () => Navigator.push(
+            context, MaterialPageRoute(builder: (_) => const TuklasTutorScreen()),
+          ),
+          backgroundColor: theme.colorScheme.primary,
+          icon: const Icon(Icons.auto_awesome, color: Colors.white),
+          label: const Text("Ask Tutor", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ).animate().scale(delay: 500.ms, duration: 400.ms, curve: Curves.easeOutBack),
+      ),
       
       body: SafeArea(
         child: RefreshIndicator(
@@ -49,20 +48,26 @@ class HomeScreen extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverPadding(
-                padding: EdgeInsets.fromLTRB(16.0, 20.0, 16.0, MediaQuery.paddingOf(context).bottom + 80),
+                // Added extra bottom padding so the last item isn't hidden by the navbar
+                padding: EdgeInsets.fromLTRB(16.0, 20.0, 16.0, MediaQuery.paddingOf(context).bottom + 120),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     
-                    HomeHeader(userName: userName, heroTitle: heroTitle, xp: xp),
+                    HomeHeader(
+                      userName: userName, 
+                      heroTitle: heroTitle, 
+                      xp: xp,
+                      avatarUrl: avatarUrl,
+                    ),
                     const SizedBox(height: 24),
 
-                    DailyMotivation(streak: streak, scans: scans),
-                    const SizedBox(height: 32),
+                    // Daily motivation no longer needs scans count
+                    DailyMotivation(streak: streak),
+                    const SizedBox(height: 48),
 
                     const HeroScanButton(),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 48),
 
-                    // Assuming you moved the remaining widgets to home_preview_cards.dart
                     const QuickRecommendationCard(),
                     const SizedBox(height: 24),
 

@@ -12,32 +12,75 @@ class HeroScanButton extends StatelessWidget {
     return Center(
       child: GestureDetector(
         onTap: () => MainNavScope.maybeOf(context)?.goToTab(1),
-        child: Container(
-          width: 200, height: 200,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
-              begin: Alignment.topLeft, end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(color: theme.colorScheme.primary.withOpacity(0.4), blurRadius: 30, spreadRadius: 10),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.document_scanner_rounded, size: 70, color: Colors.white),
-              SizedBox(height: 12),
-              Text(
-                "TAP TO SCAN",
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 1.5),
+        child: SizedBox(
+          width: 260,
+          height: 260,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // 4. Outer Expanding Ripple
+              Container(
+                width: 240, height: 240,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: theme.colorScheme.secondary.withOpacity(0.5), width: 2),
+                ),
+              ).animate(onPlay: (controller) => controller.repeat())
+               .scaleXY(begin: 0.8, end: 1.2, duration: 2.seconds, curve: Curves.easeOut)
+               .fadeOut(duration: 2.seconds, curve: Curves.easeOut),
+
+              // Middle Glowing Ring
+              Container(
+                width: 190, height: 190,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3), width: 4),
+                  boxShadow: [
+                    BoxShadow(color: theme.colorScheme.primary.withOpacity(0.3), blurRadius: 20, spreadRadius: 5),
+                  ],
+                ),
+              ),
+
+              // Core Sci-Fi Button
+              Container(
+                width: 150, height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [theme.colorScheme.primary, const Color(0xFF0D3B66)],
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withOpacity(0.6),
+                      blurRadius: 30, offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.document_scanner_rounded, size: 50, color: Colors.white)
+                        .animate(onPlay: (c) => c.repeat(reverse: true))
+                        .slideY(begin: -0.1, end: 0.1, duration: 1.seconds),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "SCAN",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                        letterSpacing: 3,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
-      ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-       .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 2.seconds),
+      ).animate().scale(delay: 200.ms, duration: 600.ms, curve: Curves.easeOutBack),
     );
   }
 }

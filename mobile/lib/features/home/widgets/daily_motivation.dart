@@ -3,13 +3,27 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 class DailyMotivation extends StatelessWidget {
   final int streak;
-  final int scans;
+  
+  const DailyMotivation({super.key, required this.streak});
 
-  const DailyMotivation({super.key, required this.streak, required this.scans});
+  // A list of cool science/discovery facts
+  static const List<String> _funFacts = [
+    "Bananas are slightly radioactive because of potassium! 🍌",
+    "Water can boil and freeze at the same time (triple point). 🧊",
+    "A day on Venus is longer than a year on Venus! 🪐",
+    "Octopuses have three hearts and blue blood. 🐙",
+    "Honey never spoils. Archaeologists found edible honey in ancient Egyptian tombs! 🍯",
+    "There are more trees on Earth than stars in the Milky Way. 🌲",
+    "Wombat poop is cube-shaped to stop it from rolling away! ⬛"
+  ];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    
+    // 3. Pseudo-random logic: Changes exactly once per day
+    final dayOfYear = DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
+    final dailyFact = _funFacts[dayOfYear % _funFacts.length];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -25,15 +39,18 @@ class DailyMotivation extends StatelessWidget {
         children: [
           Column(
             children: [
-              Icon(Icons.local_fire_department_rounded, size: 40, color: theme.colorScheme.secondary),
+              Icon(Icons.local_fire_department_rounded, size: 40, color: theme.colorScheme.secondary)
+                  .animate(onPlay: (c) => c.repeat(reverse: true))
+                  .scaleXY(end: 1.1, duration: 1.seconds),
               Text(
-                "$streak Day Streak",
-                style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.secondary),
+                "$streak Day\nStreak",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.secondary, height: 1.2),
               )
             ],
           ),
           Container(
-            height: 50, width: 1,
+            height: 60, width: 1,
             color: theme.dividerColor,
             margin: const EdgeInsets.symmetric(horizontal: 16),
           ),
@@ -41,10 +58,19 @@ class DailyMotivation extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Siyensya Thursday 🧬", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: theme.colorScheme.primary)),
-                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline, size: 16, color: theme.colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      "Did you know?", 
+                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: theme.colorScheme.primary)
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 Text(
-                  "Scan a plant to earn 2x XP today! ($scans/3 Scans)",
+                  dailyFact,
                   style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.8), height: 1.3),
                 ),
               ],
