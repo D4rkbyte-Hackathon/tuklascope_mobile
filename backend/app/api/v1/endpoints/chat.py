@@ -12,7 +12,7 @@ router = APIRouter()
 async def chat_with_tutor(
     request: ChatRequest,
     # Lock this route down! Only authenticated Flutter users can talk to the tutor.
-    db_data: tuple[Client, str] = Depends(get_user_db_client)
+    db_data: tuple[Client, str] = Depends(get_user_db_client),
 ):
     try:
         # db_client and user_id are available here to save chat logs to Supabase later
