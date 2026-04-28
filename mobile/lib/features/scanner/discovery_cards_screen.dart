@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:async'; // 🚀 NEW: Required for the text timer
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuklascope_mobile/features/home/providers/home_provider.dart';
@@ -22,22 +24,62 @@ class DiscoveryCardsScreen extends ConsumerStatefulWidget {
   });
 
   @override
+  // 🚀 NEW: Added TickerProviderStateMixin for the advanced animation
   ConsumerState<DiscoveryCardsScreen> createState() =>
       _DiscoveryCardsScreenState();
 }
 
-class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
+class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
+    with TickerProviderStateMixin {
   int _selectedIndex = 0; // 0: Fun Fact, 1: Lesson, 2: Real World
   bool _isLoading = true;
   String? _error;
   Map<String, dynamic>? _deckData;
-
   final int baseRewardXp = 50;
+
+  // 🚀 NEW: Animation & Timer Variables
+  late AnimationController _scanController;
+  Timer? _phraseTimer;
+  int _currentPhraseIndex = 0;
+  late final List<String> _loadingPhrases;
 
   @override
   void initState() {
     super.initState();
+
+    // 🚀 NEW: The dynamic phrases the AI cycles through
+    _loadingPhrases = [
+      'Calibrating AI lenses...',
+      'Analyzing structural composition...',
+      'Cross-referencing historical data...',
+      'Extracting core concepts...',
+      'Synthesizing ${widget.selectedLens} pathways...',
+    ];
+
+    // 🚀 NEW: Setup the sweeping laser animation loop
+    _scanController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    // 🚀 NEW: Setup the timer to change the text every 2.5 seconds
+    _phraseTimer = Timer.periodic(const Duration(milliseconds: 2500), (timer) {
+      if (mounted && _isLoading) {
+        setState(() {
+          _currentPhraseIndex =
+              (_currentPhraseIndex + 1) % _loadingPhrases.length;
+        });
+      }
+    });
+
     _fetchLearningDeck();
+  }
+
+  @override
+  void dispose() {
+    _scanController.dispose();
+    _phraseTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchLearningDeck() async {
@@ -68,140 +110,256 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
     }
   }
 
+  IconData _getLensIcon() {
+    switch (widget.selectedLens.toUpperCase()) {
+      case 'STEM':
+        return Icons.science;
+      case 'ABM':
+        return Icons.trending_up;
+      case 'HUMSS':
+        return Icons.public;
+      case 'TVL':
+        return Icons.handyman;
+      default:
+        return Icons.lightbulb;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // 🚀 NEW: This is no longer a Scaffold. It's a Container meant to slide up as a Bottom Sheet!
-    return Container(
-      height:
-          MediaQuery.of(context).size.height * 0.85, // Takes up 85% of screen
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 30,
-            offset: const Offset(0, -10),
-          ),
-        ],
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      child: Stack(
+      floatingActionButton: _deckData != null && !_isLoading
+          ? FloatingActionButton.extended(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text(
+                'Ask Tutor',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              onPressed: () {
+                final conceptCard =
+                    _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
+                showTuklasTutorSheet(
+                  context,
+                  objectName: widget.objectName,
+                  strand: widget.selectedLens,
+                  currentCardContent: conceptCard['lesson_text'] ?? '',
+                );
+              },
+            )
+          : null,
+      bottomNavigationBar: _deckData != null && !_isLoading
+          ? _buildChallengeBottomBar(theme)
+          : null,
+      body: _isLoading
+          ? _buildAnimatedLoadingState(theme)
+          : _error != null
+          ? Center(
+              child: Text(
+                _error!,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            )
+          : _buildContent(theme),
+    );
+  }
+
+  // 🚀 NEW: The Cyber-Scanner Animation UI
+  Widget _buildAnimatedLoadingState(ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: FileImage(File(widget.imagePath)),
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(
+            Colors.black.withValues(alpha: 0.85),
+            BlendMode.darken,
+          ),
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Column(
-            children: [
-              // Small drag handle indicator
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 12),
-                  height: 5,
-                  width: 50,
+          // Cyber Scanner Box
+          SizedBox(
+            height: 150,
+            width: 150,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Glowing outer ring
+                Container(
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.15,
+                        ),
+                        blurRadius: 40,
+                        spreadRadius: 10,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              Expanded(
-                child: _isLoading
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(height: 24),
-                            Text(
-                              'Synthesizing ${widget.selectedLens} Knowledge...',
-                              style: TextStyle(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
+                // The Central Icon
+                Icon(
+                  _getLensIcon(),
+                  size: 60,
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
+
+                // The Sweeping Laser Line
+                AnimatedBuilder(
+                  animation: _scanController,
+                  builder: (context, child) {
+                    // Moving the line from top (0) to bottom (150)
+                    return Positioned(
+                      top: _scanController.value * 145,
+                      child: Container(
+                        width: 150,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondary,
+                          boxShadow: [
+                            BoxShadow(
+                              color: theme.colorScheme.secondary,
+                              blurRadius: 15,
+                              spreadRadius: 3,
                             ),
                           ],
                         ),
-                      )
-                    : _error != null
-                    ? Center(
-                        child: Text(
-                          _error!,
-                          style: TextStyle(color: theme.colorScheme.error),
-                        ),
-                      )
-                    : _buildContent(theme),
-              ),
-            ],
-          ),
-
-          // Ask Tutor FAB mapped to top right of the sheet
-          if (_deckData != null)
-            Positioned(
-              top: 20,
-              right: 20,
-              child: FloatingActionButton.extended(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
-                icon: const Icon(Icons.auto_awesome, size: 20),
-                label: const Text(
-                  'Ask Tutor',
-                  style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    );
+                  },
                 ),
-                onPressed: () {
-                  final conceptCard =
-                      _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
-                  showTuklasTutorSheet(
-                    context,
-                    objectName: widget.objectName,
-                    strand: widget.selectedLens,
-                    currentCardContent: conceptCard['lesson_text'] ?? '',
-                  );
-                },
-              ),
+              ],
             ),
+          ),
+          const SizedBox(height: 50),
+
+          // 🚀 NEW: Cross-fading, sliding dynamic text
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 600),
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.0, 0.5),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              );
+            },
+            child: Text(
+              _loadingPhrases[_currentPhraseIndex],
+              key: ValueKey<int>(
+                _currentPhraseIndex,
+              ), // Key forces the switch animation
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'UNLOCKING SECRETS',
+            style: TextStyle(
+              color: theme.colorScheme.primary,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 4,
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildContent(ThemeData theme) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 350,
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                Text(
-                  '${widget.selectedLens.toUpperCase()}: ${widget.objectName}',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    color: theme.colorScheme.primary,
-                    height: 1.1,
+                Image.file(File(widget.imagePath), fit: BoxFit.cover),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.6),
+                        Colors.transparent,
+                        theme.scaffoldBackgroundColor,
+                      ],
+                      stops: const [0.0, 0.4, 1.0],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    _buildTabButton(0, 'Fun Fact', Icons.bolt, theme),
-                    const SizedBox(width: 8),
-                    _buildTabButton(1, 'Lesson', Icons.menu_book, theme),
-                    const SizedBox(width: 8),
-                    _buildTabButton(2, 'Real World', Icons.public, theme),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildActiveCard(theme),
               ],
             ),
           ),
-        ),
-        _buildChallengeBottomBar(theme),
-      ],
+          Transform.translate(
+            offset: const Offset(0, -30),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${widget.selectedLens.toUpperCase()}: ${widget.objectName}',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.primary,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      _buildTabButton(0, 'Fun Fact', Icons.bolt, theme),
+                      const SizedBox(width: 8),
+                      _buildTabButton(1, 'Lesson', Icons.menu_book, theme),
+                      const SizedBox(width: 8),
+                      _buildTabButton(2, 'Real World', Icons.public, theme),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _buildActiveCard(theme),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -217,7 +375,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
         onTap: () => setState(() => _selectedIndex = index),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
             color: isSelected
                 ? theme.colorScheme.secondary
@@ -237,14 +395,13 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                 color: isSelected
                     ? theme.colorScheme.onSecondary
                     : theme.colorScheme.primary,
-                size: 24,
+                size: 28,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
                 label,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
                   color: isSelected
                       ? theme.colorScheme.onSecondary
                       : theme.colorScheme.onSurface,
@@ -266,7 +423,6 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
         'Mind-Blowing Fact',
         realWorld['fun_fact'] ?? '',
         theme,
-        isAccent: true,
       );
     } else if (_selectedIndex == 1) {
       return _buildGlassSection(
@@ -289,69 +445,48 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
     String content,
     ThemeData theme, {
     String? badgeText,
-    bool isAccent = false,
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: isAccent
-            ? theme.colorScheme.primary.withValues(alpha: 0.1)
-            : theme.colorScheme.surface.withValues(alpha: 0.9),
+        color: theme.colorScheme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isAccent
-              ? theme.colorScheme.primary.withValues(alpha: 0.3)
-              : theme.colorScheme.onSurface.withValues(alpha: 0.1),
+          color: theme.colorScheme.primary.withValues(alpha: 0.3),
           width: 2,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment:
-                CrossAxisAlignment.start, // Align to top in case title wraps
-            children: [
-              // 🚀 FIX: Wrapped Title in Expanded to prevent RenderFlex Overflow!
-              Expanded(
-                child: Text(
-                  title.toUpperCase(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: isAccent
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.secondary,
-                    letterSpacing: 1.5,
-                  ),
+          if (badgeText != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                badgeText.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.primary,
+                  letterSpacing: 1,
                 ),
               ),
-              if (badgeText != null)
-                Flexible(
-                  // 🚀 FIX: Wrapped Badge in Flexible so it yields space if needed
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    margin: const EdgeInsets.only(left: 12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      badgeText.toUpperCase(),
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+            ),
+            const SizedBox(height: 16),
+          ],
+          Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: theme.colorScheme.primary,
+              letterSpacing: 1.5,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -359,7 +494,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
             style: TextStyle(
               fontSize: 16,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
-              height: 1.6,
+              height: 1.7,
             ),
           ),
         ],
@@ -425,7 +560,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      isDismissible: false, // Prevent accidental closing
+      isDismissible: false,
       enableDrag: false,
       backgroundColor: Colors.transparent,
       builder: (context) {
@@ -474,7 +609,6 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                         Color borderColor = theme.colorScheme.onSurface
                             .withValues(alpha: 0.1);
 
-                        // 🚀 NEW ANTI-FARMING STYLING
                         if (hasAnswered) {
                           if (isThisSelected && isCorrect) {
                             buttonColor = Colors.green.withValues(alpha: 0.2);
@@ -536,15 +670,12 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                                   if (isCorrect) {
                                     _saveProgressToBackend();
                                   } else {
-                                    // 🚀 NEW: KICK OUT LOGIC FOR WRONG ANSWERS
                                     Future.delayed(
                                       const Duration(milliseconds: 2500),
                                       () {
                                         if (context.mounted) {
-                                          Navigator.pop(context); // Close modal
-                                          Navigator.pop(
-                                            context,
-                                          ); // Kick out of card
+                                          Navigator.pop(context);
+                                          Navigator.pop(context);
                                         }
                                       },
                                     );
