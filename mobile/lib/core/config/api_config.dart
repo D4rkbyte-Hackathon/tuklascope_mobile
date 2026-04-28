@@ -19,5 +19,5 @@ class ApiConfig {
   static String get generateLearnDeck => '$baseUrl/learn/generate-deck';
   static String get pathfinderAnalyze => '$baseUrl/pathfinder/recommend';
   static String get pathfinderSkills => '$baseUrl/pathfinder/skills';
-  static String get chatAsk => '$baseUrl/chat/ask';
+  static String get chatAsk => '$baseUrl/chat';
 }
