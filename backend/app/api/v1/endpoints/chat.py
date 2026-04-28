@@ -8,7 +8,7 @@ from app.core.security import get_user_db_client
 router = APIRouter()
 
 
-@router.post("/", response_model=ChatResponse)
+@router.post("", response_model=ChatResponse)
 async def chat_with_tutor(
     request: ChatRequest,
     # Lock this route down! Only authenticated Flutter users can talk to the tutor.
