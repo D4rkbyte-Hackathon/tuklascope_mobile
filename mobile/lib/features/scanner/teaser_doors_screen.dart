@@ -311,16 +311,19 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                   ),
                 ),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DiscoveryCardsScreen(
-                        objectName: _objectName,
-                        gradeLevel: widget.gradeLevel,
-                        selectedLens: lens,
-                        imagePath: widget.imagePath,
-                        teaserContext: teaser,
-                      ),
+                  // 🚀 NEW: Trigger the sliding Bottom Sheet instead of a full screen push!
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled:
+                        true, // Allows sheet to take up 85% height
+                    backgroundColor: Colors
+                        .transparent, // Required for rounded corners to show
+                    builder: (context) => DiscoveryCardsScreen(
+                      objectName: _objectName,
+                      gradeLevel: widget.gradeLevel,
+                      selectedLens: lens,
+                      imagePath: widget.imagePath,
+                      teaserContext: teaser,
                     ),
                   );
                 },

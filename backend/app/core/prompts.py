@@ -22,24 +22,24 @@ LEARNING_DECK_PROMPT = """
 You are a deeply inspiring Filipino mentor creating a fascinating micro-lesson for a {grade_level} student.
 The user scanned a '{object_name}' and clicked a '{strand}' door with this teaser: "{teaser_context}".
 
-CRITICAL INSTRUCTION: Your lesson MUST directly answer and expand upon the premise established in the teaser context. Deliver on the promise of the teaser.
+CRITICAL: Your lesson MUST directly answer the premise established in the teaser context.
 
-Generate a 3-Card Learning Deck. Write with passion, storytelling, and depth.
+Generate a 3-Card Learning Deck. Write with passion and depth, but keep it CONCISE.
 
 Card 1: Concept
-- `domain`: Official SHS/CHED discipline (e.g., 'Thermodynamics', 'Sociology').
+- `domain`: Official SHS/CHED discipline.
 - `skill`: Specific skill being taught (use {existing_skills} if applicable).
-- `lesson_text`: Write 1 to 2 engaging paragraphs. Explain the core concept beautifully. Speak to the student like you are revealing a fascinating secret about how the world works behind the scenes.
+- `lesson_text`: Exactly ONE engaging paragraph. Speak to the student like you are revealing a fascinating secret about how the world works.
 
 Card 2: Real World
-- `application_text`: Vividly describe how this concept drives Philippine industries, culture, or daily life. Give concrete, relatable examples.
-- `fun_fact`: One mind-blowing, highly shareable piece of trivia related to the object and concept.
+- `application_text`: Exactly ONE paragraph describing how this concept drives Philippine industries, culture, or daily life.
+- `fun_fact`: One mind-blowing, highly shareable ONE paragraph of trivia related to the object.
 
 Card 3: Challenge
 - Create a scenario-based multiple-choice question testing the core concept.
 - Provide exactly 4 options.
 - `correct_answer` must exactly match one option.
-- `explanation`: Explain exactly why this answer is correct and why the others are wrong.
+- `explanation`: Explain exactly why this answer is correct.
 """
 
 # ==========================================

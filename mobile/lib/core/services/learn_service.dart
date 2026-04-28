@@ -23,6 +23,7 @@ class LearnService {
       );
 
       if (response.statusCode == 200) {
+        debugPrint('🎯 AI DECK RESPONSE: ${response.body}');
         return jsonDecode(response.body);
       } else {
         debugPrint(
