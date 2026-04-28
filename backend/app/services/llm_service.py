@@ -7,7 +7,6 @@ from langchain_core.messages import HumanMessage
 from app.core.config import settings
 from app.core.prompts import (
     VISION_DISCOVERY_PROMPT,
-    TEXT_DISCOVERY_PROMPT,
     LEARNING_DECK_PROMPT,
     PATHFINDER_PROMPT,
 )
