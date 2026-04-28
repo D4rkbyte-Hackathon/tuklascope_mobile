@@ -24,6 +24,7 @@ class ChatService {
       final response = await ApiClient.post(ApiConfig.chatAsk, body: payload);
 
       if (response.statusCode == 200) {
+        debugPrint('💬 TUTOR RESPONSE: ${response.body}');
         final data = jsonDecode(utf8.decode(response.bodyBytes));
         return data['reply'];
       } else {
