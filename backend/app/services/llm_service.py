@@ -38,28 +38,6 @@ LLM_TIMEOUT = 25.0
 # ==========================================
 
 
-async def generate_discovery_cards(data: DiscoverRequest) -> DiscoverResponse:
-    try:
-        prompt_text = TEXT_DISCOVERY_PROMPT.format(
-            scanned_object=data.scanned_object, grade_level=data.grade_level.value
-        )
-        return await asyncio.wait_for(
-            structured_discover.ainvoke(prompt_text), timeout=LLM_TIMEOUT
-        )
-
-    except asyncio.TimeoutError:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Tuklascope AI is taking too long to think. Please try again.",
-        )
-    except Exception as e:
-        # 422 for when AI fails to parse the structure
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Failed to generate discovery paths: {str(e)}",
-        )
-
-
 async def generate_discovery_from_image(
     image_bytes: bytes, grade_level: str
 ) -> DiscoverResponse:
@@ -117,13 +95,18 @@ async def generate_holistic_pathfinder(
 
 
 async def generate_learning_deck(
-    object_name: str, strand: str, grade_level: str, existing_skills: list[str]
+    object_name: str,
+    strand: str,
+    grade_level: str,
+    teaser_context: str,
+    existing_skills: list[str],
 ) -> LearningDeckResponse:
     try:
         prompt_text = LEARNING_DECK_PROMPT.format(
             grade_level=grade_level,
             object_name=object_name,
             strand=strand,
+            teaser_context=teaser_context,
             existing_skills=existing_skills,
         )
         return await asyncio.wait_for(
