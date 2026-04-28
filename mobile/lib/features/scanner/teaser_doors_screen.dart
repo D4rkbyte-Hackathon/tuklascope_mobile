@@ -1,11 +1,12 @@
+import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../../core/widgets/gradient_scaffold.dart';
 import 'discovery_cards_screen.dart';
 
 class TeaserDoorsScreen extends StatefulWidget {
   final Map<String, dynamic> aiData;
   final String imagePath;
-  final String gradeLevel; // 🚀 NEW: Receive from Scanner Modal
+  final String gradeLevel;
 
   const TeaserDoorsScreen({
     super.key,
@@ -24,7 +25,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.8);
+    _pageController = PageController(viewportFraction: 0.85);
   }
 
   @override
@@ -39,11 +40,11 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
   IconData _getIconForStrand(String lens) {
     switch (lens.toUpperCase()) {
       case 'STEM':
-        return Icons.settings;
+        return Icons.science;
       case 'ABM':
-        return Icons.bar_chart;
+        return Icons.trending_up;
       case 'HUMSS':
-        return Icons.history_edu;
+        return Icons.public;
       case 'TVL':
         return Icons.handyman;
       default:
@@ -71,100 +72,121 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
     final theme = Theme.of(context);
 
     if (_teaserDoors.isEmpty) {
-      return GradientScaffold(
+      return Scaffold(
         appBar: AppBar(title: const Text('Error')),
         body: const Center(child: Text('No pathways found.')),
       );
     }
 
-    return GradientScaffold(
+    return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(
-          _objectName,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        // 🚀 FIX: Swapped "Choose your lens" to the top, small and subtle
+        title: const Text(
+          'Choose your lens',
           style: TextStyle(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w900,
+            color: Colors.white70,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            letterSpacing: 1,
           ),
         ),
         centerTitle: true,
-        iconTheme: IconThemeData(color: theme.colorScheme.primary),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 20),
-            RichText(
-              text: TextSpan(
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  fontFamily: 'Roboto',
-                ),
-                children: [
-                  TextSpan(
-                    text: 'Open a ',
-                    style: TextStyle(color: theme.colorScheme.primary),
+      body: Stack(
+        children: [
+          // 1. IMMERSIVE BACKGROUND: The user's actual photo
+          Positioned.fill(
+            child: Image.file(
+              File(widget.imagePath),
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: theme.scaffoldBackgroundColor,
+                child: const Center(
+                  child: Icon(
+                    Icons.broken_image,
+                    color: Colors.white24,
+                    size: 100,
                   ),
-                  TextSpan(
-                    text: 'Door',
-                    style: TextStyle(color: theme.colorScheme.secondary),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: Text(
-                'Swipe to explore the hidden knowledge within this artifact.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  height: 1.5,
                 ),
               ),
             ),
-            const SizedBox(height: 30),
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                physics: const BouncingScrollPhysics(),
-                itemCount: _teaserDoors.length,
-                itemBuilder: (context, index) {
-                  return AnimatedBuilder(
-                    animation: _pageController,
-                    builder: (context, child) {
-                      final double page =
-                          _pageController.position.haveDimensions
-                          ? _pageController.page!
-                          : 0.0;
-                      final double difference = (page - index).abs();
-                      final double scale = (1 - (difference * 0.15)).clamp(
-                        0.85,
-                        1.0,
-                      );
-                      final double opacity = (1 - (difference * 0.4)).clamp(
-                        0.4,
-                        1.0,
-                      );
+          ),
+          // 2. LITE FROSTED OVERLAY
+          Positioned.fill(
+            child: BackdropFilter(
+              // 🚀 FIX: Drastically lowered blur and darkness so the photo is highly visible
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Container(
+                color: Colors.black.withValues(
+                  alpha: 0.4,
+                ), // Let the photo shine through!
+              ),
+            ),
+          ),
+          // 3. MAIN CONTENT
+          SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                // 🚀 FIX: Scanned Object is now here. Normal casing, normal spacing.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    _objectName,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0, // Normal spacing
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: _teaserDoors.length,
+                    itemBuilder: (context, index) {
+                      return AnimatedBuilder(
+                        animation: _pageController,
+                        builder: (context, child) {
+                          final double page =
+                              _pageController.position.haveDimensions
+                              ? _pageController.page!
+                              : 0.0;
+                          final double difference = (page - index).abs();
+                          final double scale = (1 - (difference * 0.1)).clamp(
+                            0.9,
+                            1.0,
+                          );
+                          final double opacity = (1 - (difference * 0.5)).clamp(
+                            0.4,
+                            1.0,
+                          );
 
-                      return Transform.scale(
-                        scale: scale,
-                        child: Opacity(
-                          opacity: opacity,
-                          child: _buildMagicalDoor(context, index, theme),
-                        ),
+                          return Transform.scale(
+                            scale: scale,
+                            child: Opacity(
+                              opacity: opacity,
+                              child: _buildMagicalDoor(context, index, theme),
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
-              ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
             ),
-            const SizedBox(height: 40),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -174,8 +196,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
     final lens = door['lens'] ?? 'Unknown';
     final title = door['title'] ?? 'Mysterious Path';
     final teaser = door['teaser_text'] ?? '';
-
-    // 🚀 FIX: Gamification integrity. Lock base XP to 50 instead of AI hallucination.
     const int xp = 50;
 
     final Color strandColor = _getColorForStrand(lens);
@@ -184,12 +204,14 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: strandColor.withValues(alpha: 0.3), width: 2),
+        color: theme.colorScheme.surface.withValues(
+          alpha: 0.90,
+        ), // Slightly more opaque to contrast with the clearer image
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: strandColor.withValues(alpha: 0.5), width: 2),
         boxShadow: [
           BoxShadow(
-            color: strandColor.withValues(alpha: 0.15),
+            color: strandColor.withValues(alpha: 0.2),
             blurRadius: 30,
             spreadRadius: 5,
             offset: const Offset(0, 10),
@@ -202,15 +224,14 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: strandColor.withValues(alpha: 0.1),
+                    color: strandColor.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, color: strandColor, size: 32),
+                  child: Icon(icon, color: strandColor, size: 36),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -218,8 +239,11 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -232,9 +256,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                       Text(
                         '+$xp XP',
                         style: TextStyle(
-                          color: theme.colorScheme.onPrimary,
+                          color: theme.colorScheme.primary,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -242,58 +265,47 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 30),
             Text(
               lens.toUpperCase(),
               style: TextStyle(
                 color: strandColor,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 2,
-                fontSize: 14,
+                fontSize: 16,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               title,
               textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
+                color: theme.colorScheme.onSurface,
                 height: 1.2,
               ),
             ),
-            const SizedBox(height: 16),
-            Divider(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-              thickness: 2,
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Text(
-                  teaser,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
-                    height: 1.5,
-                  ),
-                ),
+            const Spacer(),
+            Text(
+              teaser,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                height: 1.5,
               ),
             ),
-            const SizedBox(height: 20),
+            const Spacer(),
             SizedBox(
               width: double.infinity,
-              height: 55,
+              height: 60,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: strandColor,
                   foregroundColor: Colors.white,
-                  elevation: 0,
+                  elevation: 5,
+                  shadowColor: strandColor.withValues(alpha: 0.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -304,20 +316,20 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                     MaterialPageRoute(
                       builder: (context) => DiscoveryCardsScreen(
                         objectName: _objectName,
-                        gradeLevel:
-                            widget.gradeLevel, // 🚀 FIX: Passed real grade
+                        gradeLevel: widget.gradeLevel,
                         selectedLens: lens,
                         imagePath: widget.imagePath,
+                        teaserContext: teaser,
                       ),
                     ),
                   );
                 },
                 child: const Text(
-                  'Step Through',
+                  'ENTER PORTAL',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
                   ),
                 ),
               ),

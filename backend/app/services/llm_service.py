@@ -11,7 +11,7 @@ from app.core.prompts import (
     LEARNING_DECK_PROMPT,
     PATHFINDER_PROMPT,
 )
-from app.schemas.discover import DiscoverResponse, DiscoverRequest
+from app.schemas.discover import DiscoverResponse
 from app.schemas.pathfinder import PathfinderResponse
 from app.schemas.cards import LearningDeckResponse
 

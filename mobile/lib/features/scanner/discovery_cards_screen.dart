@@ -1,6 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:tuklascope_mobile/features/home/providers/home_provider.dart';
-import '../../core/widgets/gradient_scaffold.dart';
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
 import '../../core/services/discovery_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +11,7 @@ class DiscoveryCardsScreen extends ConsumerStatefulWidget {
   final String gradeLevel;
   final String selectedLens;
   final String imagePath;
+  final String teaserContext; // 🚀 NEW: Receive the context!
 
   const DiscoveryCardsScreen({
     super.key,
@@ -18,6 +19,7 @@ class DiscoveryCardsScreen extends ConsumerStatefulWidget {
     required this.gradeLevel,
     required this.selectedLens,
     required this.imagePath,
+    required this.teaserContext,
   });
 
   @override
@@ -31,7 +33,6 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   String? _error;
   Map<String, dynamic>? _deckData;
 
-  // 🚀 Gamification Constant
   final int baseRewardXp = 50;
 
   @override
@@ -48,22 +49,21 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
 
     final data = await LearnService.generateDeck(
       objectName: widget.objectName,
-      gradeLevel: widget.gradeLevel, // Now using real grade!
+      gradeLevel: widget.gradeLevel,
       selectedLens: widget.selectedLens,
+      teaserContext: widget.teaserContext, // 🚀 Pass to backend!
     );
 
     if (!mounted) return;
 
     if (data != null) {
-      debugPrint('🎯 AI DECK RESPONSE: $data');
       setState(() {
         _deckData = data;
         _isLoading = false;
       });
     } else {
       setState(() {
-        _error =
-            'Failed to generate the learning deck. Please check your connection.';
+        _error = 'Failed to generate the learning deck. Please try again.';
         _isLoading = false;
       });
     }
@@ -73,32 +73,39 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return GradientScaffold(
-      appBar: AppBar(/* ... existing ... */),
-      // 🚀 NEW: Add the floating action button here!
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      // 🚀 FIX: The FAB now floats naturally above the bottom navigation bar
       floatingActionButton: _deckData != null
           ? FloatingActionButton.extended(
               backgroundColor: theme.colorScheme.primary,
-              foregroundColor: theme.colorScheme.onPrimary,
+              foregroundColor: Colors.white,
               icon: const Icon(Icons.auto_awesome),
               label: const Text(
                 'Ask Tutor',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.w900),
               ),
               onPressed: () {
-                // Extract whatever text the user is currently reading
                 final conceptCard =
                     _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
-                final lessonText = conceptCard['lesson_text'] ?? '';
-
                 showTuklasTutorSheet(
                   context,
                   objectName: widget.objectName,
                   strand: widget.selectedLens,
-                  currentCardContent: lessonText,
+                  currentCardContent: conceptCard['lesson_text'] ?? '',
                 );
               },
             )
+          : null,
+      // 🚀 FIX: The Challenge Button is locked to the bottom to prevent overlap
+      bottomNavigationBar: _deckData != null
+          ? _buildChallengeBottomBar(theme)
           : null,
       body: _isLoading
           ? Center(
@@ -106,12 +113,13 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(color: theme.colorScheme.primary),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   Text(
-                    'Generating custom lesson...',
+                    'Synthesizing ${widget.selectedLens} Knowledge...',
                     style: TextStyle(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
                 ],
@@ -119,178 +127,25 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
             )
           : _error != null
           ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      color: theme.colorScheme.error,
-                      size: 48,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _fetchLearningDeck,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: theme.colorScheme.onPrimary,
-                      ),
-                      child: const Text('Try Again'),
-                    ),
-                  ],
-                ),
+              child: Text(
+                _error!,
+                style: TextStyle(color: theme.colorScheme.error),
               ),
             )
           : _buildContent(theme),
     );
   }
 
-  Widget _buildContent(ThemeData theme) {
-    final imageUrl =
-        _deckData?['image_url'] ??
-        'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?q=80&w=1000&auto=format&fit=crop';
-
-    return Stack(
-      children: [
-        SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 100),
-          child: Column(
-            children: [
-              SizedBox(
-                height: 350,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: theme.colorScheme.surface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.45),
-                            Colors.transparent,
-                            theme.scaffoldBackgroundColor,
-                          ],
-                          stops: const [0.0, 0.4, 1.0],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Transform.translate(
-                offset: const Offset(0, -20),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${widget.selectedLens.toUpperCase()}: ${widget.objectName}',
-                              style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w900,
-                                color: theme.colorScheme.primary,
-                                height: 1.1,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.secondary,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.star,
-                                  color: theme.colorScheme.onSecondary,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '+$baseRewardXp XP', // 🚀 Gamification strict sync
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                      Row(
-                        children: [
-                          _buildTabButton(0, 'Quick Fact', Icons.bolt, theme),
-                          const SizedBox(width: 8),
-                          _buildTabButton(
-                            1,
-                            'Concepts',
-                            Icons.lightbulb_outline,
-                            theme,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildTabButton(
-                            2,
-                            'Hands-on',
-                            Icons.build_circle_outlined,
-                            theme,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      _buildActiveCard(theme),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Positioned(
-          bottom: 24,
-          left: 24,
-          right: 24,
-          child: _buildChallengeButton(theme),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildChallengeButton(ThemeData theme) {
+  Widget _buildChallengeBottomBar(ThemeData theme) {
     return Container(
+      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 32, top: 16),
       decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.secondary.withValues(alpha: 0.4),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 20,
-            offset: const Offset(0, 8),
+            offset: const Offset(0, -5),
           ),
         ],
       ),
@@ -299,11 +154,11 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: theme.colorScheme.secondary,
           foregroundColor: theme.colorScheme.onSecondary,
-          padding: const EdgeInsets.symmetric(vertical: 18),
+          padding: const EdgeInsets.symmetric(vertical: 20),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          elevation: 0,
+          elevation: 5,
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -314,8 +169,8 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
               'TAKE CHALLENGE TO EARN XP',
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1,
               ),
             ),
           ],
@@ -324,11 +179,74 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
     );
   }
 
+  Widget _buildContent(ThemeData theme) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        children: [
+          // User's Scanned Image Header
+          SizedBox(
+            height: 350,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.file(File(widget.imagePath), fit: BoxFit.cover),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.6),
+                        Colors.transparent,
+                        theme.scaffoldBackgroundColor,
+                      ],
+                      stops: const [0.0, 0.4, 1.0],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.translate(
+            offset: const Offset(0, -30),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${widget.selectedLens.toUpperCase()}: ${widget.objectName}',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.primary,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      _buildTabButton(0, 'Lesson', Icons.menu_book, theme),
+                      const SizedBox(width: 8),
+                      _buildTabButton(1, 'Real World', Icons.public, theme),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _buildActiveCard(theme),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showChallengeModal() {
     final challengeCard =
         _deckData?['challenge_card'] as Map<String, dynamic>? ?? {};
-    final question =
-        challengeCard['question'] ?? "Are you ready to test your knowledge?";
+    final question = challengeCard['question'] ?? "Ready?";
     final options = List<String>.from(challengeCard['options'] ?? []);
     final correctAnswer = challengeCard['correct_answer'] ?? "";
     final explanation = challengeCard['explanation'] ?? "";
@@ -340,6 +258,8 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: false, // Prevent accidental closing
+      enableDrag: false,
       backgroundColor: Colors.transparent,
       builder: (context) {
         final theme = Theme.of(context);
@@ -347,7 +267,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             return Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
                 borderRadius: const BorderRadius.vertical(
@@ -360,117 +280,81 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.3,
-                            ),
-                            borderRadius: const BorderRadius.all(
-                              Radius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
                       Text(
                         'TUKLAS CHALLENGE',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: theme.colorScheme.secondary,
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 1.5,
+                          letterSpacing: 2,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       Text(
                         question,
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
                           color: theme.colorScheme.onSurface,
+                          height: 1.3,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
 
                       ...options.map((option) {
                         final bool isThisSelected = selectedOption == option;
-                        final bool isThisCorrect = option == correctAnswer;
-
-                        Color buttonColor = theme.colorScheme.surface;
-                        Color textColor = theme.colorScheme.onSurface;
+                        Color buttonColor = theme.scaffoldBackgroundColor;
                         Color borderColor = theme.colorScheme.onSurface
-                            .withValues(alpha: 0.2);
+                            .withValues(alpha: 0.1);
 
+                        // 🚀 NEW ANTI-FARMING STYLING
                         if (hasAnswered) {
-                          if (isThisCorrect) {
-                            buttonColor = Colors.green.withValues(alpha: 0.15);
+                          if (isThisSelected && isCorrect) {
+                            buttonColor = Colors.green.withValues(alpha: 0.2);
                             borderColor = Colors.green;
-                            textColor = Colors.green;
-                          } else if (isThisSelected && !isThisCorrect) {
-                            buttonColor = Colors.red.withValues(alpha: 0.15);
+                          } else if (isThisSelected && !isCorrect) {
+                            buttonColor = Colors.red.withValues(alpha: 0.2);
                             borderColor = Colors.red;
-                            textColor = Colors.red;
                           }
                         } else if (isThisSelected) {
                           buttonColor = theme.colorScheme.primary.withValues(
-                            alpha: 0.15,
+                            alpha: 0.2,
                           );
                           borderColor = theme.colorScheme.primary;
-                          textColor = theme.colorScheme.primary;
                         }
 
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
+                          padding: const EdgeInsets.only(bottom: 16.0),
                           child: InkWell(
                             onTap: hasAnswered
                                 ? null
-                                : () {
-                                    setModalState(() {
-                                      selectedOption = option;
-                                    });
-                                  },
+                                : () => setModalState(
+                                    () => selectedOption = option,
+                                  ),
                             child: Container(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
                                 color: buttonColor,
                                 border: Border.all(
                                   color: borderColor,
                                   width: 2,
                                 ),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      option,
-                                      style: TextStyle(
-                                        color: textColor,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  if (hasAnswered && isThisCorrect)
-                                    const Icon(
-                                      Icons.check_circle,
-                                      color: Colors.green,
-                                    ),
-                                  if (hasAnswered &&
-                                      isThisSelected &&
-                                      !isThisCorrect)
-                                    const Icon(Icons.cancel, color: Colors.red),
-                                ],
+                              child: Text(
+                                option,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: theme.colorScheme.onSurface,
+                                ),
                               ),
                             ),
                           ),
                         );
                       }),
 
-                      const SizedBox(height: 16),
-
+                      const SizedBox(height: 24),
                       if (!hasAnswered)
                         ElevatedButton(
                           onPressed: selectedOption == null
@@ -481,72 +365,93 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                                     isCorrect =
                                         (selectedOption == correctAnswer);
                                   });
+
                                   if (isCorrect) {
                                     _saveProgressToBackend();
+                                  } else {
+                                    // 🚀 NEW: KICK OUT LOGIC FOR WRONG ANSWERS
+                                    Future.delayed(
+                                      const Duration(milliseconds: 2500),
+                                      () {
+                                        if (context.mounted) {
+                                          Navigator.pop(context); // Close modal
+                                          Navigator.pop(
+                                            context,
+                                          ); // Kick out of card
+                                        }
+                                      },
+                                    );
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: theme.colorScheme.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 20),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: Text(
+                          child: const Text(
                             'SUBMIT ANSWER',
                             style: TextStyle(
-                              color: theme.colorScheme.onPrimary,
-                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1,
                             ),
                           ),
                         )
                       else
-                        Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: isCorrect
-                                    ? Colors.green.withValues(alpha: 0.15)
-                                    : Colors.red.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: isCorrect
+                                ? Colors.green.withValues(alpha: 0.1)
+                                : Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isCorrect ? Colors.green : Colors.red,
+                              width: 2,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                isCorrect ? Icons.check_circle : Icons.cancel,
+                                color: isCorrect ? Colors.green : Colors.red,
+                                size: 48,
                               ),
-                              child: Text(
+                              const SizedBox(height: 16),
+                              Text(
                                 isCorrect
-                                    ? "🎉 Correct! $explanation"
-                                    : "Not quite! $explanation",
+                                    ? "Brilliant! $explanation"
+                                    : "Incorrect. The door closes...",
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: isCorrect ? Colors.green : Colors.red,
-                                  height: 1.5,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            if (isCorrect)
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  Navigator.pop(context);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: theme.colorScheme.secondary,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                    horizontal: 32,
+                              if (isCorrect) ...[
+                                const SizedBox(height: 24),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    Navigator.pop(context);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Text(
-                                  'CLAIM XP & CONTINUE',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSecondary,
-                                    fontWeight: FontWeight.bold,
+                                  child: const Text(
+                                    'CLAIM XP',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
+                              ],
+                            ],
+                          ),
                         ),
                     ],
                   ),
@@ -560,31 +465,16 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   }
 
   Future<void> _saveProgressToBackend() async {
-    if (_deckData == null) return;
-
     final success = await DiscoveryService.saveDiscovery(
       objectName: widget.objectName,
       chosenLens: widget.selectedLens,
       imagePath: widget.imagePath,
       learningDeck: _deckData!,
-      // 🚀 ENFORCING ARCHITECTURE: The UI simply passes the constant
-      // The backend PostgreSQL handles all multipliers or penalties!
       xpAwarded: baseRewardXp,
     );
 
-    if (success) {
-      if (mounted) {
-        ref.invalidate(homeStatsProvider);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('XP Claimed and Discovery Saved!')),
-        );
-      }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save. Please try again.')),
-        );
-      }
+    if (success && mounted) {
+      ref.invalidate(homeStatsProvider);
     }
   }
 
@@ -594,28 +484,23 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
     IconData icon,
     ThemeData theme,
   ) {
-    final bool isSelected = _selectedIndex == index;
-
+    final isSelected = _selectedIndex == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onTap: () => setState(() => _selectedIndex = index),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
             color: isSelected
                 ? theme.colorScheme.secondary
-                : Colors.transparent,
+                : theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
                   ? theme.colorScheme.secondary
-                  : theme.colorScheme.onSurface.withValues(alpha: 0.2),
-              width: 1.5,
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.1),
+              width: 2,
             ),
           ),
           child: Column(
@@ -624,15 +509,13 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                 icon,
                 color: isSelected
                     ? theme.colorScheme.onSecondary
-                    : theme.colorScheme.onSurface,
-                size: 24,
+                    : theme.colorScheme.primary,
+                size: 28,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
                 label,
-                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: isSelected
                       ? theme.colorScheme.onSecondary
@@ -647,40 +530,33 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   }
 
   Widget _buildActiveCard(ThemeData theme) {
-    final conceptCard =
-        _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
-    final realWorldCard =
-        _deckData?['real_world_card'] as Map<String, dynamic>? ?? {};
+    final concept = _deckData?['concept_card'] ?? {};
+    final realWorld = _deckData?['real_world_card'] ?? {};
 
-    final quickFact =
-        realWorldCard['fun_fact'] ??
-        "A fascinating fact about this artifact is currently hidden.";
-
-    // Extract domain & skill for the UI Badge
-    final String domain = conceptCard['domain'] ?? 'General';
-    final String skill = conceptCard['skill'] ?? 'Concept';
-    final String lessonText =
-        conceptCard['lesson_text'] ??
-        "The underlying principles are still waiting to be discovered.";
-
-    final handsOn =
-        realWorldCard['application_text'] ??
-        "Try finding a way to apply this in your local community!";
-
-    switch (_selectedIndex) {
-      case 0:
-        return _buildGlassSection('Quick Fact', quickFact, theme);
-      case 1:
-        return _buildGlassSection(
-          'Concepts',
-          lessonText,
-          theme,
-          badgeText: '$domain: $skill',
-        );
-      case 2:
-        return _buildGlassSection('Hands-on Project', handsOn, theme);
-      default:
-        return const SizedBox();
+    if (_selectedIndex == 0) {
+      return _buildGlassSection(
+        'The Secret',
+        concept['lesson_text'] ?? '',
+        theme,
+        badgeText: '${concept['domain']} | ${concept['skill']}',
+      );
+    } else {
+      return Column(
+        children: [
+          _buildGlassSection(
+            'Real World Impact',
+            realWorld['application_text'] ?? '',
+            theme,
+          ),
+          const SizedBox(height: 16),
+          _buildGlassSection(
+            'Mind-Blowing Fact',
+            realWorld['fun_fact'] ?? '',
+            theme,
+            isAccent: true,
+          ),
+        ],
+      );
     }
   }
 
@@ -689,66 +565,55 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
     String content,
     ThemeData theme, {
     String? badgeText,
+    bool isAccent = false,
   }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.85),
+        color: isAccent
+            ? theme.colorScheme.primary.withValues(alpha: 0.1)
+            : theme.colorScheme.surface.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+          color: isAccent
+              ? theme.colorScheme.primary.withValues(alpha: 0.3)
+              : theme.colorScheme.onSurface.withValues(alpha: 0.1),
           width: 2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 title.toUpperCase(),
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.secondary,
-                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.w900,
+                  color: isAccent
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.secondary,
+                  letterSpacing: 1.5,
                 ),
               ),
-              // The Dynamic UI Badge
               if (badgeText != null)
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    margin: const EdgeInsets.only(left: 12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
-                      badgeText.toUpperCase(),
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: theme.colorScheme.primary,
-                        letterSpacing: 0.5,
-                      ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    badgeText.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.primary,
                     ),
                   ),
                 ),

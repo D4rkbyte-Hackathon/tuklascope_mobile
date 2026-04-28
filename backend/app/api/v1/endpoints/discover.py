@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, status
 from supabase import Client
-from app.schemas.discover import DiscoverRequest, DiscoverResponse, GradeLevel
+from app.schemas.discover import DiscoverResponse, GradeLevel
 from app.schemas.scan import SaveScanRequest, SaveScanResponse
 from app.services.llm_service import generate_discovery_from_image
 from app.services.gamification_service import save_user_discovery
