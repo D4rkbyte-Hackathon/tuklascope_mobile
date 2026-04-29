@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:tuklascope_mobile/core/services/pathfinder_service.dart';
 
 // 1. Define the Data Structure for our Nodes
 class SkillNode {
@@ -9,9 +10,9 @@ class SkillNode {
   final String career;
   final int xp;
   final Color color;
-  final Offset position; 
+  final Offset position;
   final double radius;
-  final IconData? icon; 
+  final IconData? icon;
 
   int get level => (xp ~/ 50) + 1;
 
@@ -34,99 +35,188 @@ class KaalamanSkillTreeScreen extends StatefulWidget {
   const KaalamanSkillTreeScreen({super.key, required this.educationLevel});
 
   @override
-  State<KaalamanSkillTreeScreen> createState() => _KaalamanSkillTreeScreenState();
+  State<KaalamanSkillTreeScreen> createState() =>
+      _KaalamanSkillTreeScreenState();
 }
 
-class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen> with SingleTickerProviderStateMixin {
-  late final List<SkillNode> nodes;
+class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
+    with SingleTickerProviderStateMixin {
+  List<SkillNode> nodes = [];
   SkillNode? _selectedNode;
 
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  bool _isInitialized = false;
+  bool _isLoadingData = true;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3000), 
+      duration: const Duration(milliseconds: 2500),
     );
 
     _scaleAnimation = CurvedAnimation(
       parent: _animationController,
-      curve: Curves.elasticOut, 
+      curve: Curves.elasticOut,
     );
 
-    _animationController.forward();
+    // 🚀 Fetch real user data immediately
+    _loadTreeData();
   }
 
-  // 🚀 MOVED INITIALIZATION HERE TO ACCESS THE THEME!
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isInitialized) {
-      final theme = Theme.of(context);
-      _initializeNodes(theme);
-      _selectedNode = nodes.firstWhere((n) => n.id == 'root');
-      _isInitialized = true;
+  Future<void> _loadTreeData() async {
+    final data = await PathfinderService.getSkillWeb();
+
+    if (mounted) {
+      _buildDynamicNodes(Theme.of(context), data);
+      setState(() {
+        _selectedNode = nodes.isNotEmpty
+            ? nodes.firstWhere((n) => n.id == 'root')
+            : null;
+        _isLoadingData = false;
+      });
+      _animationController.forward();
     }
   }
 
   @override
   void dispose() {
-    _animationController.dispose(); 
+    _animationController.dispose();
     super.dispose();
   }
 
-  void _initializeNodes(ThemeData theme) {
+  void _buildDynamicNodes(ThemeData theme, Map<String, dynamic>? data) {
     final stemColor = Colors.green[600]!;
     final humssColor = Colors.orange[600]!;
     final abmColor = Colors.blue[600]!;
     final tvlColor = Colors.red[500]!;
 
+    // Extract XP safely (default to 0)
+    final xpDist = data?['xp_distribution'] as Map<String, dynamic>? ?? {};
+    final int stemXp = (xpDist['STEM'] ?? 0) as int;
+    final int abmXp = (xpDist['ABM'] ?? 0) as int;
+    final int humssXp = (xpDist['HUMSS'] ?? 0) as int;
+    final int tvlXp = (xpDist['TVL'] ?? 0) as int;
+
     nodes = [
-      // ROOT - Now dynamically uses the theme's surface color
-      SkillNode(id: 'root', title: 'You', description: 'The roots of your journey.', career: 'Explorer', xp: 0, color: theme.colorScheme.surface, position: const Offset(0.50, 0.90), radius: 35.0),
-      
-      // --- STEM BRANCH ---
-      SkillNode(id: 'stem', title: 'STEM', description: 'Science, Tech, Engineering & Math.', career: 'Engineer, Scientist', xp: 120, color: stemColor, position: const Offset(0.20, 0.72), radius: 30.0),
-      SkillNode(id: 'stem_1', title: 'Physics', description: 'The study of matter and energy.', career: 'Mechanical Engineer', xp: 50, color: stemColor, position: const Offset(0.08, 0.58), radius: 22.0, icon: Icons.science),
-      SkillNode(id: 'stem_2', title: 'Coding', description: 'Building digital logic.', career: 'Software Developer', xp: 110, color: stemColor, position: const Offset(0.32, 0.60), radius: 22.0, icon: Icons.code),
-      
-      // --- HUMSS BRANCH ---
-      SkillNode(id: 'humss', title: 'HUMSS', description: 'Humanities & Social Sciences.', career: 'Lawyer, Writer, Teacher', xp: 90, color: humssColor, position: const Offset(0.80, 0.72), radius: 30.0),
-      SkillNode(id: 'humss_1', title: 'Literature', description: 'The art of written works.', career: 'Author, Journalist', xp: 40, color: humssColor, position: const Offset(0.92, 0.58), radius: 22.0, icon: Icons.menu_book),
-      SkillNode(id: 'humss_2', title: 'Sociology', description: 'The study of society.', career: 'Social Worker', xp: 50, color: humssColor, position: const Offset(0.68, 0.60), radius: 22.0, icon: Icons.people),
-      
-      // --- ABM BRANCH ---
-      SkillNode(id: 'abm', title: 'ABM', description: 'Accountancy, Business & Mgt.', career: 'Accountant, CEO', xp: 150, color: abmColor, position: const Offset(0.22, 0.42), radius: 30.0),
-      SkillNode(id: 'abm_1', title: 'Finance', description: 'Managing money and investments.', career: 'Financial Analyst', xp: 80, color: abmColor, position: const Offset(0.10, 0.28), radius: 22.0, icon: Icons.attach_money),
-      SkillNode(id: 'abm_2', title: 'Marketing', description: 'Understanding consumer behavior.', career: 'Marketing Director', xp: 70, color: abmColor, position: const Offset(0.32, 0.25), radius: 22.0, icon: Icons.storefront),
-      
-      // --- TVL BRANCH ---
-      SkillNode(id: 'tvl', title: 'TVL', description: 'Technical-Vocational Livelihood.', career: 'Technician, Chef', xp: 60, color: tvlColor, position: const Offset(0.78, 0.42), radius: 30.0),
-      SkillNode(id: 'tvl_1', title: 'Culinary', description: 'The art of cooking.', career: 'Executive Chef', xp: 30, color: tvlColor, position: const Offset(0.90, 0.28), radius: 22.0, icon: Icons.restaurant),
-      SkillNode(id: 'tvl_2', title: 'Electrical', description: 'Circuitry and power systems.', career: 'Master Electrician', xp: 30, color: tvlColor, position: const Offset(0.68, 0.25), radius: 22.0, icon: Icons.electrical_services),
+      // ROOT
+      SkillNode(
+        id: 'root',
+        title: 'You',
+        description: 'The roots of your journey.',
+        career: 'Explorer',
+        xp: 0,
+        color: theme.colorScheme.surface,
+        position: const Offset(0.50, 0.90),
+        radius: 40.0,
+      ),
+
+      // BASE STRANDS (Injected with real XP)
+      SkillNode(
+        id: 'stem',
+        title: 'STEM',
+        description: 'Science, Tech, Engineering & Math.',
+        career: 'STEM Path',
+        xp: stemXp,
+        color: stemColor,
+        position: const Offset(0.20, 0.72),
+        radius: 30.0,
+      ),
+      SkillNode(
+        id: 'humss',
+        title: 'HUMSS',
+        description: 'Humanities & Social Sciences.',
+        career: 'HUMSS Path',
+        xp: humssXp,
+        color: humssColor,
+        position: const Offset(0.80, 0.72),
+        radius: 30.0,
+      ),
+      SkillNode(
+        id: 'abm',
+        title: 'ABM',
+        description: 'Accountancy, Business & Mgt.',
+        career: 'ABM Path',
+        xp: abmXp,
+        color: abmColor,
+        position: const Offset(0.22, 0.42),
+        radius: 30.0,
+      ),
+      SkillNode(
+        id: 'tvl',
+        title: 'TVL',
+        description: 'Technical-Vocational Livelihood.',
+        career: 'TVL Path',
+        xp: tvlXp,
+        color: tvlColor,
+        position: const Offset(0.78, 0.42),
+        radius: 30.0,
+      ),
     ];
 
-    // --- SENIOR HIGH CAREER BRANCH ---
-    final edLevel = widget.educationLevel.toLowerCase();
-    final isSeniorHigh = edLevel.contains('senior') || edLevel.contains('shs') || edLevel.contains('11') || edLevel.contains('12');
+    // 🚀 DYNAMICALLY SPAWN UNLOCKED SKILLS
+    final topSkills = (data?['top_skills'] as List<dynamic>?) ?? [];
 
-    if (isSeniorHigh) {
-      final careerColor = Colors.purple[400]!; 
-      nodes.add(SkillNode(id: 'career', title: 'Careers', description: 'Your Future Career Tracks.', career: 'Professional', xp: 200, color: careerColor, position: const Offset(0.50, 0.52), radius: 30.0));
-      nodes.add(SkillNode(id: 'career_1', title: 'University', description: 'Pursue higher education.', career: 'College Degree', xp: 50, color: careerColor, position: const Offset(0.38, 0.38), radius: 22.0, icon: Icons.school));
-      nodes.add(SkillNode(id: 'career_2', title: 'Industry', description: 'Direct employment path.', career: 'Workforce', xp: 40, color: careerColor, position: const Offset(0.62, 0.38), radius: 22.0, icon: Icons.work));
-      nodes.add(SkillNode(id: 'career_3', title: 'Business', description: 'Start your own enterprise.', career: 'Entrepreneur', xp: 60, color: careerColor, position: const Offset(0.50, 0.22), radius: 22.0, icon: Icons.store));
+    // Grid positioning constants to orbit them at the top of the screen
+    final List<Offset> dynamicPositions = [
+      const Offset(0.50, 0.25),
+      const Offset(0.25, 0.15),
+      const Offset(0.75, 0.15),
+      const Offset(0.15, 0.30),
+      const Offset(0.85, 0.30),
+      const Offset(0.50, 0.10),
+      const Offset(0.35, 0.05),
+      const Offset(0.65, 0.05),
+    ];
+
+    for (int i = 0; i < topSkills.length && i < dynamicPositions.length; i++) {
+      final skillString = topSkills[i].toString();
+
+      // Parse backend string: "Material Properties (Materials Science) - Lv.3"
+      final regex = RegExp(r'^(.*?) \((.*?)\) - Lv\.(\d+)$');
+      final match = regex.firstMatch(skillString);
+
+      String skillName = skillString;
+      String domainName = 'Discipline';
+      int calculatedXp = 0; // Base 0 XP for level 1
+
+      if (match != null) {
+        skillName = match.group(1)?.trim() ?? skillName;
+        domainName = match.group(2)?.trim() ?? domainName;
+        int level = int.tryParse(match.group(3) ?? '1') ?? 1;
+        calculatedXp =
+            (level - 1) * 50; // Convert level back to base XP for the UI
+      }
+
+      nodes.add(
+        SkillNode(
+          id: 'skill_$i',
+          title: skillName,
+          description: 'Domain: $domainName',
+          career: 'Advanced Mastery',
+          xp: calculatedXp,
+          color: theme
+              .colorScheme
+              .primary, // Highlight dynamically unlocked skills
+          position: dynamicPositions[i],
+          radius: 25.0,
+          icon: Icons.star_border,
+        ),
+      );
     }
   }
 
   void _handleTap(Offset tapPosition, Size canvasSize) {
     for (var node in nodes) {
-      final nodeCenter = Offset(node.position.dx * canvasSize.width, node.position.dy * canvasSize.height);
-      final distance = sqrt(pow(tapPosition.dx - nodeCenter.dx, 2) + pow(tapPosition.dy - nodeCenter.dy, 2));
+      final nodeCenter = Offset(
+        node.position.dx * canvasSize.width,
+        node.position.dy * canvasSize.height,
+      );
+      final distance = sqrt(
+        pow(tapPosition.dx - nodeCenter.dx, 2) +
+            pow(tapPosition.dy - nodeCenter.dy, 2),
+      );
 
       if (distance <= node.radius) {
         setState(() => _selectedNode = node);
@@ -137,131 +227,204 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen> with 
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Cache Theme
-
-    if (!_isInitialized) {
-      return Scaffold(backgroundColor: theme.scaffoldBackgroundColor); // Wait for nodes
-    }
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // Themed Map Background
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: theme.colorScheme.onSurface, // Themed Icons/Text
-        title: const Text('Kaalaman Skill Tree', style: TextStyle(fontWeight: FontWeight.bold)),
+        foregroundColor: theme.colorScheme.onSurface,
+        title: const Text(
+          'Omni-Tree',
+          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5),
+        ),
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            flex: 3,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final size = Size(constraints.maxWidth, constraints.maxHeight);
-                return InteractiveViewer(
-                  boundaryMargin: const EdgeInsets.all(80),
-                  minScale: 0.8,
-                  maxScale: 3.5,
-                  child: GestureDetector(
-                    onTapUp: (details) => _handleTap(details.localPosition, size),
-                    child: AnimatedBuilder(
-                      animation: _scaleAnimation,
-                      builder: (context, child) {
-                        return CustomPaint(
-                          size: size,
-                          painter: _OrganicTreePainter(
-                            theme: theme, // Pass theme to painter
-                            nodes: nodes,
-                            selectedNodeId: _selectedNode?.id,
-                            scale: _scaleAnimation.value,
-                          ),
-                        );
-                      },
+      body: _isLoadingData
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: theme.colorScheme.primary),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Querying Neural Network...',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-          
-          Expanded(
-            flex: 1,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface, // Themed Info Panel Background
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.shadowColor.withValues(alpha: 0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, -5)
-                  )
-                ]
+                ],
               ),
-              child: _selectedNode == null 
-                  ? Center(child: Text('Tap a leaf or branch to explore.', style: TextStyle(color: theme.colorScheme.onSurface)))
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: _selectedNode!.id == 'root' 
-                                  ? theme.colorScheme.primary.withValues(alpha: 0.1) 
-                                  : _selectedNode!.color,
-                              radius: 16,
-                              child: _selectedNode!.icon != null 
-                                ? Icon(
-                                    _selectedNode!.icon, 
-                                    color: _selectedNode!.id == 'root' ? theme.colorScheme.primary : Colors.white, 
-                                    size: 18
-                                  )
-                                : null,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              _selectedNode!.title,
-                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: theme.colorScheme.primary), // Themed Title
-                            ),
-                            const Spacer(),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'Level ${_selectedNode!.level}',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary, fontSize: 16), // Themed Blue
+            )
+          : Column(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final size = Size(
+                        constraints.maxWidth,
+                        constraints.maxHeight,
+                      );
+                      return InteractiveViewer(
+                        boundaryMargin: const EdgeInsets.all(80),
+                        minScale: 0.8,
+                        maxScale: 3.5,
+                        child: GestureDetector(
+                          onTapUp: (details) =>
+                              _handleTap(details.localPosition, size),
+                          child: AnimatedBuilder(
+                            animation: _scaleAnimation,
+                            builder: (context, child) {
+                              return CustomPaint(
+                                size: size,
+                                painter: _OrganicTreePainter(
+                                  theme: theme,
+                                  nodes: nodes,
+                                  selectedNodeId: _selectedNode?.id,
+                                  scale: _scaleAnimation.value,
                                 ),
-                                Text(
-                                  '${_selectedNode!.xp} XP',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.secondary), // Themed Orange
-                                ),
-                              ],
-                            ),
-                          ],
+                              );
+                            },
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _selectedNode!.description, 
-                          style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.8)) // Themed Desc
-                        ),
-                        const SizedBox(height: 12),
-                        Text('Plausible Path:', style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
-                        Text(
-                          _selectedNode!.career, 
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.colorScheme.primary) // Themed Career Text
+                      );
+                    },
+                  ),
+                ),
+
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(32),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.shadowColor.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, -5),
                         ),
                       ],
                     ),
+                    child: _selectedNode == null
+                        ? Center(
+                            child: Text(
+                              'Tap a constellation node to explore.',
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: _selectedNode!.id == 'root'
+                                        ? theme.colorScheme.primary.withValues(
+                                            alpha: 0.1,
+                                          )
+                                        : _selectedNode!.color,
+                                    radius: 20,
+                                    child: _selectedNode!.icon != null
+                                        ? Icon(
+                                            _selectedNode!.icon,
+                                            color: Colors.white,
+                                            size: 20,
+                                          )
+                                        : Text(
+                                            _selectedNode!.title[0],
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _selectedNode!.title,
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w900,
+                                            color: theme.colorScheme.primary,
+                                            height: 1.1,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _selectedNode!.description,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.secondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primary
+                                              .withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Lv.${_selectedNode!.level}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.primary,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${_selectedNode!.xp} XP',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.5),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -272,65 +435,58 @@ class _OrganicTreePainter extends CustomPainter {
   final String? selectedNodeId;
   final double scale;
 
-  _OrganicTreePainter({required this.theme, required this.nodes, this.selectedNodeId, required this.scale});
+  _OrganicTreePainter({
+    required this.theme,
+    required this.nodes,
+    this.selectedNodeId,
+    required this.scale,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (nodes.isEmpty) return;
+
     final root = nodes.firstWhere((n) => n.id == 'root');
-    final stem = nodes.firstWhere((n) => n.id == 'stem');
-    final humss = nodes.firstWhere((n) => n.id == 'humss');
-    final abm = nodes.firstWhere((n) => n.id == 'abm');
-    final tvl = nodes.firstWhere((n) => n.id == 'tvl');
 
     Offset getOffset(SkillNode node) {
-      return Offset(node.position.dx * size.width, node.position.dy * size.height);
+      return Offset(
+        node.position.dx * size.width,
+        node.position.dy * size.height,
+      );
     }
 
     void drawOrganicBranch(SkillNode n1, SkillNode n2, Color color) {
       final p1 = getOffset(n1);
       final p2 = getOffset(n2);
-      
+
       final path = Path();
       path.moveTo(p1.dx, p1.dy);
-      
-      final cpX = p1.dx; 
+
+      final cpX = p1.dx;
       final cpY = p2.dy + (p1.dy - p2.dy) * 0.8;
-      
+
       path.quadraticBezierTo(cpX, cpY, p2.dx, p2.dy);
 
       final paint = Paint()
-        ..color = color.withValues(alpha: 0.6 * scale.clamp(0.0, 1.0))
+        ..color = color.withValues(alpha: 0.5 * scale.clamp(0.0, 1.0))
         ..style = PaintingStyle.stroke
-        ..strokeWidth = (n1.id == 'root' ? 8.0 : 4.0) * scale.clamp(0.0, 1.0); 
-      
+        ..strokeWidth = (n1.id == 'root' ? 6.0 : 3.0) * scale.clamp(0.0, 1.0);
+
       canvas.drawPath(path, paint);
     }
 
-    // DRAW STANDARD BRANCHES
-    drawOrganicBranch(root, stem, stem.color);
-    drawOrganicBranch(stem, nodes.firstWhere((n) => n.id == 'stem_1'), stem.color);
-    drawOrganicBranch(stem, nodes.firstWhere((n) => n.id == 'stem_2'), stem.color);
+    // 🚀 FIX: DYNAMICALLY DRAW LINES TO ALL NODES
+    for (var node in nodes) {
+      if (node.id == 'root') continue;
 
-    drawOrganicBranch(root, humss, humss.color);
-    drawOrganicBranch(humss, nodes.firstWhere((n) => n.id == 'humss_1'), humss.color);
-    drawOrganicBranch(humss, nodes.firstWhere((n) => n.id == 'humss_2'), humss.color);
-
-    drawOrganicBranch(root, abm, abm.color);
-    drawOrganicBranch(abm, nodes.firstWhere((n) => n.id == 'abm_1'), abm.color);
-    drawOrganicBranch(abm, nodes.firstWhere((n) => n.id == 'abm_2'), abm.color);
-
-    drawOrganicBranch(root, tvl, tvl.color);
-    drawOrganicBranch(tvl, nodes.firstWhere((n) => n.id == 'tvl_1'), tvl.color);
-    drawOrganicBranch(tvl, nodes.firstWhere((n) => n.id == 'tvl_2'), tvl.color);
-
-    // DRAW SENIOR HIGH BRANCH
-    final isSeniorHigh = nodes.any((n) => n.id == 'career');
-    if (isSeniorHigh) {
-      final career = nodes.firstWhere((n) => n.id == 'career');
-      drawOrganicBranch(root, career, career.color);
-      drawOrganicBranch(career, nodes.firstWhere((n) => n.id == 'career_1'), career.color);
-      drawOrganicBranch(career, nodes.firstWhere((n) => n.id == 'career_2'), career.color);
-      drawOrganicBranch(career, nodes.firstWhere((n) => n.id == 'career_3'), career.color);
+      // Base strands connect to root
+      if (['stem', 'abm', 'humss', 'tvl'].contains(node.id)) {
+        drawOrganicBranch(root, node, node.color);
+      }
+      // Newly unlocked skills connect dynamically to the root web
+      else if (node.id.startsWith('skill_')) {
+        drawOrganicBranch(root, node, theme.colorScheme.primary);
+      }
     }
 
     // DRAW ALL LEAVES AND TEXT
@@ -342,21 +498,24 @@ class _OrganicTreePainter extends CustomPainter {
       if (currentRadius <= 0) continue;
 
       if (isSelected) {
-        // Selection Halo adapts to surface color
-        canvas.drawCircle(center, currentRadius + 6, Paint()..color = theme.colorScheme.onSurface.withValues(alpha: 0.2));
+        canvas.drawCircle(
+          center,
+          currentRadius + 8,
+          Paint()..color = theme.colorScheme.primary.withValues(alpha: 0.3),
+        );
       }
 
-      // Draw the main node circle
       canvas.drawCircle(center, currentRadius, Paint()..color = node.color);
-      
-      // Draw the border stroke
+
       canvas.drawCircle(
-        center, 
-        currentRadius, 
+        center,
+        currentRadius,
         Paint()
-          ..color = isSelected ? theme.colorScheme.onSurface : theme.colorScheme.onSurface.withValues(alpha: 0.2) // Adaptive Border
+          ..color = isSelected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurface.withValues(alpha: 0.2)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = isSelected ? 3.0 : 2.0
+          ..strokeWidth = isSelected ? 4.0 : 2.0,
       );
 
       if (scale > 0.5) {
@@ -365,44 +524,62 @@ class _OrganicTreePainter extends CustomPainter {
             text: TextSpan(
               text: String.fromCharCode(node.icon!.codePoint),
               style: TextStyle(
-                fontSize: currentRadius * 1.1, 
-                fontFamily: node.icon!.fontFamily, 
-                package: node.icon!.fontPackage, 
-                color: Colors.white
+                fontSize: currentRadius * 1.1,
+                fontFamily: node.icon!.fontFamily,
+                package: node.icon!.fontPackage,
+                color: Colors.white,
               ),
             ),
             textDirection: TextDirection.ltr,
           )..layout();
-          
-          iconPainter.paint(canvas, center - Offset(iconPainter.width / 2, iconPainter.height / 2));
 
-          final TextPainter levelPainter = TextPainter(
-            text: TextSpan(
-              text: 'Lv.${node.level}',
-              style: TextStyle(
-                color: theme.colorScheme.onSurface, // Ensures level is visible above/below the node
-                fontSize: 10 * scale, 
-                fontWeight: FontWeight.bold
-              ),
-            ),
-            textDirection: TextDirection.ltr,
-          )..layout();
-          levelPainter.paint(canvas, center + Offset(-levelPainter.width / 2, currentRadius + 2));
-
+          iconPainter.paint(
+            canvas,
+            center - Offset(iconPainter.width / 2, iconPainter.height / 2),
+          );
         } else {
           final textPainter = TextPainter(
             text: TextSpan(
-              text: node.title,
+              text: node.title.split(
+                ' ',
+              )[0], // Only show first word of dynamic skills to keep it clean
               style: TextStyle(
-                color: node.id == 'root' ? theme.colorScheme.onSurface : Colors.white, // Root text adapts to dark mode!
-                fontSize: 12 * scale.clamp(0.5, 1.0), 
-                fontWeight: FontWeight.bold
+                color: node.id == 'root'
+                    ? theme.colorScheme.onSurface
+                    : Colors.white,
+                fontSize: 10 * scale.clamp(0.5, 1.0),
+                fontWeight: FontWeight.bold,
               ),
             ),
             textDirection: TextDirection.ltr,
           );
           textPainter.layout();
-          textPainter.paint(canvas, Offset(center.dx - (textPainter.width / 2), center.dy - (textPainter.height / 2)));
+          textPainter.paint(
+            canvas,
+            Offset(
+              center.dx - (textPainter.width / 2),
+              center.dy - (textPainter.height / 2),
+            ),
+          );
+        }
+
+        // Draw floating Level badge
+        if (node.id != 'root') {
+          final TextPainter levelPainter = TextPainter(
+            text: TextSpan(
+              text: 'Lv.${node.level}',
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontSize: 11 * scale,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          levelPainter.paint(
+            canvas,
+            center + Offset(-levelPainter.width / 2, currentRadius + 4),
+          );
         }
       }
     }
@@ -410,6 +587,8 @@ class _OrganicTreePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _OrganicTreePainter oldDelegate) {
-    return oldDelegate.scale != scale || oldDelegate.selectedNodeId != selectedNodeId;
+    return oldDelegate.scale != scale ||
+        oldDelegate.selectedNodeId != selectedNodeId ||
+        oldDelegate.nodes.length != nodes.length;
   }
 }

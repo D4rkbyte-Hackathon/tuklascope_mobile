@@ -445,28 +445,53 @@ class _CareerRecommendationCard extends StatelessWidget {
     required this.matchConfidence,
   });
 
+  // 🚀 FIX: Added curly braces for flow control
   Color _getPathColor(ThemeData theme) {
-    if (pathType.contains('Specialist')) return const Color(0xFF4CAF50);
-    if (pathType.contains('Interdisciplinary')) return const Color(0xFF2196F3);
-    return const Color(0xFFFF9800);
+    final type = pathType.toLowerCase();
+    if (type.contains('master') || type.contains('specialist')) {
+      return const Color(0xFFE91E63);
+    }
+    if (type.contains('hybrid') || type.contains('architect')) {
+      return const Color(0xFF2196F3);
+    }
+    if (type.contains('future') || type.contains('pioneer')) {
+      return const Color(0xFFFFC107);
+    }
+    return theme.colorScheme.primary; // Default
+  }
+
+  // 🚀 FIX: Added curly braces for flow control
+  IconData _getPathIcon() {
+    final type = pathType.toLowerCase();
+    if (type.contains('master') || type.contains('specialist')) {
+      return Icons.local_fire_department;
+    }
+    if (type.contains('hybrid') || type.contains('architect')) {
+      return Icons.device_hub;
+    }
+    if (type.contains('future') || type.contains('pioneer')) {
+      return Icons.rocket_launch;
+    }
+    return Icons.star;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final pathColor = _getPathColor(theme);
+    final pathIcon = _getPathIcon();
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: pathColor.withValues(alpha: 0.3), width: 1.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: pathColor.withValues(alpha: 0.4), width: 2),
         boxShadow: [
           BoxShadow(
-            color: pathColor.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: pathColor.withValues(alpha: 0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -479,21 +504,28 @@ class _CareerRecommendationCard extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
+                  horizontal: 12,
+                  vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: pathColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
+                  color: pathColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: pathColor.withValues(alpha: 0.3)),
                 ),
-                child: Text(
-                  pathType.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.0,
-                    color: pathColor,
-                  ),
+                child: Row(
+                  children: [
+                    Icon(pathIcon, size: 14, color: pathColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      pathType.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        color: pathColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Row(
@@ -501,18 +533,18 @@ class _CareerRecommendationCard extends StatelessWidget {
                   Text(
                     '$matchConfidence%',
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
                       color: theme.colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(width: 8),
                   SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: 24,
+                    height: 24,
                     child: CircularProgressIndicator(
                       value: matchConfidence / 100,
-                      strokeWidth: 3,
+                      strokeWidth: 4,
                       backgroundColor: theme.colorScheme.onSurface.withValues(
                         alpha: 0.1,
                       ),
@@ -523,26 +555,27 @@ class _CareerRecommendationCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // Title
           Text(
             title,
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: theme.colorScheme.onSurface,
+              height: 1.2,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
           // Description
           Text(
             description,
             style: TextStyle(
-              fontSize: 14,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
-              height: 1.4,
+              fontSize: 15,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+              height: 1.5,
             ),
           ),
         ],
