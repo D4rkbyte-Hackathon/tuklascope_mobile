@@ -71,19 +71,20 @@ async def save_discovery_choice(
 ):
     db_client, user_id = db_data
     try:
-        # Extract the skill for Neo4j directly from the JSON payload
-        extracted_skill = request.learning_deck.get("concept_card", {}).get(
-            "skill", "General Knowledge"
-        )
+        # Extract BOTH domain and skill for Neo4j directly from the JSON payload
+        concept_card = request.learning_deck.get("concept_card", {})
+        extracted_domain = concept_card.get("domain", "General Knowledge")
+        extracted_skill = concept_card.get("skill", "General Skill")
 
-        # Supabase Save
+        # Supabase Save (This calculates and sets the final request.xp_awarded internally)
         scan_id = save_user_discovery(db_client, user_id, request)
 
-        # Neo4j Save
+        # Neo4j Save (The True RPG Skill Tree)
         graph_success = await save_skill_to_graph(
             user_id=user_id,
             strand_name=request.chosen_lens,
-            skill_name=extracted_skill,
+            domain_name=extracted_domain,  # 🚀 NEW PARAMETER
+            skill_name=extracted_skill,  # Passes specific skill
             xp_awarded=request.xp_awarded,
         )
 
