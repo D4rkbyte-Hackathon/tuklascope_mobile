@@ -48,13 +48,11 @@ async def discover_from_vision(
         response = await generate_discovery_from_image(image_bytes, grade_level.value)
         return response
 
-    except RuntimeError as e:
-        logger.error(f"Vision AI Processing Error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Failed to analyze image. Please try again.",
-        )
+    except HTTPException:
+        # Let our carefully crafted LLM exceptions pass through directly!
+        raise
     except Exception as e:
+        # Only catch ACTUAL unexpected server crashes here
         logger.error(f"Unexpected vision error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
