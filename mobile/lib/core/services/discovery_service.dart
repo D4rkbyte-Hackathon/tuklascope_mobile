@@ -58,7 +58,7 @@ class DiscoveryService {
         return jsonDecode(utf8.decode(response.bodyBytes));
       } else {
         debugPrint(
-          '❌ Backend rejected the image. Status: ${response.statusCode}',
+          '❌ Vision API Error [${response.statusCode}]: ${response.body}',
         );
         return null;
       }
