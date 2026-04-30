@@ -16,19 +16,45 @@ import 'screens/change_password_screen.dart';
 import '../auth/presentation/widgets/auth_gate.dart';
 
 // =========================================================================
-// STATE MANAGEMENT: PROFILE STATS PROVIDER
+// DATA STRUCTURES & LOGIC
 // =========================================================================
+
+class SkillNode {
+  final String id;
+  final String title;
+  final String description;
+  final String strand;
+  final int xp;
+  final int level;
+  final Color color;
+  final double angle;
+  final double radialDistance;
+  final double radius;
+  final IconData? icon;
+
+  SkillNode({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.strand,
+    required this.xp,
+    required this.level,
+    required this.color,
+    required this.angle,
+    required this.radialDistance,
+    this.radius = 35.0,
+    this.icon,
+  });
+}
 
 class ProfileStats {
   final int totalXp;
   final int currentLevel;
   final int conceptsMastered;
-
   final int stemXp;
   final int humssXp;
   final int abmXp;
   final int tvlXp;
-
   final List<String> topSkills;
 
   ProfileStats({
@@ -42,12 +68,7 @@ class ProfileStats {
     required this.topSkills,
   });
 
-  int get progressToNextLevel {
-    final int xpIntoCurrentLevel = totalXp % 500;
-    return ((xpIntoCurrentLevel / 500) * 100).toInt();
-  }
-
-  int calculateBranchLevel(int xp) => 1 + (xp ~/ 500);
+  int get progressToNextLevel => ((totalXp % 500) / 500 * 100).toInt();
 }
 
 final profileStatsProvider = FutureProvider.autoDispose<ProfileStats>((
@@ -74,18 +95,15 @@ final profileStatsProvider = FutureProvider.autoDispose<ProfileStats>((
       .select('total_xp, current_level')
       .eq('id', userId)
       .maybeSingle();
-
   final treeRes = await client
       .from('kaalaman_skill_tree')
       .select()
       .eq('user_id', userId)
       .maybeSingle();
-
   final scansRes = await client
       .from('scans')
       .select('id')
       .eq('user_id', userId);
-
   final neo4jData = await PathfinderService.getSkillWeb();
 
   List<String> parsedTopSkills = [];
@@ -105,8 +123,243 @@ final profileStatsProvider = FutureProvider.autoDispose<ProfileStats>((
   );
 });
 
+// 🚀 CLUSTERED LAYOUT ALGORITHM
+List<SkillNode> generateSkillNodes(
+  ProfileStats stats,
+  String userName,
+  ThemeData theme,
+) {
+  final nodes = <SkillNode>[];
+
+  // 1. Center Root Node (The User)
+  nodes.add(
+    SkillNode(
+      id: 'root',
+      title: userName.toUpperCase(),
+      description: 'Your central learning core.',
+      strand: 'root',
+      xp: stats.totalXp, // 🚀 FIX: Actual Total XP
+      level: stats.currentLevel, // 🚀 FIX: Actual Global Level
+      color: theme.colorScheme.primary,
+      angle: 0,
+      radialDistance: 0,
+      radius: 50.0,
+    ),
+  );
+
+  // 2. Base Strands (Angles push them to 4 corners)
+  final strandData = {
+    'stem': {
+      'xp': stats.stemXp,
+      'angle': -math.pi * 0.75,
+      'color': Colors.green[600]!,
+    },
+    'abm': {
+      'xp': stats.abmXp,
+      'angle': -math.pi * 0.25,
+      'color': Colors.blue[600]!,
+    },
+    'tvl': {
+      'xp': stats.tvlXp,
+      'angle': math.pi * 0.25,
+      'color': Colors.red[500]!,
+    },
+    'humss': {
+      'xp': stats.humssXp,
+      'angle': math.pi * 0.75,
+      'color': Colors.orange[600]!,
+    },
+  };
+
+  strandData.forEach((id, data) {
+    final strandXp = data['xp'] as int;
+    nodes.add(
+      SkillNode(
+        id: id,
+        title: id.toUpperCase(),
+        description: 'Core SHS Pathway',
+        strand: 'root',
+        xp: strandXp,
+        level: (strandXp ~/ 500) + 1, // 0 XP = Lv 1, 500 XP = Lv 2
+        color: data['color'] as Color,
+        angle: data['angle'] as double,
+        radialDistance: 130.0,
+        radius: 38.0,
+      ),
+    );
+  });
+
+  // 3. Clustered Outer Skills
+  final topicColors = [
+    Colors.cyan.shade400,
+    Colors.pink.shade400,
+    Colors.amber.shade400,
+    Colors.deepPurple.shade300,
+  ];
+  final strandSkillCounts = <String, int>{};
+
+  for (int i = 0; i < stats.topSkills.length; i++) {
+    final skillString = stats.topSkills[i];
+    final regex = RegExp(r'^(.*?) \((.*?)\) \[(.*?)\] - Lv\.(\d+)$');
+    final match = regex.firstMatch(skillString);
+
+    String skillName = skillString;
+    String domainName = 'Discipline';
+    String strandName = 'stem';
+    int parsedLevel = 1;
+
+    if (match != null) {
+      skillName = match.group(1)?.trim() ?? skillName;
+      domainName = match.group(2)?.trim() ?? domainName;
+      strandName = match.group(3)?.trim().toLowerCase() ?? 'stem';
+      parsedLevel = int.tryParse(match.group(4) ?? '1') ?? 1;
+    }
+
+    if (!strandData.containsKey(strandName)) strandName = 'stem';
+
+    final parentData = strandData[strandName]!;
+    final baseAngle = parentData['angle'] as double;
+    final parentColor = parentData['color'] as Color;
+
+    final count = strandSkillCounts[strandName] ?? 0;
+    strandSkillCounts[strandName] = count + 1;
+
+    // Spreads skills out AROUND their parent strand so lines never cross the center
+    final offset = (count == 0)
+        ? 0.0
+        : (count % 2 == 0 ? 1 : -1) * ((count + 1) ~/ 2) * 0.35;
+    final finalAngle = baseAngle + offset;
+
+    nodes.add(
+      SkillNode(
+        id: 'skill_$i',
+        title: skillName,
+        description: domainName,
+        strand: strandName,
+        xp: parsedLevel * 50, // 🚀 FIX: Lv 1 = 50 XP, Lv 2 = 100 XP
+        level: parsedLevel,
+        color: count == 0 ? parentColor : topicColors[i % topicColors.length],
+        angle: finalAngle,
+        radialDistance: 270.0 + (count > 2 ? 40 : 0),
+        radius: (30.0 + (parsedLevel * 2.0)).clamp(30.0, 45.0),
+      ),
+    );
+  }
+
+  return nodes;
+}
+
+// 🚀 BOTTOM SHEET INTERACTIVE UI
+void _showNodeDetailsBottomSheet(BuildContext context, SkillNode node) {
+  final theme = Theme.of(context);
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: Border.all(
+            color: node.color.withValues(alpha: 0.5),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: node.color.withValues(alpha: 0.1),
+              blurRadius: 40,
+              spreadRadius: 5,
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                backgroundColor: node.color.withValues(alpha: 0.15),
+                radius: 30,
+                child: Icon(
+                  node.id == 'root' ? Icons.person : Icons.hub,
+                  color: node.color,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                node.title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                node.description,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildStatPill('LEVEL', '${node.level}', node.color),
+                  _buildStatPill(
+                    'TOTAL XP',
+                    '${node.xp}',
+                    node.color,
+                  ), // Now displays for ALL nodes!
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildStatPill(String label, String value, Color color) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: color.withValues(alpha: 0.3)),
+    ),
+    child: Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: color,
+            letterSpacing: 1,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 // =========================================================================
-// MAIN SCREEN
+// MAIN SCREENS
 // =========================================================================
 
 class ProfileScreen extends ConsumerWidget {
@@ -145,13 +398,9 @@ class ProfileScreen extends ConsumerWidget {
           }
 
           final profile = appUser.profile;
-          String location = '';
-          final city = profile.city ?? '';
-          final country = profile.country ?? '';
-          if (city.isNotEmpty && country.isNotEmpty) {
-            location = '$city, $country';
-          } else {
-            location = city + country;
+          String location = profile.city ?? '';
+          if (location.isNotEmpty && profile.country?.isNotEmpty == true) {
+            location += ', ${profile.country}';
           }
 
           return Column(
@@ -260,7 +509,7 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
           child: TabBarView(
             controller: _tabController,
             physics:
-                const NeverScrollableScrollPhysics(), // 🚀 FIX: Disables swiping between tabs
+                const NeverScrollableScrollPhysics(), // 🚀 Swiping Disabled Here
             children: [
               _buildProfileTab(widget.theme),
               _buildSettingsTab(widget.theme),
@@ -302,9 +551,7 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-              ).then((_) {
-                ref.invalidate(appUserProvider);
-              });
+              ).then((_) => ref.invalidate(appUserProvider));
             },
           ).animate().fade(duration: 600.ms).slideY(begin: 0.1),
           Padding(
@@ -333,7 +580,7 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
           Padding(
             padding: const EdgeInsets.only(bottom: 28),
             child: Text(
-              'Inner nodes track your overall gamification strands. Outer nodes are specific topics mastered through discovery.',
+              'Inner nodes track your gamification strands. Outer nodes are dynamic topics you mastered.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -359,21 +606,26 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                     .slideY(begin: 0.1),
           ),
           statsAsync.when(
-            loading: () => const SizedBox(height: 250),
+            loading: () => const SizedBox(height: 350),
             error: (e, s) => const SizedBox(),
-            data: (stats) =>
-                Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: _DynamicSkillTreeNetwork(
-                        theme: theme,
-                        stats: stats,
-                        userName:
-                            widget.currentName, // 🚀 NEW: Passing user name
-                      ),
-                    )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 200.ms)
-                    .slideY(begin: 0.1),
+            data: (stats) {
+              final nodes = generateSkillNodes(
+                stats,
+                widget.currentName,
+                theme,
+              );
+              return Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: _DynamicSkillTreeNetwork(
+                      theme: theme,
+                      nodes: nodes,
+                      userName: widget.currentName,
+                    ),
+                  )
+                  .animate()
+                  .fade(duration: 600.ms, delay: 200.ms)
+                  .slideY(begin: 0.1);
+            },
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
@@ -388,7 +640,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                       buttonColor: theme.colorScheme.primary,
                       onPressed: () {
                         final currentStats = statsAsync.value;
-
                         showPathfinderBlueprintSheet(
                           context,
                           stemXp: currentStats?.stemXp ?? 0,
@@ -404,16 +655,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                     .fade(duration: 600.ms, delay: 300.ms)
                     .slideY(begin: 0.1),
           ),
-          _ProfilePromoCard(
-            theme: theme,
-            borderColor: theme.colorScheme.primary.withValues(alpha: 0.35),
-            title: 'Expand Your Network',
-            description:
-                'Scan new objects to grow the branches of your skill tree!',
-            buttonLabel: 'Start Discovery →',
-            buttonColor: theme.colorScheme.secondary,
-            onPressed: () => MainNavScope.maybeOf(context)?.goToTab(1),
-          ).animate().fade(duration: 600.ms, delay: 400.ms).slideY(begin: 0.1),
         ],
       ),
     );
@@ -421,7 +662,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
 
   Widget _buildSettingsTab(ThemeData theme) {
     final isEmailUser = ref.watch(isEmailPasswordUserProvider);
-
     return ListView(
       padding: const EdgeInsets.all(20),
       physics: const BouncingScrollPhysics(),
@@ -445,7 +685,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                   final isDarkMode =
                       currentMode == ThemeMode.dark ||
                       (currentMode == ThemeMode.system && isSystemDark);
-
                   return SwitchListTile(
                     secondary: Icon(
                       isDarkMode ? Icons.dark_mode : Icons.light_mode,
@@ -460,33 +699,11 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                     ),
                     value: isDarkMode,
                     activeThumbColor: theme.colorScheme.primary,
-                    onChanged: (bool value) {
-                      appThemeNotifier.value = value
-                          ? ThemeMode.dark
-                          : ThemeMode.light;
-                    },
+                    onChanged: (bool value) => appThemeNotifier.value = value
+                        ? ThemeMode.dark
+                        : ThemeMode.light,
                   );
                 },
-              ),
-              Divider(
-                height: 1,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-              ),
-              SwitchListTile(
-                secondary: Icon(
-                  Icons.vibration,
-                  color: theme.colorScheme.secondary,
-                ),
-                title: Text(
-                  'Vibration',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                value: true,
-                activeThumbColor: theme.colorScheme.secondary,
-                onChanged: (bool value) {},
               ),
             ],
           ),
@@ -513,109 +730,24 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
           child: Column(
             children: [
               if (isEmailUser)
-                Container(
-                  margin: const EdgeInsets.all(8),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ChangePasswordScreen(),
-                        ),
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          gradient: LinearGradient(
-                            colors: [
-                              theme.colorScheme.primary.withValues(alpha: 0.1),
-                              theme.colorScheme.primary.withValues(alpha: 0.05),
-                            ],
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withValues(
-                                  alpha: 0.15,
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.lock_outline,
-                                color: theme.colorScheme.primary,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Change Password',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Update your security',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-              else
                 ListTile(
                   leading: Icon(
                     Icons.lock_outline,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                    color: theme.colorScheme.primary,
                   ),
                   title: Text(
                     'Change Password',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
-                  subtitle: Text(
-                    'Not available for OAuth accounts (Google/Facebook)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ChangePasswordScreen(),
                     ),
                   ),
-                  enabled: false,
-                ),
-              if (isEmailUser)
-                Divider(
-                  height: 1,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
                 ),
               ListTile(
                 title: Text(
@@ -645,7 +777,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
   Widget _buildAboutTab(ThemeData theme) {
     return ListView(
       padding: const EdgeInsets.all(20),
-      physics: const BouncingScrollPhysics(),
       children: [
         Container(
           padding: const EdgeInsets.all(20),
@@ -677,16 +808,435 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
   }
 }
 
-// -----------------------------------------------------------------------------
-// HELPER WIDGETS
-// -----------------------------------------------------------------------------
+// =============================================================================
+// TREE VISUALIZATION WIDGETS
+// =============================================================================
+
+// =============================================================================
+// TREE VISUALIZATION WIDGETS
+// =============================================================================
+
+class _DynamicSkillTreeNetwork extends StatelessWidget {
+  final ThemeData theme;
+  final List<SkillNode> nodes;
+  final String userName;
+
+  const _DynamicSkillTreeNetwork({
+    required this.theme,
+    required this.nodes,
+    required this.userName,
+  });
+
+  void _handleTap(BuildContext context, Offset localPosition) {
+    const center = Offset(400, 400);
+    for (var node in nodes.reversed) {
+      final nodeCenter =
+          center +
+          Offset(
+            node.radialDistance * math.cos(node.angle),
+            node.radialDistance * math.sin(node.angle),
+          );
+      if ((localPosition - nodeCenter).distance <= node.radius + 15) {
+        _showNodeDetailsBottomSheet(context, node);
+        return;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            child: Stack(
+              children: [
+                SizedBox(
+                  height: 350,
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: SizedBox(
+                      width: 800,
+                      height: 800,
+                      child: GestureDetector(
+                        onTapUp: (details) =>
+                            _handleTap(context, details.localPosition),
+                        child: CustomPaint(
+                          painter: _OrganicTreePainter(
+                            theme: theme,
+                            nodes: nodes,
+                            scale: 1.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: IconButton.filled(
+                    style: IconButton.styleFrom(
+                      backgroundColor: theme.colorScheme.surface.withValues(
+                        alpha: 0.8,
+                      ),
+                      foregroundColor: theme.colorScheme.primary,
+                    ),
+                    icon: const Icon(Icons.fullscreen),
+                    onPressed: () =>
+                        Navigator.of(context, rootNavigator: true).push(
+                          // 🚀 FIX: rootNavigator: true hides the bottom tabs!
+                          MaterialPageRoute(
+                            builder: (context) => _FullScreenSkillTree(
+                              theme: theme,
+                              nodes: nodes,
+                            ),
+                          ),
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () => Navigator.of(context, rootNavigator: true).push(
+              // 🚀 FIX: rootNavigator: true here as well
+              MaterialPageRoute(
+                builder: (context) =>
+                    _FullScreenSkillTree(theme: theme, nodes: nodes),
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.02),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.zoom_out_map,
+                    size: 16,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tap to expand & explore interactively',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.1,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FullScreenSkillTree extends StatefulWidget {
+  final ThemeData theme;
+  final List<SkillNode> nodes;
+
+  const _FullScreenSkillTree({required this.theme, required this.nodes});
+
+  @override
+  State<_FullScreenSkillTree> createState() => _FullScreenSkillTreeState();
+}
+
+class _FullScreenSkillTreeState extends State<_FullScreenSkillTree> {
+  final TransformationController _transformationController =
+      TransformationController();
+
+  @override
+  void initState() {
+    super.initState();
+    // 🚀 FIX: The canvas is 2000x2000, so its center is 1000x1000.
+    // This perfectly centers the camera on the user's name when they open full screen!
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final screenSize = MediaQuery.of(context).size;
+      final offsetX = 1000.0 - (screenSize.width / 2);
+      final offsetY = 1000.0 - (screenSize.height / 2);
+      // 🚀 FIX: Use modern Matrix4.translationValues (x, y, z)
+      _transformationController.value = Matrix4.translationValues(
+        -offsetX,
+        -offsetY,
+        0.0,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _transformationController.dispose();
+    super.dispose();
+  }
+
+  void _handleTap(BuildContext context, Offset localPosition) {
+    const center = Offset(1000, 1000);
+    for (var node in widget.nodes.reversed) {
+      final nodeCenter =
+          center +
+          Offset(
+            node.radialDistance * math.cos(node.angle),
+            node.radialDistance * math.sin(node.angle),
+          );
+      if ((localPosition - nodeCenter).distance <= node.radius + 15) {
+        _showNodeDetailsBottomSheet(context, node);
+        return;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: widget.theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: widget.theme.colorScheme.primary,
+        title: const Text('Interactive Skill Tree'),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.pinch,
+                    size: 16,
+                    color: widget.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.6,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Pinch to zoom • Drag to pan',
+                    style: TextStyle(
+                      color: widget.theme.colorScheme.onSurface.withValues(
+                        alpha: 0.6,
+                      ),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: InteractiveViewer(
+                transformationController:
+                    _transformationController, // 🚀 Uses the centering controller
+                minScale: 0.2,
+                maxScale: 3.5,
+                constrained: false,
+                boundaryMargin: const EdgeInsets.all(1000),
+                child: SizedBox(
+                  width: 2000,
+                  height: 2000,
+                  child: GestureDetector(
+                    onTapUp: (details) =>
+                        _handleTap(context, details.localPosition),
+                    child: CustomPaint(
+                      painter: _OrganicTreePainter(
+                        theme: widget.theme,
+                        nodes: widget.nodes,
+                        scale: 1.0,
+                        isFullScreen: true,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrganicTreePainter extends CustomPainter {
+  final ThemeData theme;
+  final List<SkillNode> nodes;
+  final double scale;
+  final bool isFullScreen;
+
+  _OrganicTreePainter({
+    required this.theme,
+    required this.nodes,
+    required this.scale,
+    this.isFullScreen = false,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (nodes.isEmpty) return;
+
+    final center = isFullScreen
+        ? const Offset(1000, 1000)
+        : const Offset(400, 400);
+
+    Offset getOffset(SkillNode node) =>
+        center +
+        Offset(
+          node.radialDistance * math.cos(node.angle),
+          node.radialDistance * math.sin(node.angle),
+        );
+
+    void drawOrganicBranch(SkillNode n1, SkillNode n2, Color color) {
+      final p1 = getOffset(n1);
+      final p2 = getOffset(n2);
+      final path = Path()..moveTo(p1.dx, p1.dy);
+
+      final midPoint = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
+      final angle = math.atan2(p2.dy - p1.dy, p2.dx - p1.dx);
+      final cpX = midPoint.dx - math.sin(angle) * 30;
+      final cpY = midPoint.dy + math.cos(angle) * 30;
+
+      path.quadraticBezierTo(cpX, cpY, p2.dx, p2.dy);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = color.withValues(alpha: 0.4)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = (n1.id == 'root' ? 4.0 : 2.0),
+      );
+    }
+
+    final root = nodes.firstWhere((n) => n.id == 'root');
+    for (var node in nodes) {
+      if (node.id == 'root') continue;
+      if (node.strand == 'root') {
+        drawOrganicBranch(root, node, node.color);
+      } else {
+        final parentNode = nodes.firstWhere(
+          (n) => n.id == node.strand,
+          orElse: () => root,
+        );
+        drawOrganicBranch(parentNode, node, node.color);
+      }
+    }
+
+    for (var node in nodes) {
+      final pCenter = getOffset(node);
+
+      if (node.id == 'root') {
+        final Rect coreRect = Rect.fromCircle(
+          center: pCenter,
+          radius: node.radius,
+        );
+        canvas.drawCircle(
+          pCenter,
+          node.radius,
+          Paint()
+            ..shader = LinearGradient(
+              colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+            ).createShader(coreRect),
+        );
+      } else {
+        canvas.drawCircle(
+          pCenter,
+          node.radius + 4,
+          Paint()
+            ..color = node.color.withValues(alpha: 0.15)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+        );
+        canvas.drawCircle(
+          pCenter,
+          node.radius,
+          Paint()..color = theme.colorScheme.surface,
+        );
+        canvas.drawCircle(
+          pCenter,
+          node.radius,
+          Paint()
+            ..color = node.color
+            ..strokeWidth = 3.0
+            ..style = PaintingStyle.stroke,
+        );
+      }
+
+      final text = node.id == 'root' ? node.title : node.title.split(' ')[0];
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: node.id == 'root'
+                ? Colors.white
+                : theme.colorScheme.onSurface,
+            fontSize: node.id == 'root' ? 16 : 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(
+        canvas,
+        Offset(
+          pCenter.dx - (textPainter.width / 2),
+          pCenter.dy - (textPainter.height / 2),
+        ),
+      );
+
+      if (node.id != 'root') {
+        final levelPainter = TextPainter(
+          text: TextSpan(
+            text: 'Lv.${node.level}',
+            style: TextStyle(
+              color: theme.colorScheme.onSurface,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        levelPainter.paint(
+          canvas,
+          pCenter + Offset(-levelPainter.width / 2, node.radius + 2),
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrganicTreePainter oldDelegate) => true;
+}
+
+// =============================================================================
+// EDIT PROFILE SCREEN (Unchanged)
+// =============================================================================
 
 class _StatsGridCard extends StatelessWidget {
   final ThemeData theme;
   final ProfileStats stats;
-
   const _StatsGridCard({required this.theme, required this.stats});
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -696,7 +1246,6 @@ class _StatsGridCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-          width: 1,
         ),
       ),
       child: Column(
@@ -753,14 +1302,12 @@ class _StatCell extends StatelessWidget {
   final String label;
   final Color valueColor;
   final ThemeData theme;
-
   const _StatCell({
     required this.value,
     required this.label,
     required this.valueColor,
     required this.theme,
   });
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -794,13 +1341,10 @@ class _StatCell extends StatelessWidget {
 
 class _ProfileHeaderCard extends StatelessWidget {
   final ThemeData theme;
-  final String fullName;
-  final String educationLevel;
-  final String location;
+  final String fullName, educationLevel, location;
   final int streak;
   final String? profilePictureUrl;
   final VoidCallback onEditPressed;
-
   const _ProfileHeaderCard({
     required this.theme,
     required this.fullName,
@@ -810,7 +1354,6 @@ class _ProfileHeaderCard extends StatelessWidget {
     this.profilePictureUrl,
     required this.onEditPressed,
   });
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -820,7 +1363,6 @@ class _ProfileHeaderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-          width: 1,
         ),
       ),
       child: Column(
@@ -931,13 +1473,9 @@ class _ProfileHeaderCard extends StatelessWidget {
 
 class _ProfilePromoCard extends StatelessWidget {
   final ThemeData theme;
-  final Color borderColor;
-  final String title;
-  final String description;
-  final String buttonLabel;
-  final Color buttonColor;
+  final Color borderColor, buttonColor;
+  final String title, description, buttonLabel;
   final VoidCallback onPressed;
-
   const _ProfilePromoCard({
     required this.theme,
     required this.borderColor,
@@ -947,7 +1485,6 @@ class _ProfilePromoCard extends StatelessWidget {
     required this.buttonColor,
     required this.onPressed,
   });
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -955,7 +1492,7 @@ class _ProfilePromoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: borderColor, width: 1),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1001,474 +1538,6 @@ class _ProfilePromoCard extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// DYNAMIC SKILL TREE NETWORK WIDGET (INLINE PREVIEW)
-// =============================================================================
-
-class _DynamicSkillTreeNetwork extends StatelessWidget {
-  final ThemeData theme;
-  final ProfileStats stats;
-  final String userName; // 🚀 NEW
-
-  const _DynamicSkillTreeNetwork({
-    required this.theme,
-    required this.stats,
-    required this.userName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-            child: Stack(
-              children: [
-                SizedBox(
-                  height: 350,
-                  width: double.infinity,
-                  child: CustomPaint(
-                    size: const Size(double.infinity, 350),
-                    painter: _AdvancedInteractiveRadialPainter(
-                      theme: theme,
-                      stats: stats,
-                      userName: userName,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: IconButton.filled(
-                    style: IconButton.styleFrom(
-                      backgroundColor: theme.colorScheme.surface.withValues(
-                        alpha: 0.8,
-                      ),
-                      foregroundColor: theme.colorScheme.primary,
-                    ),
-                    icon: const Icon(Icons.fullscreen),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => _FullScreenSkillTree(
-                            theme: theme,
-                            stats: stats,
-                            userName: userName,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => _FullScreenSkillTree(
-                    theme: theme,
-                    stats: stats,
-                    userName: userName,
-                  ),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.02),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.zoom_out_map,
-                    size: 16,
-                    color: theme.colorScheme.primary.withValues(alpha: 0.7),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Tap to expand & explore interactively',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.1,
-                      color: theme.colorScheme.primary.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AdvancedInteractiveRadialPainter extends CustomPainter {
-  final ThemeData theme;
-  final ProfileStats stats;
-  final String userName; // 🚀 NEW
-
-  _AdvancedInteractiveRadialPainter({
-    required this.theme,
-    required this.stats,
-    required this.userName,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-
-    const double innerRadius = 90.0;
-    const double outerRadius = 175.0;
-
-    final innerLinePaint = Paint()
-      ..color = theme.colorScheme.onSurface.withValues(alpha: 0.15)
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    final outerLinePaint = Paint()
-      ..color = theme.colorScheme.primary.withValues(alpha: 0.25)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    final strandData = [
-      {
-        'name': 'STEM',
-        'level': stats.calculateBranchLevel(stats.stemXp),
-        'color': const Color(0xFF2196F3),
-        'angle': -math.pi * 0.75,
-      },
-      {
-        'name': 'ABM',
-        'level': stats.calculateBranchLevel(stats.abmXp),
-        'color': const Color(0xFFFF9800),
-        'angle': -math.pi * 0.25,
-      },
-      {
-        'name': 'HUMSS',
-        'level': stats.calculateBranchLevel(stats.humssXp),
-        'color': const Color(0xFF9C27B0),
-        'angle': math.pi * 0.75,
-      },
-      {
-        'name': 'TVL',
-        'level': stats.calculateBranchLevel(stats.tvlXp),
-        'color': const Color(0xFF4CAF50),
-        'angle': math.pi * 0.25,
-      },
-    ];
-
-    final topics = stats.topSkills;
-    final int topicCount = topics.length;
-
-    final topicColors = [
-      Colors.cyan.shade600,
-      Colors.pink.shade500,
-      Colors.amber.shade600,
-      Colors.lightGreen.shade600,
-      Colors.deepPurple.shade400,
-    ];
-
-    for (var strand in strandData) {
-      final angle = strand['angle'] as double;
-      final dx = center.dx + innerRadius * math.cos(angle);
-      final dy = center.dy + innerRadius * math.sin(angle);
-      canvas.drawLine(center, Offset(dx, dy), innerLinePaint);
-    }
-
-    for (int i = 0; i < topicCount; i++) {
-      final skillString = topics[i];
-      // 🚀 FIX: Parse the new [Strand] format from the backend!
-      final regex = RegExp(r'^(.*?) \((.*?)\) \[(.*?)\] - Lv\.(\d+)$');
-      final match = regex.firstMatch(skillString);
-
-      String strandName = 'STEM';
-
-      if (match != null) {
-        strandName = match.group(3)?.trim().toUpperCase() ?? 'STEM';
-      }
-
-      final angle = (2 * math.pi * i) / topicCount - (math.pi / 2);
-      final dx = center.dx + outerRadius * math.cos(angle);
-      final dy = center.dy + outerRadius * math.sin(angle);
-      final topicPos = Offset(dx, dy);
-
-      // 🚀 FIX: Draw a true connected branch directly to its actual parent strand!
-      Offset parentStrandPos = center;
-      for (var strand in strandData) {
-        if (strand['name'] == strandName) {
-          final sAngle = strand['angle'] as double;
-          parentStrandPos =
-              center +
-              Offset(
-                innerRadius * math.cos(sAngle),
-                innerRadius * math.sin(sAngle),
-              );
-          break;
-        }
-      }
-      canvas.drawLine(parentStrandPos, topicPos, outerLinePaint);
-    }
-
-    for (int i = 0; i < topicCount; i++) {
-      final skillString = topics[i];
-      final regex = RegExp(r'^(.*?) \((.*?)\) \[(.*?)\] - Lv\.(\d+)$');
-      final match = regex.firstMatch(skillString);
-
-      String topicName = skillString;
-      int topicLevel = 1;
-
-      if (match != null) {
-        topicName = match.group(1)?.trim() ?? topicName;
-        topicLevel = int.tryParse(match.group(4) ?? '1') ?? 1;
-      }
-
-      final angle = (2 * math.pi * i) / topicCount - (math.pi / 2);
-      final dx = center.dx + outerRadius * math.cos(angle);
-      final dy = center.dy + outerRadius * math.sin(angle);
-      final nodeCenter = Offset(dx, dy);
-      final nodeColor = topicColors[i % topicColors.length];
-
-      final double nodeRadius = (35.0 + (topicLevel * 2.0)).clamp(35.0, 48.0);
-
-      canvas.drawCircle(
-        nodeCenter,
-        nodeRadius + 3,
-        Paint()
-          ..color = nodeColor.withValues(alpha: 0.3)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
-      );
-      canvas.drawCircle(
-        nodeCenter,
-        nodeRadius,
-        Paint()..color = theme.colorScheme.surface,
-      );
-      canvas.drawCircle(
-        nodeCenter,
-        nodeRadius,
-        Paint()
-          ..color = nodeColor
-          ..strokeWidth = 3.0
-          ..style = PaintingStyle.stroke,
-      );
-
-      final String displayName = topicName.length > 12
-          ? '${topicName.substring(0, 10)}..'
-          : topicName;
-      _drawMultiLineText(
-        canvas,
-        'Lv.$topicLevel\n$displayName',
-        nodeCenter,
-        theme.colorScheme.onSurface,
-        10,
-        true,
-      );
-    }
-
-    for (var strand in strandData) {
-      final name = strand['name'] as String;
-      final level = strand['level'] as int;
-      final color = strand['color'] as Color;
-      final angle = strand['angle'] as double;
-
-      final dx = center.dx + innerRadius * math.cos(angle);
-      final dy = center.dy + innerRadius * math.sin(angle);
-      final nodeCenter = Offset(dx, dy);
-      const double nodeRadius = 32.0;
-
-      canvas.drawCircle(
-        nodeCenter,
-        nodeRadius,
-        Paint()..color = theme.colorScheme.surface,
-      );
-      canvas.drawCircle(
-        nodeCenter,
-        nodeRadius,
-        Paint()
-          ..color = color
-          ..strokeWidth = 3.5
-          ..style = PaintingStyle.stroke,
-      );
-
-      _drawMultiLineText(
-        canvas,
-        'Lv.$level\n$name',
-        nodeCenter,
-        theme.colorScheme.onSurface,
-        10,
-        true,
-      );
-    }
-
-    canvas.drawCircle(center, 45, Paint()..color = theme.colorScheme.surface);
-    canvas.drawCircle(
-      center,
-      45,
-      Paint()
-        ..color = theme.colorScheme.primary
-        ..strokeWidth = 4
-        ..style = PaintingStyle.stroke,
-    );
-
-    final Rect coreRect = Rect.fromCircle(center: center, radius: 40);
-    canvas.drawCircle(
-      center,
-      40,
-      Paint()
-        ..shader = LinearGradient(
-          colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ).createShader(coreRect),
-    );
-
-    _drawMultiLineText(
-      canvas,
-      '${userName.toUpperCase()}\nLV.${stats.currentLevel}', // 🚀 Shows User Name
-      center,
-      Colors.white,
-      12,
-      true,
-    );
-  }
-
-  void _drawMultiLineText(
-    Canvas canvas,
-    String text,
-    Offset centerOffset,
-    Color color,
-    double fontSize,
-    bool isBold,
-  ) {
-    final textSpan = TextSpan(
-      text: text,
-      style: TextStyle(
-        color: color,
-        fontSize: fontSize,
-        fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-        height: 1.2,
-      ),
-    );
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    );
-    textPainter.layout();
-    textPainter.paint(
-      canvas,
-      Offset(
-        centerOffset.dx - textPainter.width / 2,
-        centerOffset.dy - textPainter.height / 2,
-      ),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _AdvancedInteractiveRadialPainter oldDelegate) =>
-      true;
-}
-
-// =============================================================================
-// FULL SCREEN INTERACTIVE SKILL TREE
-// =============================================================================
-
-class _FullScreenSkillTree extends StatelessWidget {
-  final ThemeData theme;
-  final ProfileStats stats;
-  final String userName;
-
-  const _FullScreenSkillTree({
-    required this.theme,
-    required this.stats,
-    required this.userName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: theme.colorScheme.primary,
-        title: const Text('Interactive Skill Tree'),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.pinch,
-                    size: 16,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Pinch to zoom • Drag to pan',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 4.0,
-                boundaryMargin: const EdgeInsets.all(double.infinity),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: double.infinity,
-                  child: CustomPaint(
-                    painter: _AdvancedInteractiveRadialPainter(
-                      theme: theme,
-                      stats: stats,
-                      userName: userName,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// EDIT PROFILE SCREEN
-// =============================================================================
-
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
   @override
@@ -1478,7 +1547,6 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
   @override
   void initState() {
     super.initState();
@@ -1491,456 +1559,54 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     super.dispose();
   }
 
-  Future<void> _showEditNameDialog(String currentName) async {
+  Future<void> _showEditDialog(
+    String title,
+    String initialValue,
+    Function(String) onSave,
+  ) async {
     final theme = Theme.of(context);
-    final TextEditingController nameController = TextEditingController(
-      text: currentName,
-    );
-
+    final controller = TextEditingController(text: initialValue);
     await showDialog(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: theme.colorScheme.surface,
-          title: Text(
-            'Edit Full Name',
-            style: TextStyle(color: theme.colorScheme.primary),
-          ),
-          content: TextField(
-            controller: nameController,
-            style: TextStyle(color: theme.colorScheme.onSurface),
-            decoration: InputDecoration(
-              hintText: 'Enter your new name',
-              hintStyle: TextStyle(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: theme.colorScheme.secondary),
-              ),
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: theme.colorScheme.surface,
+        title: Text(title, style: TextStyle(color: theme.colorScheme.primary)),
+        content: TextField(
+          controller: controller,
+          style: TextStyle(color: theme.colorScheme.onSurface),
+          decoration: InputDecoration(
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: theme.colorScheme.secondary),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: theme.colorScheme.secondary,
-              ),
-              onPressed: () async {
-                final newName = nameController.text.trim();
-                if (newName.isNotEmpty && newName != currentName) {
-                  final nav = Navigator.of(dialogContext);
-                  final messenger = ScaffoldMessenger.of(context);
-                  try {
-                    final userId =
-                        Supabase.instance.client.auth.currentUser?.id;
-                    if (userId != null) {
-                      await Supabase.instance.client
-                          .from('profiles')
-                          .update({'full_name': newName})
-                          .eq('id', userId);
-                      ref.invalidate(appUserProvider);
-                      ref.invalidate(profileStatsProvider);
-
-                      nav.pop();
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Profile updated successfully!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    nav.pop();
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: theme.colorScheme.error,
-                      ),
-                    );
-                  }
-                } else {
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _showEditCityDialog(String currentCity) async {
-    final theme = Theme.of(context);
-    final TextEditingController cityController = TextEditingController(
-      text: currentCity,
-    );
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: theme.colorScheme.surface,
-          title: Text(
-            'Edit City',
-            style: TextStyle(color: theme.colorScheme.primary),
-          ),
-          content: TextField(
-            controller: cityController,
-            style: TextStyle(color: theme.colorScheme.onSurface),
-            decoration: InputDecoration(
-              hintText: 'Enter your city',
-              hintStyle: TextStyle(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: theme.colorScheme.secondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.secondary,
             ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: theme.colorScheme.secondary,
-              ),
-              onPressed: () async {
-                final newCity = cityController.text.trim();
-                if (newCity != currentCity) {
-                  final nav = Navigator.of(dialogContext);
-                  final messenger = ScaffoldMessenger.of(context);
-                  try {
-                    final userId =
-                        Supabase.instance.client.auth.currentUser?.id;
-                    if (userId != null) {
-                      await Supabase.instance.client
-                          .from('profiles')
-                          .update({'city': newCity})
-                          .eq('id', userId);
-                      ref.invalidate(appUserProvider);
-                      ref.invalidate(profileStatsProvider);
-
-                      nav.pop();
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('City updated successfully!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    nav.pop();
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: theme.colorScheme.error,
-                      ),
-                    );
-                  }
-                } else {
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _showEditCountryDialog(String currentCountry) async {
-    final theme = Theme.of(context);
-    final TextEditingController countryController = TextEditingController(
-      text: currentCountry,
-    );
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: theme.colorScheme.surface,
-          title: Text(
-            'Edit Country',
-            style: TextStyle(color: theme.colorScheme.primary),
-          ),
-          content: TextField(
-            controller: countryController,
-            style: TextStyle(color: theme.colorScheme.onSurface),
-            decoration: InputDecoration(
-              hintText: 'Enter your country',
-              hintStyle: TextStyle(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: theme.colorScheme.secondary),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: theme.colorScheme.secondary,
-              ),
-              onPressed: () async {
-                final newCountry = countryController.text.trim();
-                if (newCountry != currentCountry) {
-                  final nav = Navigator.of(dialogContext);
-                  final messenger = ScaffoldMessenger.of(context);
-                  try {
-                    final userId =
-                        Supabase.instance.client.auth.currentUser?.id;
-                    if (userId != null) {
-                      await Supabase.instance.client
-                          .from('profiles')
-                          .update({'country': newCountry})
-                          .eq('id', userId);
-                      ref.invalidate(appUserProvider);
-                      ref.invalidate(profileStatsProvider);
-
-                      nav.pop();
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Country updated successfully!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    nav.pop();
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: theme.colorScheme.error,
-                      ),
-                    );
-                  }
-                } else {
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _showEditEducationLevelDialog(String currentLevel) async {
-    final theme = Theme.of(context);
-    const List<String> educationLevels = [
-      'Elementary',
-      'High School',
-      'Senior High School',
-      'Others',
-    ];
-    String? selectedLevel =
-        currentLevel.isNotEmpty && educationLevels.contains(currentLevel)
-        ? currentLevel
-        : null;
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: theme.colorScheme.surface,
-              title: Text(
-                'Edit Education Level',
-                style: TextStyle(color: theme.colorScheme.primary),
-              ),
-              content: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: theme.colorScheme.secondary,
-                    width: 2,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    dropdownColor: theme.colorScheme.surface,
-                    isExpanded: true,
-                    hint: Text(
-                      'Select your education level',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.5,
-                        ),
-                      ),
-                    ),
-                    value: selectedLevel,
-                    icon: Icon(
-                      Icons.arrow_drop_down,
-                      color: theme.colorScheme.secondary,
-                    ),
-                    items: educationLevels.map((String level) {
-                      return DropdownMenuItem<String>(
-                        value: level,
-                        child: Text(
-                          level,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() => selectedLevel = newValue);
-                    },
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: Text(
-                    'Cancel',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: theme.colorScheme.secondary,
-                  ),
-                  onPressed:
-                      selectedLevel != null && selectedLevel != currentLevel
-                      ? () async {
-                          final nav = Navigator.of(dialogContext);
-                          final messenger = ScaffoldMessenger.of(context);
-                          try {
-                            final userId =
-                                Supabase.instance.client.auth.currentUser?.id;
-                            if (userId != null) {
-                              await Supabase.instance.client
-                                  .from('profiles')
-                                  .update({'education_level': selectedLevel})
-                                  .eq('id', userId);
-                              ref.invalidate(appUserProvider);
-                              ref.invalidate(profileStatsProvider);
-
-                              nav.pop();
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Education updated successfully!',
-                                  ),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            nav.pop();
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text('Error: $e'),
-                                backgroundColor: theme.colorScheme.error,
-                              ),
-                            );
-                          }
-                        }
-                      : null,
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _showEditBioDialog(String currentBio) async {
-    final theme = Theme.of(context);
-    final TextEditingController bioController = TextEditingController(
-      text: currentBio,
-    );
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: theme.colorScheme.surface,
-          title: Text(
-            'Edit Bio',
-            style: TextStyle(color: theme.colorScheme.primary),
-          ),
-          content: TextField(
-            controller: bioController,
-            maxLines: 4,
-            style: TextStyle(color: theme.colorScheme.onSurface),
-            decoration: InputDecoration(
-              hintText: 'Tell us about yourself',
-              hintStyle: TextStyle(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: theme.colorScheme.secondary),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: theme.colorScheme.secondary,
-              ),
-              onPressed: () async {
+            onPressed: () async {
+              if (controller.text.trim().isNotEmpty &&
+                  controller.text.trim() != initialValue) {
                 final nav = Navigator.of(dialogContext);
                 final messenger = ScaffoldMessenger.of(context);
                 try {
-                  await ref
-                      .read(profileServiceProvider)
-                      .updateBio(bioController.text.trim());
+                  await onSave(controller.text.trim());
                   ref.invalidate(appUserProvider);
-
+                  ref.invalidate(profileStatsProvider);
                   nav.pop();
                   messenger.showSnackBar(
                     const SnackBar(
-                      content: Text('Bio updated successfully!'),
+                      content: Text('Updated successfully!'),
                       backgroundColor: Colors.green,
                     ),
                   );
@@ -1953,12 +1619,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                     ),
                   );
                 }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
+              } else {
+                Navigator.of(dialogContext).pop();
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1967,42 +1635,35 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
     try {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
       if (pickedFile != null) {
         if (!mounted) return;
         final messenger = ScaffoldMessenger.of(context);
         final nav = Navigator.of(context, rootNavigator: true);
-
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (ctx) {
-            return Dialog(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: theme.colorScheme.primary),
-                    const SizedBox(height: 20),
-                    const Text('Uploading profile picture...'),
-                  ],
-                ),
+          builder: (ctx) => Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: theme.colorScheme.primary),
+                  const SizedBox(height: 20),
+                  const Text('Uploading...'),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         );
-
         await ref
             .read(profileServiceProvider)
             .uploadProfilePicture(pickedFile.path);
-
-        nav.pop(); // Close dialog
-
+        nav.pop();
         ref.invalidate(appUserProvider);
         messenger.showSnackBar(
           const SnackBar(
-            content: Text('Profile picture updated successfully!'),
+            content: Text('Profile picture updated!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -2012,10 +1673,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       try {
         Navigator.of(context, rootNavigator: true).pop();
       } catch (_) {}
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error uploading picture: $e'),
+          content: Text('Error: $e'),
           backgroundColor: theme.colorScheme.error,
         ),
       );
@@ -2028,14 +1688,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, s) => const Center(child: Text("Error")),
       data: (appUser) {
-        if (appUser == null) {
-          return const Center(child: Text("Not logged in"));
-        }
+        if (appUser == null) return const Center(child: Text("Not logged in"));
         final profile = appUser.profile;
-        final currentName = profile.fullName ?? 'Explorer';
-        final currentCity = profile.city ?? '';
-        final currentCountry = profile.country ?? '';
-        final currentEducationLevel = profile.educationLevel ?? 'Not set';
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
           children: [
@@ -2058,15 +1712,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                             child: Image.network(
                               profile.profilePictureUrl!,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Center(
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                );
-                              },
                             ),
                           )
                         : Center(
@@ -2078,44 +1723,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           ),
                   ),
                   const SizedBox(height: 16),
-                  if (profile.profilePictureUrl?.isNotEmpty == true)
-                    GestureDetector(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => Dialog(
-                            child: SizedBox(
-                              width: 300,
-                              height: 300,
-                              child: Image.network(
-                                profile.profilePictureUrl!,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.visibility,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'See profile picture',
-                            style: TextStyle(
-                              color: theme.colorScheme.primary,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (profile.profilePictureUrl?.isNotEmpty == true)
-                    const SizedBox(height: 12),
                   GestureDetector(
                     onTap: _changeProfilePicture,
                     child: Row(
@@ -2124,7 +1731,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                         Icon(Icons.image, color: theme.colorScheme.secondary),
                         const SizedBox(width: 8),
                         Text(
-                          'Choose profile picture',
+                          'Change profile picture',
                           style: TextStyle(
                             color: theme.colorScheme.secondary,
                             fontSize: 14,
@@ -2139,204 +1746,67 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
             ),
             const SizedBox(height: 28),
             Container(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                ),
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    title: const Text('Full Name'),
+                    subtitle: Text(profile.fullName ?? 'Explorer'),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () => _showEditDialog(
+                      'Edit Name',
+                      profile.fullName ?? '',
+                      (v) => Supabase.instance.client
+                          .from('profiles')
+                          .update({'full_name': v})
+                          .eq('id', profile.id),
                     ),
                   ),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: Icon(
-                          Icons.person_outline,
-                          color: theme.colorScheme.primary,
-                        ),
-                        title: Text(
-                          'Full Name',
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                            fontSize: 12,
-                          ),
-                        ),
-                        subtitle: Text(
-                          currentName,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.edit,
-                          color: theme.colorScheme.secondary,
-                          size: 20,
-                        ),
-                        onTap: () => _showEditNameDialog(currentName),
-                      ),
-                      Divider(
-                        height: 1,
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.1,
-                        ),
-                      ),
-                      ListTile(
-                        leading: Icon(
-                          Icons.location_on_outlined,
-                          color: theme.colorScheme.primary,
-                        ),
-                        title: Text(
-                          'City',
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                            fontSize: 12,
-                          ),
-                        ),
-                        subtitle: Text(
-                          currentCity.isNotEmpty ? currentCity : 'Not set',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.edit,
-                          color: theme.colorScheme.secondary,
-                          size: 20,
-                        ),
-                        onTap: () => _showEditCityDialog(currentCity),
-                      ),
-                      Divider(
-                        height: 1,
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.1,
-                        ),
-                      ),
-                      ListTile(
-                        leading: Icon(
-                          Icons.public_outlined,
-                          color: theme.colorScheme.primary,
-                        ),
-                        title: Text(
-                          'Country',
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                            fontSize: 12,
-                          ),
-                        ),
-                        subtitle: Text(
-                          currentCountry.isNotEmpty
-                              ? currentCountry
-                              : 'Not set',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.edit,
-                          color: theme.colorScheme.secondary,
-                          size: 20,
-                        ),
-                        onTap: () => _showEditCountryDialog(currentCountry),
-                      ),
-                      Divider(
-                        height: 1,
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.1,
-                        ),
-                      ),
-                      ListTile(
-                        leading: Icon(
-                          Icons.school_outlined,
-                          color: theme.colorScheme.primary,
-                        ),
-                        title: Text(
-                          'Education Level',
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                            fontSize: 12,
-                          ),
-                        ),
-                        subtitle: Text(
-                          currentEducationLevel,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.edit,
-                          color: theme.colorScheme.secondary,
-                          size: 20,
-                        ),
-                        onTap: () => _showEditEducationLevelDialog(
-                          currentEducationLevel,
-                        ),
-                      ),
-                      Divider(
-                        height: 1,
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.1,
-                        ),
-                      ),
-                      ListTile(
-                        leading: Icon(
-                          Icons.description_outlined,
-                          color: theme.colorScheme.primary,
-                        ),
-                        title: Text(
-                          'Bio',
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                            fontSize: 12,
-                          ),
-                        ),
-                        subtitle: Text(
-                          profile.bio?.isNotEmpty == true
-                              ? profile.bio!
-                              : 'Not set',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.edit,
-                          color: theme.colorScheme.secondary,
-                          size: 20,
-                        ),
-                        onTap: () => _showEditBioDialog(profile.bio ?? ''),
-                      ),
-                      Divider(
-                        height: 1,
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.1,
-                        ),
-                      ),
-                    ],
+                  ListTile(
+                    title: const Text('City'),
+                    subtitle: Text(profile.city ?? 'Not set'),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () => _showEditDialog(
+                      'Edit City',
+                      profile.city ?? '',
+                      (v) => Supabase.instance.client
+                          .from('profiles')
+                          .update({'city': v})
+                          .eq('id', profile.id),
+                    ),
                   ),
-                )
-                .animate()
-                .fade(duration: 400.ms, delay: 100.ms)
-                .slideY(begin: 0.1),
+                  ListTile(
+                    title: const Text('Country'),
+                    subtitle: Text(profile.country ?? 'Not set'),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () => _showEditDialog(
+                      'Edit Country',
+                      profile.country ?? '',
+                      (v) => Supabase.instance.client
+                          .from('profiles')
+                          .update({'country': v})
+                          .eq('id', profile.id),
+                    ),
+                  ),
+                  ListTile(
+                    title: const Text('Bio'),
+                    subtitle: Text(profile.bio ?? 'Not set'),
+                    trailing: const Icon(Icons.edit),
+                    onTap: () => _showEditDialog(
+                      'Edit Bio',
+                      profile.bio ?? '',
+                      (v) => ref.read(profileServiceProvider).updateBio(v),
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fade().slideY(begin: 0.1),
           ],
         );
       },
@@ -2356,29 +1826,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.all(20),
             child: Container(
               height: 50,
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(25),
-                border: Border.all(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-                  width: 1,
-                ),
               ),
               child: TabBar(
                 controller: _tabController,
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
                 indicator: BoxDecoration(
                   color: theme.colorScheme.primary,
                   borderRadius: BorderRadius.circular(25),
                 ),
                 labelColor: theme.colorScheme.onPrimary,
-                unselectedLabelColor: theme.colorScheme.onSurface.withValues(
-                  alpha: 0.6,
-                ),
                 tabs: const [
                   Tab(text: 'Profile'),
                   Tab(text: 'Settings'),

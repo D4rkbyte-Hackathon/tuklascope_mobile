@@ -1,6 +1,6 @@
-// mobile/lib/features/profile/pathfinder_blueprint_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'dart:async';
 import '../../core/services/pathfinder_service.dart';
 
 /// Opens a near-full-screen sheet that can be dragged down from the top to dismiss.
@@ -66,33 +66,9 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
     return FutureBuilder<Map<String, dynamic>?>(
       future: _analysisFuture,
       builder: (context, snapshot) {
-        // 1. Loading State
+        // 1. Loading State - The new Animated Modal
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildStaticSheetShell(
-            theme,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 24),
-                  Text(
-                        'Analyzing Neo4j Skill Graph...',
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.1,
-                        ),
-                      )
-                      .animate(onPlay: (controller) => controller.repeat())
-                      .shimmer(
-                        duration: 1500.ms,
-                        color: theme.colorScheme.secondary,
-                      ),
-                ],
-              ),
-            ),
-          );
+          return const _NeuralLinkOverlay();
         }
 
         // 2. Error State
@@ -276,11 +252,140 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
 
   Widget _buildStaticSheetShell(ThemeData theme, {required Widget child}) {
     return Container(
+      height: MediaQuery.of(context).size.height * 0.5,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: child,
+    );
+  }
+}
+
+// =============================================================================
+// NEW: NEURAL LINK LOADING OVERLAY
+// =============================================================================
+
+class _NeuralLinkOverlay extends StatefulWidget {
+  const _NeuralLinkOverlay();
+
+  @override
+  State<_NeuralLinkOverlay> createState() => _NeuralLinkOverlayState();
+}
+
+class _NeuralLinkOverlayState extends State<_NeuralLinkOverlay> {
+  final List<String> _phrases = [
+    'Initializing Uplink...',
+    'Mapping Graph Data...',
+    'Analyzing Skill Synergies...',
+    'Calculating Career Vectors...',
+    'Querying Neural Network...',
+    'Synthesizing Blueprint...',
+  ];
+
+  int _currentIndex = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Change phrase every 1.5 seconds
+    _timer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
+      if (mounted) {
+        setState(() {
+          _currentIndex = (_currentIndex + 1) % _phrases.length;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      // We don't use a solid background here so it overlays the blurred barrier of the BottomSheet
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Glowing, pulsating icon
+            Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                        blurRadius: 30,
+                        spreadRadius: 10,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.hub,
+                    size: 48,
+                    color: theme.colorScheme.primary,
+                  ),
+                )
+                .animate(
+                  onPlay: (controller) => controller.repeat(reverse: true),
+                )
+                .scaleXY(
+                  begin: 0.9,
+                  end: 1.1,
+                  duration: 1.seconds,
+                  curve: Curves.easeInOut,
+                )
+                .shimmer(
+                  duration: 2.seconds,
+                  color: theme.colorScheme.secondary,
+                ),
+
+            const SizedBox(height: 32),
+
+            // Animated Text
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 500),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.0, 0.2),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: Text(
+                _phrases[_currentIndex],
+                key: ValueKey<int>(
+                  _currentIndex,
+                ), // Important for AnimatedSwitcher
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -445,7 +550,6 @@ class _CareerRecommendationCard extends StatelessWidget {
     required this.matchConfidence,
   });
 
-  // 🚀 FIX: Added curly braces for flow control
   Color _getPathColor(ThemeData theme) {
     final type = pathType.toLowerCase();
     if (type.contains('master') || type.contains('specialist')) {
@@ -460,7 +564,6 @@ class _CareerRecommendationCard extends StatelessWidget {
     return theme.colorScheme.primary; // Default
   }
 
-  // 🚀 FIX: Added curly braces for flow control
   IconData _getPathIcon() {
     final type = pathType.toLowerCase();
     if (type.contains('master') || type.contains('specialist')) {
