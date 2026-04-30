@@ -1,6 +1,3 @@
-// mobile/lib/features/profile/profile_screen.dart
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -11,13 +8,11 @@ import 'dart:math' as math;
 import '../../core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../auth/providers/auth_controller.dart';
-import '../auth/services/supabase_auth_service.dart';
 import 'pathfinder_blueprint_sheet.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/services/pathfinder_service.dart';
 import 'services/profile_service.dart';
 import 'screens/change_password_screen.dart';
-
 import '../auth/presentation/widgets/auth_gate.dart';
 
 // =========================================================================
@@ -29,14 +24,12 @@ class ProfileStats {
   final int currentLevel;
   final int conceptsMastered;
 
-  // 4 Main Gamification Strands
   final int stemXp;
   final int humssXp;
   final int abmXp;
   final int tvlXp;
 
-  // Neo4j Specific Topics & Levels
-  final Map<String, int> topSkills;
+  final List<String> topSkills;
 
   ProfileStats({
     required this.totalXp,
@@ -72,7 +65,7 @@ final profileStatsProvider = FutureProvider.autoDispose<ProfileStats>((
       humssXp: 0,
       abmXp: 0,
       tvlXp: 0,
-      topSkills: {},
+      topSkills: [],
     );
   }
 
@@ -94,9 +87,10 @@ final profileStatsProvider = FutureProvider.autoDispose<ProfileStats>((
       .eq('user_id', userId);
 
   final neo4jData = await PathfinderService.getSkillWeb();
-  Map<String, int> parsedTopSkills = {};
+
+  List<String> parsedTopSkills = [];
   if (neo4jData != null && neo4jData['top_skills'] != null) {
-    parsedTopSkills = Map<String, int>.from(neo4jData['top_skills']);
+    parsedTopSkills = List<String>.from(neo4jData['top_skills']);
   }
 
   return ProfileStats(
@@ -307,7 +301,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                 context,
                 MaterialPageRoute(builder: (_) => const EditProfileScreen()),
               ).then((_) {
-                // Refresh profile data after returning from edit
                 ref.invalidate(appUserProvider);
               });
             },
@@ -380,28 +373,32 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: _ProfilePromoCard(
-              theme: theme,
-              borderColor: theme.colorScheme.secondary,
-              title: 'Open Your Blueprint',
-              description: 'See how your skills map to real-world careers.',
-              buttonLabel: 'Open Pathfinder →',
-              buttonColor: theme.colorScheme.primary,
-              onPressed: () {
-                // Safely grab the current stats value, or default to 0 if still loading
-                final currentStats = statsAsync.value;
+            child:
+                _ProfilePromoCard(
+                      theme: theme,
+                      borderColor: theme.colorScheme.secondary,
+                      title: 'Open Your Blueprint',
+                      description:
+                          'See how your skills map to real-world careers.',
+                      buttonLabel: 'Open Pathfinder →',
+                      buttonColor: theme.colorScheme.primary,
+                      onPressed: () {
+                        final currentStats = statsAsync.value;
 
-                showPathfinderBlueprintSheet(
-                  context,
-                  stemXp: currentStats?.stemXp ?? 0,
-                  humssXp: currentStats?.humssXp ?? 0,
-                  abmXp: currentStats?.abmXp ?? 0,
-                  tvlXp: currentStats?.tvlXp ?? 0,
-                  onNavigateToScan: () =>
-                      MainNavScope.maybeOf(context)?.goToTab(1),
-                );
-              },
-            ).animate().fade(duration: 600.ms, delay: 300.ms).slideY(begin: 0.1),
+                        showPathfinderBlueprintSheet(
+                          context,
+                          stemXp: currentStats?.stemXp ?? 0,
+                          humssXp: currentStats?.humssXp ?? 0,
+                          abmXp: currentStats?.abmXp ?? 0,
+                          tvlXp: currentStats?.tvlXp ?? 0,
+                          onNavigateToScan: () =>
+                              MainNavScope.maybeOf(context)?.goToTab(1),
+                        );
+                      },
+                    )
+                    .animate()
+                    .fade(duration: 600.ms, delay: 300.ms)
+                    .slideY(begin: 0.1),
           ),
           _ProfilePromoCard(
             theme: theme,
@@ -511,7 +508,6 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
           ),
           child: Column(
             children: [
-              // ===== CHANGE PASSWORD (Email Users Only) =====
               if (isEmailUser)
                 Container(
                   margin: const EdgeInsets.all(8),
@@ -627,16 +623,12 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                 ),
                 trailing: Icon(Icons.logout, color: theme.colorScheme.error),
                 onTap: () async {
+                  final nav = Navigator.of(context, rootNavigator: true);
                   await Supabase.instance.client.auth.signOut();
-                  if (context.mounted) {
-                    Navigator.of(
-                      context,
-                      rootNavigator: true,
-                    ).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (context) => const AuthGate()),
-                      (route) => false,
-                    );
-                  }
+                  nav.pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const AuthGate()),
+                    (route) => false,
+                  );
                 },
               ),
             ],
@@ -1029,7 +1021,6 @@ class _DynamicSkillTreeNetwork extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // 🚀 THE STATIC PREVIEW WITH TAP-TO-EXPAND
           ClipRRect(
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
@@ -1040,7 +1031,6 @@ class _DynamicSkillTreeNetwork extends StatelessWidget {
                 SizedBox(
                   height: 350,
                   width: double.infinity,
-                  // Removed InteractiveViewer here to stop scroll conflicts!
                   child: CustomPaint(
                     size: const Size(double.infinity, 350),
                     painter: _AdvancedInteractiveRadialPainter(
@@ -1049,7 +1039,6 @@ class _DynamicSkillTreeNetwork extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Expand Button Overlay
                 Positioned(
                   top: 12,
                   right: 12,
@@ -1062,7 +1051,6 @@ class _DynamicSkillTreeNetwork extends StatelessWidget {
                     ),
                     icon: const Icon(Icons.fullscreen),
                     onPressed: () {
-                      // Open Full Screen Mode
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) =>
@@ -1075,7 +1063,6 @@ class _DynamicSkillTreeNetwork extends StatelessWidget {
               ],
             ),
           ),
-          // Footer Hint
           GestureDetector(
             onTap: () {
               Navigator.of(context).push(
@@ -1172,7 +1159,7 @@ class _AdvancedInteractiveRadialPainter extends CustomPainter {
       },
     ];
 
-    final topics = stats.topSkills.entries.toList();
+    final topics = stats.topSkills;
     final int topicCount = topics.length;
 
     final topicColors = [
@@ -1218,8 +1205,17 @@ class _AdvancedInteractiveRadialPainter extends CustomPainter {
     }
 
     for (int i = 0; i < topicCount; i++) {
-      final topicName = topics[i].key;
-      final topicLevel = topics[i].value;
+      final skillString = topics[i];
+      final regex = RegExp(r'^(.*?) \((.*?)\) - Lv\.(\d+)$');
+      final match = regex.firstMatch(skillString);
+
+      String topicName = skillString;
+      int topicLevel = 1;
+
+      if (match != null) {
+        topicName = match.group(1)?.trim() ?? topicName;
+        topicLevel = int.tryParse(match.group(3) ?? '1') ?? 1;
+      }
 
       final angle = (2 * math.pi * i) / topicCount - (math.pi / 2);
       final dx = center.dx + outerRadius * math.cos(angle);
@@ -1412,14 +1408,10 @@ class _FullScreenSkillTree extends StatelessWidget {
               ),
             ),
             Expanded(
-              // 🚀 FIX: Removed the massive 1200x1200 unconstrained box.
-              // Now it perfectly centers to your phone screen and allows panning in any direction!
               child: InteractiveViewer(
                 minScale: 0.5,
                 maxScale: 4.0,
-                boundaryMargin: const EdgeInsets.all(
-                  double.infinity,
-                ), // Allows infinite panning
+                boundaryMargin: const EdgeInsets.all(double.infinity),
                 child: SizedBox(
                   width: double.infinity,
                   height: double.infinity,
@@ -1473,7 +1465,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
     await showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           title: Text(
@@ -1495,7 +1487,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 'Cancel',
                 style: TextStyle(
@@ -1510,6 +1502,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
               onPressed: () async {
                 final newName = nameController.text.trim();
                 if (newName.isNotEmpty && newName != currentName) {
+                  final nav = Navigator.of(dialogContext);
+                  final messenger = ScaffoldMessenger.of(context);
                   try {
                     final userId =
                         Supabase.instance.client.auth.currentUser?.id;
@@ -1520,26 +1514,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           .eq('id', userId);
                       ref.invalidate(appUserProvider);
                       ref.invalidate(profileStatsProvider);
-                      if (mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Profile updated successfully!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: $e'),
-                          backgroundColor: theme.colorScheme.error,
+
+                      nav.pop();
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Profile updated successfully!'),
+                          backgroundColor: Colors.green,
                         ),
                       );
                     }
+                  } catch (e) {
+                    nav.pop();
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: theme.colorScheme.error,
+                      ),
+                    );
                   }
+                } else {
+                  Navigator.of(dialogContext).pop();
                 }
               },
               child: const Text('Save'),
@@ -1558,7 +1552,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
     await showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           title: Text(
@@ -1580,7 +1574,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 'Cancel',
                 style: TextStyle(
@@ -1595,6 +1589,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
               onPressed: () async {
                 final newCity = cityController.text.trim();
                 if (newCity != currentCity) {
+                  final nav = Navigator.of(dialogContext);
+                  final messenger = ScaffoldMessenger.of(context);
                   try {
                     final userId =
                         Supabase.instance.client.auth.currentUser?.id;
@@ -1605,28 +1601,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           .eq('id', userId);
                       ref.invalidate(appUserProvider);
                       ref.invalidate(profileStatsProvider);
-                      if (mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('City updated successfully!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: $e'),
-                          backgroundColor: theme.colorScheme.error,
+
+                      nav.pop();
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('City updated successfully!'),
+                          backgroundColor: Colors.green,
                         ),
                       );
                     }
+                  } catch (e) {
+                    nav.pop();
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: theme.colorScheme.error,
+                      ),
+                    );
                   }
                 } else {
-                  if (mounted) Navigator.pop(context);
+                  Navigator.of(dialogContext).pop();
                 }
               },
               child: const Text('Save'),
@@ -1645,7 +1639,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
     await showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           title: Text(
@@ -1667,7 +1661,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 'Cancel',
                 style: TextStyle(
@@ -1682,6 +1676,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
               onPressed: () async {
                 final newCountry = countryController.text.trim();
                 if (newCountry != currentCountry) {
+                  final nav = Navigator.of(dialogContext);
+                  final messenger = ScaffoldMessenger.of(context);
                   try {
                     final userId =
                         Supabase.instance.client.auth.currentUser?.id;
@@ -1692,28 +1688,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           .eq('id', userId);
                       ref.invalidate(appUserProvider);
                       ref.invalidate(profileStatsProvider);
-                      if (mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Country updated successfully!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: $e'),
-                          backgroundColor: theme.colorScheme.error,
+
+                      nav.pop();
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Country updated successfully!'),
+                          backgroundColor: Colors.green,
                         ),
                       );
                     }
+                  } catch (e) {
+                    nav.pop();
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: theme.colorScheme.error,
+                      ),
+                    );
                   }
                 } else {
-                  if (mounted) Navigator.pop(context);
+                  Navigator.of(dialogContext).pop();
                 }
               },
               child: const Text('Save'),
@@ -1739,7 +1733,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
     await showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
@@ -1798,7 +1792,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pop(dialogContext),
                   child: Text(
                     'Cancel',
                     style: TextStyle(
@@ -1813,6 +1807,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                   onPressed:
                       selectedLevel != null && selectedLevel != currentLevel
                       ? () async {
+                          final nav = Navigator.of(dialogContext);
+                          final messenger = ScaffoldMessenger.of(context);
                           try {
                             final userId =
                                 Supabase.instance.client.auth.currentUser?.id;
@@ -1823,27 +1819,25 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                                   .eq('id', userId);
                               ref.invalidate(appUserProvider);
                               ref.invalidate(profileStatsProvider);
-                              if (mounted) {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Education updated successfully!',
-                                    ),
-                                    backgroundColor: Colors.green,
+
+                              nav.pop();
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Education updated successfully!',
                                   ),
-                                );
-                              }
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: theme.colorScheme.error,
+                                  backgroundColor: Colors.green,
                                 ),
                               );
                             }
+                          } catch (e) {
+                            nav.pop();
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: theme.colorScheme.error,
+                              ),
+                            );
                           }
                         }
                       : null,
@@ -1865,7 +1859,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
     await showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           title: Text(
@@ -1888,7 +1882,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 'Cancel',
                 style: TextStyle(
@@ -1901,29 +1895,29 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                 backgroundColor: theme.colorScheme.secondary,
               ),
               onPressed: () async {
+                final nav = Navigator.of(dialogContext);
+                final messenger = ScaffoldMessenger.of(context);
                 try {
                   await ref
                       .read(profileServiceProvider)
                       .updateBio(bioController.text.trim());
                   ref.invalidate(appUserProvider);
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Bio updated successfully!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
+
+                  nav.pop();
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Bio updated successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
                 } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: theme.colorScheme.error,
-                      ),
-                    );
-                  }
+                  nav.pop();
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: theme.colorScheme.error,
+                    ),
+                  );
                 }
               },
               child: const Text('Save'),
@@ -1941,70 +1935,57 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
       if (pickedFile != null) {
-        // Store dialog context for closing later
-        BuildContext? dialogContext;
+        if (!mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        final nav = Navigator.of(context, rootNavigator: true);
 
-        if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (ctx) {
-              dialogContext = ctx;
-              return Dialog(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(height: 20),
-                      const Text('Uploading profile picture...'),
-                    ],
-                  ),
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) {
+            return Dialog(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: theme.colorScheme.primary),
+                    const SizedBox(height: 20),
+                    const Text('Uploading profile picture...'),
+                  ],
                 ),
-              );
-            },
-          );
-        }
+              ),
+            );
+          },
+        );
 
-        // Upload the image
         await ref
             .read(profileServiceProvider)
             .uploadProfilePicture(pickedFile.path);
 
-        // Close dialog using the saved context
-        if (mounted && dialogContext != null && dialogContext!.mounted) {
-          Navigator.of(dialogContext!).pop();
-        }
+        nav.pop(); // Close dialog
 
-        // Refresh UI
-        if (mounted) {
-          ref.invalidate(appUserProvider);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile picture updated successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      // Try to close dialog
-      if (mounted) {
-        try {
-          Navigator.of(context).pop();
-        } catch (e) {
-          // Dialog might not be open
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error uploading picture: $e'),
-            backgroundColor: theme.colorScheme.error,
+        ref.invalidate(appUserProvider);
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Profile picture updated successfully!'),
+            backgroundColor: Colors.green,
           ),
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+      // Close dialog if it's open, wrap in try/catch just in case
+      try {
+        Navigator.of(context, rootNavigator: true).pop();
+      } catch (_) {}
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error uploading picture: $e'),
+          backgroundColor: theme.colorScheme.error,
+        ),
+      );
     }
   }
 
@@ -2025,7 +2006,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
           children: [
-            // 🚀 Circular Profile Picture at Top
             Center(
               child: Column(
                 children: [
@@ -2065,7 +2045,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
                           ),
                   ),
                   const SizedBox(height: 16),
-                  // Action Buttons
                   if (profile.profilePictureUrl?.isNotEmpty == true)
                     GestureDetector(
                       onTap: () {

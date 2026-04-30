@@ -22,10 +22,13 @@ class TeaserDoorsScreen extends StatefulWidget {
 class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
   late PageController _pageController;
 
+  // 🚀 NEW: State tracker to lock completed portals
+  final Set<String> _securedPortals = {};
+
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.85);
+    _pageController = PageController(initialPage: 1000, viewportFraction: 0.85);
   }
 
   @override
@@ -83,7 +86,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // 🚀 FIX: Swapped "Choose your lens" to the top, small and subtle
         title: const Text(
           'Choose your lens',
           style: TextStyle(
@@ -94,45 +96,26 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
           ),
         ),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: Stack(
         children: [
-          // 1. IMMERSIVE BACKGROUND: The user's actual photo
           Positioned.fill(
-            child: Image.file(
-              File(widget.imagePath),
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color: theme.scaffoldBackgroundColor,
-                child: const Center(
-                  child: Icon(
-                    Icons.broken_image,
-                    color: Colors.white24,
-                    size: 100,
-                  ),
-                ),
-              ),
-            ),
+            child: Image.file(File(widget.imagePath), fit: BoxFit.cover),
           ),
-          // 2. LITE FROSTED OVERLAY
           Positioned.fill(
             child: BackdropFilter(
-              // 🚀 FIX: Drastically lowered blur and darkness so the photo is highly visible
               filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-              child: Container(
-                color: Colors.black.withValues(
-                  alpha: 0.4,
-                ), // Let the photo shine through!
-              ),
+              child: Container(color: Colors.black.withValues(alpha: 0.4)),
             ),
           ),
-          // 3. MAIN CONTENT
           SafeArea(
             child: Column(
               children: [
                 const SizedBox(height: 20),
-                // 🚀 FIX: Scanned Object is now here. Normal casing, normal spacing.
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
@@ -141,7 +124,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                     style: const TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 0, // Normal spacing
+                      letterSpacing: 0,
                       color: Colors.white,
                     ),
                   ),
@@ -151,7 +134,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                   child: PageView.builder(
                     controller: _pageController,
                     physics: const BouncingScrollPhysics(),
-                    itemCount: _teaserDoors.length,
                     itemBuilder: (context, index) {
                       return AnimatedBuilder(
                         animation: _pageController,
@@ -159,7 +141,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                           final double page =
                               _pageController.position.haveDimensions
                               ? _pageController.page!
-                              : 0.0;
+                              : 1000.0;
                           final double difference = (page - index).abs();
                           final double scale = (1 - (difference * 0.1)).clamp(
                             0.9,
@@ -169,12 +151,17 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                             0.4,
                             1.0,
                           );
+                          final int actualIndex = index % _teaserDoors.length;
 
                           return Transform.scale(
                             scale: scale,
                             child: Opacity(
                               opacity: opacity,
-                              child: _buildMagicalDoor(context, index, theme),
+                              child: _buildMagicalDoor(
+                                context,
+                                actualIndex,
+                                theme,
+                              ),
                             ),
                           );
                         },
@@ -198,17 +185,25 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
     final teaser = door['teaser_text'] ?? '';
     const int xp = 50;
 
-    final Color strandColor = _getColorForStrand(lens);
-    final IconData icon = _getIconForStrand(lens);
+    // Check if this specific lens has already been completed
+    final bool isSecured = _securedPortals.contains(lens);
+
+    final Color strandColor = isSecured
+        ? Colors.green
+        : _getColorForStrand(lens);
+    final IconData icon = isSecured
+        ? Icons.check_circle
+        : _getIconForStrand(lens);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(
-          alpha: 0.90,
-        ), // Slightly more opaque to contrast with the clearer image
+        color: theme.colorScheme.surface.withValues(alpha: 0.90),
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: strandColor.withValues(alpha: 0.5), width: 2),
+        border: Border.all(
+          color: strandColor.withValues(alpha: isSecured ? 1.0 : 0.5),
+          width: isSecured ? 3 : 2,
+        ),
         boxShadow: [
           BoxShadow(
             color: strandColor.withValues(alpha: 0.2),
@@ -239,24 +234,32 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                    color: isSecured
+                        ? Colors.green.withValues(alpha: 0.15)
+                        : theme.colorScheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      color: isSecured
+                          ? Colors.green
+                          : theme.colorScheme.primary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        color: Color(0xFFFFC107),
+                      Icon(
+                        isSecured ? Icons.lock : Icons.star_rounded,
+                        color: isSecured
+                            ? Colors.green
+                            : const Color(0xFFFFC107),
                         size: 16,
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '+$xp XP',
+                        isSecured ? 'SECURED' : '+$xp XP',
                         style: TextStyle(
-                          color: theme.colorScheme.primary,
+                          color: isSecured
+                              ? Colors.green
+                              : theme.colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -277,7 +280,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              title,
+              isSecured ? "Data Extracted" : title,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 24,
@@ -288,7 +291,9 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
             ),
             const Spacer(),
             Text(
-              teaser,
+              isSecured
+                  ? "You have successfully absorbed the knowledge from this pathway. Choose another lens to continue extracting."
+                  : teaser,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
@@ -302,31 +307,48 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
               height: 60,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: strandColor,
-                  foregroundColor: Colors.white,
-                  elevation: 5,
+                  backgroundColor: isSecured ? Colors.transparent : strandColor,
+                  foregroundColor: isSecured ? Colors.green : Colors.white,
+                  elevation: isSecured ? 0 : 5,
                   shadowColor: strandColor.withValues(alpha: 0.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: isSecured ? Colors.green : Colors.transparent,
+                      width: 2,
+                    ),
                   ),
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DiscoveryCardsScreen(
-                        objectName: _objectName,
-                        gradeLevel: widget.gradeLevel,
-                        selectedLens: lens,
-                        imagePath: widget.imagePath,
-                        teaserContext: teaser,
-                      ),
-                    ),
-                  );
-                },
-                child: const Text(
-                  'ENTER PORTAL',
-                  style: TextStyle(
+                onPressed: isSecured
+                    ? null
+                    : () async {
+                        // 🚀 WAIT FOR THE DECK TO RETURN TRUE IF SUCCESSFUL
+                        final result =
+                            await Navigator.of(
+                              context,
+                              rootNavigator: true,
+                            ).push(
+                              MaterialPageRoute(
+                                builder: (context) => DiscoveryCardsScreen(
+                                  objectName: _objectName,
+                                  gradeLevel: widget.gradeLevel,
+                                  selectedLens: lens,
+                                  imagePath: widget.imagePath,
+                                  teaserContext: teaser,
+                                ),
+                              ),
+                            );
+
+                        // 🚀 IF SUCCESSFUL, LOCK THIS PORTAL!
+                        if (result == true && mounted) {
+                          setState(() {
+                            _securedPortals.add(lens);
+                          });
+                        }
+                      },
+                child: Text(
+                  isSecured ? 'PORTAL CLOSED' : 'ENTER PORTAL',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.5,

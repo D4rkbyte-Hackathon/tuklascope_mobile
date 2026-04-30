@@ -1,5 +1,6 @@
 import 'dart:io';
-import 'dart:async'; // 🚀 NEW: Required for the text timer
+import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuklascope_mobile/features/home/providers/home_provider.dart';
@@ -24,69 +25,33 @@ class DiscoveryCardsScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  // 🚀 NEW: Added TickerProviderStateMixin for the advanced animation
   ConsumerState<DiscoveryCardsScreen> createState() =>
       _DiscoveryCardsScreenState();
 }
 
 class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
     with TickerProviderStateMixin {
-  int _selectedIndex = 0; // 0: Fun Fact, 1: Lesson, 2: Real World
+  int _selectedIndex = 0;
   bool _isLoading = true;
   String? _error;
   Map<String, dynamic>? _deckData;
   final int baseRewardXp = 50;
 
-  // 🚀 NEW: Animation & Timer Variables
-  late AnimationController _scanController;
-  Timer? _phraseTimer;
-  int _currentPhraseIndex = 0;
-  late final List<String> _loadingPhrases;
-
   @override
   void initState() {
     super.initState();
-
-    // 🚀 NEW: The dynamic phrases the AI cycles through
-    _loadingPhrases = [
-      'Calibrating AI lenses...',
-      'Analyzing structural composition...',
-      'Cross-referencing historical data...',
-      'Extracting core concepts...',
-      'Synthesizing ${widget.selectedLens} pathways...',
-    ];
-
-    // 🚀 NEW: Setup the sweeping laser animation loop
-    _scanController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-
-    // 🚀 NEW: Setup the timer to change the text every 2.5 seconds
-    _phraseTimer = Timer.periodic(const Duration(milliseconds: 2500), (timer) {
-      if (mounted && _isLoading) {
-        setState(() {
-          _currentPhraseIndex =
-              (_currentPhraseIndex + 1) % _loadingPhrases.length;
-        });
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchLearningDeck();
     });
-
-    _fetchLearningDeck();
-  }
-
-  @override
-  void dispose() {
-    _scanController.dispose();
-    _phraseTimer?.cancel();
-    super.dispose();
   }
 
   Future<void> _fetchLearningDeck() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.8), // Darker backdrop
+      barrierDismissible: false,
+      builder: (context) => _DeckQueryModal(lens: widget.selectedLens),
+    );
 
     final data = await LearnService.generateDeck(
       objectName: widget.objectName,
@@ -96,6 +61,8 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
     );
 
     if (!mounted) return;
+
+    Navigator.pop(context);
 
     if (data != null) {
       setState(() {
@@ -110,21 +77,6 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
     }
   }
 
-  IconData _getLensIcon() {
-    switch (widget.selectedLens.toUpperCase()) {
-      case 'STEM':
-        return Icons.science;
-      case 'ABM':
-        return Icons.trending_up;
-      case 'HUMSS':
-        return Icons.public;
-      case 'TVL':
-        return Icons.handyman;
-      default:
-        return Icons.lightbulb;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -135,7 +87,13 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(
+            context,
+            false,
+          ), // Pop with false (did not complete)
+        ),
       ),
       floatingActionButton: _deckData != null && !_isLoading
           ? FloatingActionButton.extended(
@@ -162,7 +120,19 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
           ? _buildChallengeBottomBar(theme)
           : null,
       body: _isLoading
-          ? _buildAnimatedLoadingState(theme)
+          ? Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: FileImage(File(widget.imagePath)),
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withValues(alpha: 0.85),
+                    BlendMode.darken,
+                  ),
+                ),
+              ),
+            )
           : _error != null
           ? Center(
               child: Text(
@@ -171,129 +141,6 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
               ),
             )
           : _buildContent(theme),
-    );
-  }
-
-  // 🚀 NEW: The Cyber-Scanner Animation UI
-  Widget _buildAnimatedLoadingState(ThemeData theme) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: FileImage(File(widget.imagePath)),
-          fit: BoxFit.cover,
-          colorFilter: ColorFilter.mode(
-            Colors.black.withValues(alpha: 0.85),
-            BlendMode.darken,
-          ),
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Cyber Scanner Box
-          SizedBox(
-            height: 150,
-            width: 150,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Glowing outer ring
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withValues(
-                          alpha: 0.15,
-                        ),
-                        blurRadius: 40,
-                        spreadRadius: 10,
-                      ),
-                    ],
-                  ),
-                ),
-                // The Central Icon
-                Icon(
-                  _getLensIcon(),
-                  size: 60,
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
-
-                // The Sweeping Laser Line
-                AnimatedBuilder(
-                  animation: _scanController,
-                  builder: (context, child) {
-                    // Moving the line from top (0) to bottom (150)
-                    return Positioned(
-                      top: _scanController.value * 145,
-                      child: Container(
-                        width: 150,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.secondary,
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.colorScheme.secondary,
-                              blurRadius: 15,
-                              spreadRadius: 3,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 50),
-
-          // 🚀 NEW: Cross-fading, sliding dynamic text
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 600),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0.0, 0.5),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
-              );
-            },
-            child: Text(
-              _loadingPhrases[_currentPhraseIndex],
-              key: ValueKey<int>(
-                _currentPhraseIndex,
-              ), // Key forces the switch animation
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'UNLOCKING SECRETS',
-            style: TextStyle(
-              color: theme.colorScheme.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 4,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -545,6 +392,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
     );
   }
 
+  // 🚀 REVERTED UI: 2-Tries (Hearts) Logic with standard Tuklascope UI
   void _showChallengeModal() {
     final challengeCard =
         _deckData?['challenge_card'] as Map<String, dynamic>? ?? {};
@@ -553,9 +401,10 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
     final correctAnswer = challengeCard['correct_answer'] ?? "";
     final explanation = challengeCard['explanation'] ?? "";
 
+    int attemptsLeft = 2;
     String? selectedOption;
-    bool hasAnswered = false;
-    bool isCorrect = false;
+    bool isEvaluating = false;
+    bool? lastResult; // null = waiting, true = correct, false = wrong
 
     showModalBottomSheet(
       context: context,
@@ -571,7 +420,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
             return Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
+                color: theme.colorScheme.surface, // Back to normal color!
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(32),
                 ),
@@ -582,14 +431,34 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        'TUKLAS CHALLENGE',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: theme.colorScheme.secondary,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                        ),
+                      // Header showing Heart Attempts
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'TUKLAS CHALLENGE',
+                            style: TextStyle(
+                              color: theme.colorScheme.secondary,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                          Row(
+                            children: List.generate(
+                              2,
+                              (index) => Padding(
+                                padding: const EdgeInsets.only(left: 4.0),
+                                child: Icon(
+                                  index < attemptsLeft
+                                      ? Icons.favorite
+                                      : Icons.favorite_border, // Hearts!
+                                  size: 24,
+                                  color: Colors.redAccent,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 24),
                       Text(
@@ -609,11 +478,11 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                         Color borderColor = theme.colorScheme.onSurface
                             .withValues(alpha: 0.1);
 
-                        if (hasAnswered) {
-                          if (isThisSelected && isCorrect) {
+                        if (isEvaluating && isThisSelected) {
+                          if (lastResult == true) {
                             buttonColor = Colors.green.withValues(alpha: 0.2);
                             borderColor = Colors.green;
-                          } else if (isThisSelected && !isCorrect) {
+                          } else if (lastResult == false) {
                             buttonColor = Colors.red.withValues(alpha: 0.2);
                             borderColor = Colors.red;
                           }
@@ -627,12 +496,13 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16.0),
                           child: InkWell(
-                            onTap: hasAnswered
+                            onTap: isEvaluating
                                 ? null
                                 : () => setModalState(
                                     () => selectedOption = option,
                                   ),
-                            child: Container(
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
                                 color: buttonColor,
@@ -656,29 +526,54 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                       }),
 
                       const SizedBox(height: 24),
-                      if (!hasAnswered)
+
+                      // THE EVALUATION LOGIC UI
+                      if (!isEvaluating)
                         ElevatedButton(
                           onPressed: selectedOption == null
                               ? null
                               : () {
                                   setModalState(() {
-                                    hasAnswered = true;
-                                    isCorrect =
+                                    isEvaluating = true;
+                                    lastResult =
                                         (selectedOption == correctAnswer);
                                   });
 
-                                  if (isCorrect) {
+                                  if (lastResult == true) {
                                     _saveProgressToBackend();
                                   } else {
-                                    Future.delayed(
-                                      const Duration(milliseconds: 2500),
-                                      () {
-                                        if (context.mounted) {
-                                          Navigator.pop(context);
-                                          Navigator.pop(context);
-                                        }
-                                      },
-                                    );
+                                    attemptsLeft--;
+                                    if (attemptsLeft > 0) {
+                                      // Reset after a brief flash of red
+                                      Future.delayed(
+                                        const Duration(milliseconds: 1500),
+                                        () {
+                                          if (context.mounted) {
+                                            setModalState(() {
+                                              selectedOption = null;
+                                              isEvaluating = false;
+                                              lastResult = null;
+                                            });
+                                          }
+                                        },
+                                      );
+                                    } else {
+                                      // Out of tries
+                                      Future.delayed(
+                                        const Duration(milliseconds: 2500),
+                                        () {
+                                          if (context.mounted) {
+                                            Navigator.pop(
+                                              context,
+                                            ); // Close Modal
+                                            Navigator.pop(
+                                              context,
+                                              false,
+                                            ); // Return to Teaser Doors
+                                          }
+                                        },
+                                      );
+                                    }
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
@@ -701,49 +596,63 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                         Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: isCorrect
+                            color: lastResult == true
                                 ? Colors.green.withValues(alpha: 0.1)
                                 : Colors.red.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isCorrect ? Colors.green : Colors.red,
+                              color: lastResult == true
+                                  ? Colors.green
+                                  : Colors.red,
                               width: 2,
                             ),
                           ),
                           child: Column(
                             children: [
                               Icon(
-                                isCorrect ? Icons.check_circle : Icons.cancel,
-                                color: isCorrect ? Colors.green : Colors.red,
+                                lastResult == true
+                                    ? Icons.check_circle
+                                    : Icons.cancel,
+                                color: lastResult == true
+                                    ? Colors.green
+                                    : Colors.red,
                                 size: 48,
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                isCorrect
-                                    ? "Brilliant! $explanation"
+                                lastResult == true
+                                    ? "Brilliant!\n$explanation"
+                                    : attemptsLeft > 0
+                                    ? "Incorrect. You have 1 attempt remaining."
                                     : "Incorrect. The door closes...",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: isCorrect ? Colors.green : Colors.red,
+                                  color: lastResult == true
+                                      ? Colors.green
+                                      : Colors.red,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                 ),
                               ),
-                              if (isCorrect) ...[
+                              if (lastResult == true) ...[
                                 const SizedBox(height: 24),
                                 ElevatedButton(
                                   onPressed: () {
-                                    Navigator.pop(context);
-                                    Navigator.pop(context);
+                                    Navigator.pop(context); // Pop Modal
+                                    Navigator.pop(
+                                      context,
+                                      true,
+                                    ); // Return TRUE to lock the portal
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
                                   ),
                                   child: const Text(
                                     'CLAIM XP',
                                     style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.5,
                                     ),
                                   ),
                                 ),
@@ -770,9 +679,146 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
       learningDeck: _deckData!,
       xpAwarded: baseRewardXp,
     );
-
     if (success && mounted) {
       ref.invalidate(homeStatsProvider);
     }
+  }
+}
+
+// -------------------------------------------------------------------------
+// UPGRADED SCI-FI LOADING MODAL FOR LEARNING DECK
+// -------------------------------------------------------------------------
+class _DeckQueryModal extends StatefulWidget {
+  final String lens;
+  const _DeckQueryModal({required this.lens});
+
+  @override
+  State<_DeckQueryModal> createState() => _DeckQueryModalState();
+}
+
+class _DeckQueryModalState extends State<_DeckQueryModal>
+    with SingleTickerProviderStateMixin {
+  late final Stream<int> _timerStream;
+  late final List<String> _phrases;
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _phrases = [
+      'Calibrating AI lenses...',
+      'Analyzing structural composition...',
+      'Cross-referencing historical data...',
+      'Extracting core concepts...',
+      'Synthesizing ${widget.lens} pathways...',
+    ];
+    _timerStream = Stream.periodic(
+      const Duration(milliseconds: 2000),
+      (i) => i,
+    );
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            height: 280,
+            decoration: BoxDecoration(
+              color: const Color(
+                0xFF0A0E17,
+              ).withValues(alpha: 0.8), // Deep transparent blue
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                  blurRadius: 40,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, child) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 100 + (_pulseController.value * 20),
+                          height: 100 + (_pulseController.value * 20),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.colorScheme.secondary.withValues(
+                              alpha: 0.1,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: CircularProgressIndicator(
+                            color: theme.colorScheme.secondary,
+                            strokeWidth: 3,
+                          ),
+                        ),
+                        Icon(
+                          Icons.hub,
+                          size: 36,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 40),
+                StreamBuilder<int>(
+                  stream: _timerStream,
+                  builder: (context, snapshot) {
+                    final index = (snapshot.data ?? 0) % _phrases.length;
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 500),
+                      child: Text(
+                        _phrases[index].toUpperCase(),
+                        key: ValueKey<int>(index),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.primary,
+                          letterSpacing: 2.0,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
