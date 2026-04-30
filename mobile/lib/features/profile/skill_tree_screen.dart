@@ -2,25 +2,24 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:tuklascope_mobile/core/services/pathfinder_service.dart';
 
-// 1. Define the Data Structure for our Nodes
 class SkillNode {
   final String id;
   final String title;
   final String description;
-  final String career;
+  final String strand; // 🚀 NEW
   final int xp;
   final Color color;
   final Offset position;
   final double radius;
   final IconData? icon;
 
-  int get level => (xp ~/ 50) + 1;
+  int get level => id == 'root' ? xp : (xp ~/ 50) + 1; // Root uses raw level
 
   SkillNode({
     required this.id,
     required this.title,
     required this.description,
-    required this.career,
+    required this.strand,
     required this.xp,
     required this.color,
     required this.position,
@@ -30,9 +29,14 @@ class SkillNode {
 }
 
 class KaalamanSkillTreeScreen extends StatefulWidget {
-  final String educationLevel;
+  final String userName;
+  final int coreLevel;
 
-  const KaalamanSkillTreeScreen({super.key, required this.educationLevel});
+  const KaalamanSkillTreeScreen({
+    super.key,
+    required this.userName,
+    required this.coreLevel,
+  });
 
   @override
   State<KaalamanSkillTreeScreen> createState() =>
@@ -53,26 +57,20 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2500),
+      duration: const Duration(milliseconds: 1500),
     );
-
     _scaleAnimation = CurvedAnimation(
       parent: _animationController,
       curve: Curves.elasticOut,
     );
-
     _loadTreeData();
   }
 
   Future<void> _loadTreeData() async {
     final data = await PathfinderService.getSkillWeb();
-
     if (mounted) {
       _buildDynamicNodes(Theme.of(context), data);
       setState(() {
-        _selectedNode = nodes.isNotEmpty
-            ? nodes.firstWhere((n) => n.id == 'root')
-            : null;
         _isLoadingData = false;
       });
       _animationController.forward();
@@ -92,18 +90,14 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
     final tvlColor = Colors.red[500]!;
 
     final xpDist = data?['xp_distribution'] as Map<String, dynamic>? ?? {};
-    final int stemXp = (xpDist['STEM'] ?? 0) as int;
-    final int abmXp = (xpDist['ABM'] ?? 0) as int;
-    final int humssXp = (xpDist['HUMSS'] ?? 0) as int;
-    final int tvlXp = (xpDist['TVL'] ?? 0) as int;
 
     nodes = [
       SkillNode(
         id: 'root',
-        title: 'You',
-        description: 'The roots of your journey.',
-        career: 'Explorer',
-        xp: 0,
+        title: widget.userName.toUpperCase(),
+        description: 'Your central learning core.',
+        strand: 'root',
+        xp: widget.coreLevel,
         color: theme.colorScheme.surface,
         position: const Offset(0.50, 0.90),
         radius: 40.0,
@@ -111,9 +105,9 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
       SkillNode(
         id: 'stem',
         title: 'STEM',
-        description: 'Science, Tech, Engineering & Math.',
-        career: 'STEM Path',
-        xp: stemXp,
+        description: 'Science & Math.',
+        strand: 'root',
+        xp: (xpDist['STEM'] ?? 0) as int,
         color: stemColor,
         position: const Offset(0.20, 0.72),
         radius: 30.0,
@@ -122,8 +116,8 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
         id: 'humss',
         title: 'HUMSS',
         description: 'Humanities & Social Sciences.',
-        career: 'HUMSS Path',
-        xp: humssXp,
+        strand: 'root',
+        xp: (xpDist['HUMSS'] ?? 0) as int,
         color: humssColor,
         position: const Offset(0.80, 0.72),
         radius: 30.0,
@@ -131,9 +125,9 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
       SkillNode(
         id: 'abm',
         title: 'ABM',
-        description: 'Accountancy, Business & Mgt.',
-        career: 'ABM Path',
-        xp: abmXp,
+        description: 'Business & Mgt.',
+        strand: 'root',
+        xp: (xpDist['ABM'] ?? 0) as int,
         color: abmColor,
         position: const Offset(0.22, 0.42),
         radius: 30.0,
@@ -141,9 +135,9 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
       SkillNode(
         id: 'tvl',
         title: 'TVL',
-        description: 'Technical-Vocational Livelihood.',
-        career: 'TVL Path',
-        xp: tvlXp,
+        description: 'Technical-Vocational.',
+        strand: 'root',
+        xp: (xpDist['TVL'] ?? 0) as int,
         color: tvlColor,
         position: const Offset(0.78, 0.42),
         radius: 30.0,
@@ -165,31 +159,41 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
 
     for (int i = 0; i < topSkills.length && i < dynamicPositions.length; i++) {
       final skillString = topSkills[i].toString();
-      final regex = RegExp(r'^(.*?) \((.*?)\) - Lv\.(\d+)$');
+      final regex = RegExp(
+        r'^(.*?) \((.*?)\) \[(.*?)\] - Lv\.(\d+)$',
+      ); // 🚀 NEW REGEX
       final match = regex.firstMatch(skillString);
 
       String skillName = skillString;
       String domainName = 'Discipline';
+      String strandName = 'STEM';
       int calculatedXp = 0;
 
       if (match != null) {
         skillName = match.group(1)?.trim() ?? skillName;
         domainName = match.group(2)?.trim() ?? domainName;
-        final int level = int.tryParse(match.group(3) ?? '1') ?? 1;
+        strandName = match.group(3)?.trim().toLowerCase() ?? 'stem';
+        final int level = int.tryParse(match.group(4) ?? '1') ?? 1;
         calculatedXp = (level - 1) * 50;
       }
+
+      // Match the color to its parent strand
+      Color skillColor = theme.colorScheme.primary;
+      if (strandName == 'stem') skillColor = stemColor;
+      if (strandName == 'humss') skillColor = humssColor;
+      if (strandName == 'abm') skillColor = abmColor;
+      if (strandName == 'tvl') skillColor = tvlColor;
 
       nodes.add(
         SkillNode(
           id: 'skill_$i',
           title: skillName,
           description: 'Domain: $domainName',
-          career: 'Advanced Mastery',
+          strand: strandName, // 🚀 Tracks its parent!
           xp: calculatedXp,
-          color: theme.colorScheme.primary,
+          color: skillColor,
           position: dynamicPositions[i],
-          radius: 25.0,
-          icon: Icons.star_border,
+          radius: 28.0,
         ),
       );
     }
@@ -208,15 +212,113 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
 
       if (distance <= node.radius) {
         setState(() => _selectedNode = node);
+        _showNodeDetailsBottomSheet(node); // 🚀 Show details on tap!
         return;
       }
     }
   }
 
+  void _showNodeDetailsBottomSheet(SkillNode node) {
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(
+              color: node.color.withValues(alpha: 0.5),
+              width: 2,
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  backgroundColor: node.color.withValues(alpha: 0.2),
+                  radius: 30,
+                  child: Icon(
+                    node.icon ?? Icons.hub,
+                    color: node.color,
+                    size: 30,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  node.title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  node.description,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildStatPill('LEVEL', '${node.level}', node.color),
+                    if (node.id != 'root')
+                      _buildStatPill('TOTAL XP', '${node.xp}', node.color),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatPill(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: color,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -229,31 +331,29 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: _isLoadingData
           ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: theme.colorScheme.primary),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Querying Neural Network...',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
               ),
             )
           : Column(
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                    'Pinch to zoom • Drag to pan • Tap nodes to explore',
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
                 Expanded(
-                  flex: 3,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final Size size = Size(
@@ -261,153 +361,34 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
                         constraints.maxHeight,
                       );
                       return InteractiveViewer(
-                        boundaryMargin: const EdgeInsets.all(80),
-                        minScale: 0.8,
+                        boundaryMargin: const EdgeInsets.all(100),
+                        minScale: 0.5,
                         maxScale: 3.5,
-                        child: GestureDetector(
-                          onTapUp: (details) =>
-                              _handleTap(details.localPosition, size),
-                          child: AnimatedBuilder(
-                            animation: _scaleAnimation,
-                            builder: (context, child) {
-                              return CustomPaint(
-                                size: size,
-                                painter: _OrganicTreePainter(
-                                  theme: theme,
-                                  nodes: nodes,
-                                  selectedNodeId: _selectedNode?.id,
-                                  scale: _scaleAnimation.value,
-                                ),
-                              );
-                            },
+                        constrained: false, // 🚀 Allows free panning everywhere
+                        child: SizedBox(
+                          width: size.width,
+                          height: size.height,
+                          child: GestureDetector(
+                            onTapUp: (details) =>
+                                _handleTap(details.localPosition, size),
+                            child: AnimatedBuilder(
+                              animation: _scaleAnimation,
+                              builder: (context, child) {
+                                return CustomPaint(
+                                  size: size,
+                                  painter: _OrganicTreePainter(
+                                    theme: theme,
+                                    nodes: nodes,
+                                    selectedNodeId: _selectedNode?.id,
+                                    scale: _scaleAnimation.value,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
                       );
                     },
-                  ),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(32),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.shadowColor.withValues(alpha: 0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, -5),
-                        ),
-                      ],
-                    ),
-                    child: _selectedNode == null
-                        ? Center(
-                            child: Text(
-                              'Tap a constellation node to explore.',
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundColor: _selectedNode!.id == 'root'
-                                        ? theme.colorScheme.primary.withValues(
-                                            alpha: 0.1,
-                                          )
-                                        : _selectedNode!.color,
-                                    radius: 20,
-                                    child: _selectedNode!.icon != null
-                                        ? Icon(
-                                            _selectedNode!.icon,
-                                            color: Colors.white,
-                                            size: 20,
-                                          )
-                                        : Text(
-                                            _selectedNode!.title[0],
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _selectedNode!.title,
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.w900,
-                                            color: theme.colorScheme.primary,
-                                            height: 1.1,
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          _selectedNode!.description,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.colorScheme.secondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary
-                                              .withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'Lv.${_selectedNode!.level}',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.colorScheme.primary,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${_selectedNode!.xp} XP',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: theme.colorScheme.onSurface
-                                              .withValues(alpha: 0.5),
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
                   ),
                 ),
               ],
@@ -433,45 +414,37 @@ class _OrganicTreePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (nodes.isEmpty) return;
 
-    final root = nodes.firstWhere((n) => n.id == 'root');
-
-    Offset getOffset(SkillNode node) {
-      return Offset(
-        node.position.dx * size.width,
-        node.position.dy * size.height,
-      );
-    }
+    Offset getOffset(SkillNode node) =>
+        Offset(node.position.dx * size.width, node.position.dy * size.height);
 
     void drawOrganicBranch(SkillNode n1, SkillNode n2, Color color) {
       final p1 = getOffset(n1);
       final p2 = getOffset(n2);
-
-      final path = Path();
-      path.moveTo(p1.dx, p1.dy);
-
+      final path = Path()..moveTo(p1.dx, p1.dy);
       final cpX = p1.dx;
       final cpY = p2.dy + (p1.dy - p2.dy) * 0.8;
-
       path.quadraticBezierTo(cpX, cpY, p2.dx, p2.dy);
 
       final paint = Paint()
         ..color = color.withValues(alpha: 0.5 * scale.clamp(0.0, 1.0))
         ..style = PaintingStyle.stroke
         ..strokeWidth = (n1.id == 'root' ? 6.0 : 3.0) * scale.clamp(0.0, 1.0);
-
       canvas.drawPath(path, paint);
     }
 
+    // 🚀 FIX: Draw true connections!
     for (var node in nodes) {
       if (node.id == 'root') continue;
 
-      if (['stem', 'abm', 'humss', 'tvl'].contains(node.id)) {
-        drawOrganicBranch(root, node, node.color);
-      } else if (node.id.startsWith('skill_')) {
-        drawOrganicBranch(root, node, theme.colorScheme.primary);
-      }
+      // Find its parent strand node
+      final parentNode = nodes.firstWhere(
+        (n) => n.id == node.strand,
+        orElse: () => nodes.first,
+      );
+      drawOrganicBranch(parentNode, node, node.color);
     }
 
+    // Draw Leaves
     for (var node in nodes) {
       final center = getOffset(node);
       final isSelected = node.id == selectedNodeId;
@@ -487,87 +460,75 @@ class _OrganicTreePainter extends CustomPainter {
         );
       }
 
-      canvas.drawCircle(center, currentRadius, Paint()..color = node.color);
-
-      canvas.drawCircle(
-        center,
-        currentRadius,
-        Paint()
-          ..color = isSelected
-              ? theme.colorScheme.primary
-              : theme.colorScheme.onSurface.withValues(alpha: 0.2)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = isSelected ? 4.0 : 2.0,
-      );
+      // Root has a special gradient
+      if (node.id == 'root') {
+        final Rect coreRect = Rect.fromCircle(
+          center: center,
+          radius: currentRadius,
+        );
+        canvas.drawCircle(
+          center,
+          currentRadius,
+          Paint()
+            ..shader = LinearGradient(
+              colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+            ).createShader(coreRect),
+        );
+      } else {
+        canvas.drawCircle(
+          center,
+          currentRadius,
+          Paint()..color = node.color.withValues(alpha: 0.2),
+        );
+        canvas.drawCircle(
+          center,
+          currentRadius,
+          Paint()
+            ..color = node.color
+            ..strokeWidth = 3.0
+            ..style = PaintingStyle.stroke,
+        );
+      }
 
       if (scale > 0.5) {
-        if (node.icon != null) {
-          final TextPainter iconPainter = TextPainter(
-            text: TextSpan(
-              text: String.fromCharCode(node.icon!.codePoint),
-              style: TextStyle(
-                fontSize: currentRadius * 1.1,
-                fontFamily: node.icon!.fontFamily,
-                package: node.icon!.fontPackage,
-                color: Colors.white,
-              ),
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: node.id == 'root' ? node.title : node.title.split(' ')[0],
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: (node.id == 'root' ? 14 : 10) * scale.clamp(0.5, 1.0),
+              fontWeight: FontWeight.bold,
             ),
-            textDirection: TextDirection.ltr,
-          )..layout();
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        textPainter.paint(
+          canvas,
+          Offset(
+            center.dx - (textPainter.width / 2),
+            center.dy - (textPainter.height / 2),
+          ),
+        );
 
-          iconPainter.paint(
-            canvas,
-            center - Offset(iconPainter.width / 2, iconPainter.height / 2),
-          );
-        } else {
-          final textPainter = TextPainter(
-            text: TextSpan(
-              text: node.title.split(' ')[0],
-              style: TextStyle(
-                color: node.id == 'root'
-                    ? theme.colorScheme.onSurface
-                    : Colors.white,
-                fontSize: 10 * scale.clamp(0.5, 1.0),
-                fontWeight: FontWeight.bold,
-              ),
+        final levelPainter = TextPainter(
+          text: TextSpan(
+            text: 'Lv.${node.level}',
+            style: TextStyle(
+              color: theme.colorScheme.onSurface,
+              fontSize: 11 * scale,
+              fontWeight: FontWeight.w900,
             ),
-            textDirection: TextDirection.ltr,
-          );
-          textPainter.layout();
-          textPainter.paint(
-            canvas,
-            Offset(
-              center.dx - (textPainter.width / 2),
-              center.dy - (textPainter.height / 2),
-            ),
-          );
-        }
-
-        if (node.id != 'root') {
-          final TextPainter levelPainter = TextPainter(
-            text: TextSpan(
-              text: 'Lv.${node.level}',
-              style: TextStyle(
-                color: theme.colorScheme.onSurface,
-                fontSize: 11 * scale,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            textDirection: TextDirection.ltr,
-          )..layout();
-          levelPainter.paint(
-            canvas,
-            center + Offset(-levelPainter.width / 2, currentRadius + 4),
-          );
-        }
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        levelPainter.paint(
+          canvas,
+          center + Offset(-levelPainter.width / 2, currentRadius + 4),
+        );
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant _OrganicTreePainter oldDelegate) {
-    return oldDelegate.scale != scale ||
-        oldDelegate.selectedNodeId != selectedNodeId ||
-        oldDelegate.nodes.length != nodes.length;
-  }
+  bool shouldRepaint(covariant _OrganicTreePainter oldDelegate) => true;
 }

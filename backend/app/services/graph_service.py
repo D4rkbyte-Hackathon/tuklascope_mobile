@@ -40,10 +40,10 @@ async def get_user_skill_web(user_id: str) -> dict | None:
     RETURN s.name AS strand, e.total_xp AS xp
     """
 
-    # Query 2: Advanced Mastery (Top 5 Skills & Their Domains)
+    # Query 2 now fetches the Strand (s:Strand) that the domain falls under!
     skills_query = """
-    MATCH (u:User {id: $user_id})-[m:MASTERED]->(k:Skill)-[:BELONGS_TO]->(d:Domain)
-    RETURN k.name AS skill_name, d.name AS domain_name, m.level AS level, m.total_xp AS xp
+    MATCH (u:User {id: $user_id})-[m:MASTERED]->(k:Skill)-[:BELONGS_TO]->(d:Domain)-[:FALLS_UNDER]->(s:Strand)
+    RETURN k.name AS skill_name, d.name AS domain_name, s.name AS strand_name, m.level AS level, m.total_xp AS xp
     ORDER BY level DESC, xp DESC LIMIT 8
     """
 
@@ -60,9 +60,9 @@ async def get_user_skill_web(user_id: str) -> dict | None:
 
         xp_distribution = {record["strand"]: record["xp"] for record in xp_records}
 
-        # We now send a richer profile to the Pathfinder AI
+        # We now pack the strand name into the string using [brackets]
         top_skills = [
-            f"{rec['skill_name']} ({rec['domain_name']}) - Lv.{rec['level']}"
+            f"{rec['skill_name']} ({rec['domain_name']}) [{rec['strand_name']}] - Lv.{rec['level']}"
             for rec in skill_records
         ]
 

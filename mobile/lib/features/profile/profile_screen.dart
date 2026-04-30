@@ -259,6 +259,8 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
         Expanded(
           child: TabBarView(
             controller: _tabController,
+            physics:
+                const NeverScrollableScrollPhysics(), // 🚀 FIX: Disables swiping between tabs
             children: [
               _buildProfileTab(widget.theme),
               _buildSettingsTab(widget.theme),
@@ -365,6 +367,8 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
                       child: _DynamicSkillTreeNetwork(
                         theme: theme,
                         stats: stats,
+                        userName:
+                            widget.currentName, // 🚀 NEW: Passing user name
                       ),
                     )
                     .animate()
@@ -1004,8 +1008,13 @@ class _ProfilePromoCard extends StatelessWidget {
 class _DynamicSkillTreeNetwork extends StatelessWidget {
   final ThemeData theme;
   final ProfileStats stats;
+  final String userName; // 🚀 NEW
 
-  const _DynamicSkillTreeNetwork({required this.theme, required this.stats});
+  const _DynamicSkillTreeNetwork({
+    required this.theme,
+    required this.stats,
+    required this.userName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1036,6 +1045,7 @@ class _DynamicSkillTreeNetwork extends StatelessWidget {
                     painter: _AdvancedInteractiveRadialPainter(
                       theme: theme,
                       stats: stats,
+                      userName: userName,
                     ),
                   ),
                 ),
@@ -1053,8 +1063,11 @@ class _DynamicSkillTreeNetwork extends StatelessWidget {
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) =>
-                              _FullScreenSkillTree(theme: theme, stats: stats),
+                          builder: (context) => _FullScreenSkillTree(
+                            theme: theme,
+                            stats: stats,
+                            userName: userName,
+                          ),
                         ),
                       );
                     },
@@ -1067,8 +1080,11 @@ class _DynamicSkillTreeNetwork extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) =>
-                      _FullScreenSkillTree(theme: theme, stats: stats),
+                  builder: (context) => _FullScreenSkillTree(
+                    theme: theme,
+                    stats: stats,
+                    userName: userName,
+                  ),
                 ),
               );
             },
@@ -1112,8 +1128,13 @@ class _DynamicSkillTreeNetwork extends StatelessWidget {
 class _AdvancedInteractiveRadialPainter extends CustomPainter {
   final ThemeData theme;
   final ProfileStats stats;
+  final String userName; // 🚀 NEW
 
-  _AdvancedInteractiveRadialPainter({required this.theme, required this.stats});
+  _AdvancedInteractiveRadialPainter({
+    required this.theme,
+    required this.stats,
+    required this.userName,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1178,35 +1199,42 @@ class _AdvancedInteractiveRadialPainter extends CustomPainter {
     }
 
     for (int i = 0; i < topicCount; i++) {
-      final angle = (2 * math.pi * i) / topicCount - (math.pi / 2);
-      final tDx = center.dx + outerRadius * math.cos(angle);
-      final tDy = center.dy + outerRadius * math.sin(angle);
-      final topicPos = Offset(tDx, tDy);
+      final skillString = topics[i];
+      // 🚀 FIX: Parse the new [Strand] format from the backend!
+      final regex = RegExp(r'^(.*?) \((.*?)\) \[(.*?)\] - Lv\.(\d+)$');
+      final match = regex.firstMatch(skillString);
 
-      Offset closestStrandPos = center;
-      double minDiff = double.infinity;
+      String strandName = 'STEM';
 
-      for (var strand in strandData) {
-        final sAngle = strand['angle'] as double;
-        final sPos =
-            center +
-            Offset(
-              innerRadius * math.cos(sAngle),
-              innerRadius * math.sin(sAngle),
-            );
-        final dist = (sPos - topicPos).distance;
-        if (dist < minDiff) {
-          minDiff = dist;
-          closestStrandPos = sPos;
-        }
+      if (match != null) {
+        strandName = match.group(3)?.trim().toUpperCase() ?? 'STEM';
       }
 
-      canvas.drawLine(closestStrandPos, topicPos, outerLinePaint);
+      final angle = (2 * math.pi * i) / topicCount - (math.pi / 2);
+      final dx = center.dx + outerRadius * math.cos(angle);
+      final dy = center.dy + outerRadius * math.sin(angle);
+      final topicPos = Offset(dx, dy);
+
+      // 🚀 FIX: Draw a true connected branch directly to its actual parent strand!
+      Offset parentStrandPos = center;
+      for (var strand in strandData) {
+        if (strand['name'] == strandName) {
+          final sAngle = strand['angle'] as double;
+          parentStrandPos =
+              center +
+              Offset(
+                innerRadius * math.cos(sAngle),
+                innerRadius * math.sin(sAngle),
+              );
+          break;
+        }
+      }
+      canvas.drawLine(parentStrandPos, topicPos, outerLinePaint);
     }
 
     for (int i = 0; i < topicCount; i++) {
       final skillString = topics[i];
-      final regex = RegExp(r'^(.*?) \((.*?)\) - Lv\.(\d+)$');
+      final regex = RegExp(r'^(.*?) \((.*?)\) \[(.*?)\] - Lv\.(\d+)$');
       final match = regex.firstMatch(skillString);
 
       String topicName = skillString;
@@ -1214,7 +1242,7 @@ class _AdvancedInteractiveRadialPainter extends CustomPainter {
 
       if (match != null) {
         topicName = match.group(1)?.trim() ?? topicName;
-        topicLevel = int.tryParse(match.group(3) ?? '1') ?? 1;
+        topicLevel = int.tryParse(match.group(4) ?? '1') ?? 1;
       }
 
       final angle = (2 * math.pi * i) / topicCount - (math.pi / 2);
@@ -1318,7 +1346,7 @@ class _AdvancedInteractiveRadialPainter extends CustomPainter {
 
     _drawMultiLineText(
       canvas,
-      'CORE\nLV.${stats.currentLevel}',
+      '${userName.toUpperCase()}\nLV.${stats.currentLevel}', // 🚀 Shows User Name
       center,
       Colors.white,
       12,
@@ -1370,8 +1398,13 @@ class _AdvancedInteractiveRadialPainter extends CustomPainter {
 class _FullScreenSkillTree extends StatelessWidget {
   final ThemeData theme;
   final ProfileStats stats;
+  final String userName;
 
-  const _FullScreenSkillTree({required this.theme, required this.stats});
+  const _FullScreenSkillTree({
+    required this.theme,
+    required this.stats,
+    required this.userName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1419,6 +1452,7 @@ class _FullScreenSkillTree extends StatelessWidget {
                     painter: _AdvancedInteractiveRadialPainter(
                       theme: theme,
                       stats: stats,
+                      userName: userName,
                     ),
                   ),
                 ),
@@ -1975,7 +2009,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      // Close dialog if it's open, wrap in try/catch just in case
       try {
         Navigator.of(context, rootNavigator: true).pop();
       } catch (_) {}
@@ -2357,6 +2390,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
           Expanded(
             child: TabBarView(
               controller: _tabController,
+              physics: const NeverScrollableScrollPhysics(),
               children: [
                 _buildProfileTab(theme),
                 const Center(child: Text("Settings")),
