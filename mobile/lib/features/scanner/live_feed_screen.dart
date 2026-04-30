@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mlkit_subject_segmentation/google_mlkit_subject_segmentation.dart';
 import 'package:tuklascope_mobile/core/services/discovery_service.dart';
 import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
 import 'package:tuklascope_mobile/features/auth/providers/auth_controller.dart';
@@ -15,17 +16,25 @@ class LiveFeedScreen extends StatefulWidget {
   State<LiveFeedScreen> createState() => _LiveFeedScreenState();
 }
 
-class _LiveFeedScreenState extends State<LiveFeedScreen> {
+class _LiveFeedScreenState extends State<LiveFeedScreen>
+    with SingleTickerProviderStateMixin {
   CameraController? _controller;
   List<CameraDescription>? _cameras;
   bool _isCameraInitialized = false;
   bool _isFlashOn = false;
   int _selectedCameraIndex = 0;
 
+  late AnimationController _scannerController;
+
   @override
   void initState() {
     super.initState();
     _initCamera();
+
+    _scannerController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
   }
 
   Future<void> _initCamera() async {
@@ -79,11 +88,12 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
       final File imageFile = File(rawImage.path);
 
       if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierColor: Colors.black.withValues(alpha: 0.7),
-        barrierDismissible: false,
-        builder: (context) => ScanningModal(imageFile: imageFile),
+
+      // 🚀 FIX: rootNavigator: true forces the new screen OVER the bottom nav bar!
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (context) => ConfirmImageScreen(originalImage: imageFile),
+        ),
       );
     } catch (e) {
       debugPrint('Error taking picture: $e');
@@ -93,6 +103,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
   @override
   void dispose() {
     _controller?.dispose();
+    _scannerController.dispose();
     super.dispose();
   }
 
@@ -102,7 +113,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
 
     if (!_isCameraInitialized || _controller == null) {
       return Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFF0A0E17), // Deep tech blue/black
         body: Center(
           child: CircularProgressIndicator(color: theme.colorScheme.primary),
         ),
@@ -113,130 +124,194 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
     final isNavBarVisible = navScope?.isNavBarVisible ?? true;
     final extraBottomPadding = isNavBarVisible ? 100.0 : 20.0;
 
+    const double boxWidth = 280;
+    const double boxHeight = 350;
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF0A0E17), // Solid Sci-Fi Background
       body: Stack(
         children: [
-          Positioned.fill(
-            child: ClipRect(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: 100,
-                  height: 100 * _controller!.value.aspectRatio,
-                  child: CameraPreview(_controller!),
+          // 1. THE RESTRICTED CAMERA WINDOW (No longer full screen)
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                width: boxWidth,
+                height: boxHeight,
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: 100,
+                    height: 100 * _controller!.value.aspectRatio,
+                    child: CameraPreview(_controller!),
+                  ),
                 ),
               ),
             ),
           ),
+
+          // 2. THE SCI-FI HUD DESIGNS AROUND THE BOX
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _AdvancedHudPainter(
+                theme.colorScheme.primary,
+                theme.colorScheme.secondary,
+              ),
+            ),
+          ),
+
+          // 3. THE ANIMATED LASER INSIDE THE BOX
+          Center(
+            child: SizedBox(
+              width: boxWidth,
+              height: boxHeight,
+              child: AnimatedBuilder(
+                animation: _scannerController,
+                builder: (context, child) {
+                  return Stack(
+                    children: [
+                      Positioned(
+                        top: _scannerController.value * (boxHeight - 4),
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.secondary,
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.colorScheme.secondary,
+                                blurRadius: 12,
+                                spreadRadius: 3,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+
+          // TOP STATUS BAR
           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                child: Container(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 10,
-                    bottom: 16,
-                    left: 20,
-                    right: 20,
+            top: MediaQuery.of(context).padding.top + 20,
+            left: 20,
+            right: 20,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
                   ),
-                  color: Colors.black.withValues(alpha: 0.4),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                    ),
+                  ),
                   child: Row(
                     children: [
                       Icon(
-                        Icons.fiber_manual_record,
-                        color: theme.colorScheme.secondary,
-                        size: 16,
+                        Icons.radar,
+                        color: theme.colorScheme.primary,
+                        size: 14,
                       ),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Camera Active',
+                      Text(
+                        'ISOLATION PROTOCOL',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                          color: theme.colorScheme.primary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2.0,
                         ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: Icon(
-                          _isFlashOn ? Icons.flash_on : Icons.flash_off,
-                          color: _isFlashOn
-                              ? theme.colorScheme.secondary
-                              : Colors.white,
-                        ),
-                        onPressed: _toggleFlash,
                       ),
                     ],
                   ),
                 ),
-              ),
+                IconButton(
+                  icon: Icon(
+                    _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                    color: _isFlashOn
+                        ? theme.colorScheme.secondary
+                        : Colors.white70,
+                  ),
+                  onPressed: _toggleFlash,
+                ),
+              ],
             ),
           ),
+
+          // BOTTOM CONTROLS (With Smooth Button)
           Positioned(
-            bottom: 0,
+            bottom: extraBottomPadding,
             left: 0,
             right: 0,
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeOutQuint,
-                  padding: EdgeInsets.only(
-                    top: 20,
-                    bottom:
-                        MediaQuery.of(context).padding.bottom +
-                        extraBottomPadding,
-                    left: 40,
-                    right: 40,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    iconSize: 28,
+                    icon: const Icon(
+                      Icons.photo_library,
+                      color: Colors.white70,
+                    ),
+                    onPressed: () {},
                   ),
-                  color: Colors.black.withValues(alpha: 0.5),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        iconSize: 32,
-                        icon: const Icon(
-                          Icons.photo_library,
-                          color: Colors.white,
+
+                  // 🚀 THE NEW, ULTRA-SMOOTH CAPTURE BUTTON
+                  GestureDetector(
+                    onTap: _takePictureAndScan,
+                    child: Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                        border: Border.all(
+                          color: theme.colorScheme.primary,
+                          width: 3,
                         ),
-                        onPressed: () {},
-                      ),
-                      GestureDetector(
-                        onTap: _takePictureAndScan,
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 4),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Container(
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                              ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.4,
                             ),
+                            blurRadius: 15,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
                           ),
                         ),
                       ),
-                      IconButton(
-                        iconSize: 32,
-                        icon: const Icon(
-                          Icons.flip_camera_ios,
-                          color: Colors.white,
-                        ),
-                        onPressed: _flipCamera,
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+
+                  IconButton(
+                    iconSize: 28,
+                    icon: const Icon(
+                      Icons.flip_camera_ios,
+                      color: Colors.white70,
+                    ),
+                    onPressed: _flipCamera,
+                  ),
+                ],
               ),
             ),
           ),
@@ -246,34 +321,250 @@ class _LiveFeedScreenState extends State<LiveFeedScreen> {
   }
 }
 
-// 🚀 FIX: Changed to ConsumerStatefulWidget to access Riverpod
-class ScanningModal extends ConsumerStatefulWidget {
-  final File imageFile;
+// 🚀 NEW: Advanced Sci-Fi HUD Painter
+class _AdvancedHudPainter extends CustomPainter {
+  final Color primary;
+  final Color secondary;
 
-  const ScanningModal({super.key, required this.imageFile});
+  _AdvancedHudPainter(this.primary, this.secondary);
 
   @override
-  ConsumerState<ScanningModal> createState() => _ScanningModalState();
+  void paint(Canvas canvas, Size size) {
+    const double boxWidth = 280;
+    const double boxHeight = 350;
+    final double left = (size.width - boxWidth) / 2;
+    final double top = (size.height - boxHeight) / 2;
+    final double right = left + boxWidth;
+    final double bottom = top + boxHeight;
+
+    final outlinePaint = Paint()
+      ..color = primary.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final bracketPaint = Paint()
+      ..color = primary
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0
+      ..strokeCap = StrokeCap.square;
+
+    final accentPaint = Paint()
+      ..color = secondary
+      ..style = PaintingStyle.fill;
+
+    // 1. Draw subtle grid behind everything
+    for (double i = 0; i < size.height; i += 40) {
+      canvas.drawLine(
+        Offset(0, i),
+        Offset(size.width, i),
+        Paint()..color = Colors.white.withValues(alpha: 0.03),
+      );
+    }
+    for (double i = 0; i < size.width; i += 40) {
+      canvas.drawLine(
+        Offset(i, 0),
+        Offset(i, size.height),
+        Paint()..color = Colors.white.withValues(alpha: 0.03),
+      );
+    }
+
+    // 2. Draw thin border around the camera box
+    final RRect scanRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(left, top, boxWidth, boxHeight),
+      const Radius.circular(16),
+    );
+    canvas.drawRRect(scanRect, outlinePaint);
+
+    // 3. Draw Heavy Sci-Fi Corner Brackets
+    const double length = 40.0;
+    const double offset = 8.0; // Distance of brackets from the box
+
+    // Top Left
+    canvas.drawLine(
+      Offset(left - offset, top + length),
+      Offset(left - offset, top - offset),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(left - offset, top - offset),
+      Offset(left + length, top - offset),
+      bracketPaint,
+    );
+
+    // Top Right
+    canvas.drawLine(
+      Offset(right + offset, top + length),
+      Offset(right + offset, top - offset),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(right + offset, top - offset),
+      Offset(right - length, top - offset),
+      bracketPaint,
+    );
+
+    // Bottom Left
+    canvas.drawLine(
+      Offset(left - offset, bottom - length),
+      Offset(left - offset, bottom + offset),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(left - offset, bottom + offset),
+      Offset(left + length, bottom + offset),
+      bracketPaint,
+    );
+
+    // Bottom Right
+    canvas.drawLine(
+      Offset(right + offset, bottom - length),
+      Offset(right + offset, bottom + offset),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(right + offset, bottom + offset),
+      Offset(right - length, bottom + offset),
+      bracketPaint,
+    );
+
+    // 4. Draw Telemetry Accents (Tiny secondary dots/lines)
+    canvas.drawCircle(Offset(left - offset, top - offset), 4, accentPaint);
+    canvas.drawCircle(Offset(right + offset, bottom + offset), 4, accentPaint);
+
+    // 5. Draw Crosshair ticks inside the box
+    final crosshairPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final centerX = left + (boxWidth / 2);
+    final centerY = top + (boxHeight / 2);
+
+    canvas.drawLine(
+      Offset(centerX, top + 20),
+      Offset(centerX, top + 40),
+      crosshairPaint,
+    ); // Top inner
+    canvas.drawLine(
+      Offset(centerX, bottom - 20),
+      Offset(centerX, bottom - 40),
+      crosshairPaint,
+    ); // Bottom inner
+    canvas.drawLine(
+      Offset(left + 20, centerY),
+      Offset(left + 40, centerY),
+      crosshairPaint,
+    ); // Left inner
+    canvas.drawLine(
+      Offset(right - 20, centerY),
+      Offset(right - 40, centerY),
+      crosshairPaint,
+    ); // Right inner
+
+    // 6. Draw Fake Text Data
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text:
+            'OBJ_MASK: ACTIVE\nCOORD: [X:${centerX.toInt()}, Y:${centerY.toInt()}]',
+        style: TextStyle(
+          color: primary.withValues(alpha: 0.7),
+          fontSize: 8,
+          fontFamily: 'monospace',
+          letterSpacing: 1,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    textPainter.paint(canvas, Offset(left, bottom + 20));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _ScanningModalState extends ConsumerState<ScanningModal> {
+// -------------------------------------------------------------------------
+// THE NEW CONFIRMATION & DISSOLVE SCREEN
+// -------------------------------------------------------------------------
+
+class ConfirmImageScreen extends ConsumerStatefulWidget {
+  final File originalImage;
+
+  const ConfirmImageScreen({super.key, required this.originalImage});
+
+  @override
+  ConsumerState<ConfirmImageScreen> createState() => _ConfirmImageScreenState();
+}
+
+class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
+  bool _isIsolating = true;
+  File? _segmentedImage;
+
   @override
   void initState() {
     super.initState();
-    _uploadAndAnalyze();
+    _isolateSubject();
   }
 
-  Future<void> _uploadAndAnalyze() async {
-    // Fetch real grade level securely from Riverpod state
+  Future<void> _isolateSubject() async {
+    try {
+      final segmenter = SubjectSegmenter(
+        options: SubjectSegmenterOptions(
+          enableForegroundBitmap: true,
+          enableForegroundConfidenceMask: false,
+          enableMultipleSubjects: SubjectResultOptions(
+            enableConfidenceMask: false,
+            enableSubjectBitmap: false,
+          ),
+        ),
+      );
+
+      final inputImage = InputImage.fromFilePath(widget.originalImage.path);
+      final result = await segmenter.processImage(inputImage);
+
+      if (result.foregroundBitmap != null) {
+        final segmentedPath =
+            '${widget.originalImage.parent.path}/segmented_${DateTime.now().millisecondsSinceEpoch}.png';
+        final segmentedFile = File(segmentedPath);
+        await segmentedFile.writeAsBytes(result.foregroundBitmap!);
+
+        if (mounted) {
+          setState(() {
+            _segmentedImage = segmentedFile;
+            _isIsolating = false;
+          });
+        }
+      } else {
+        _handleSegmentationFailure('No clear subject found.');
+      }
+      segmenter.close();
+    } catch (e) {
+      debugPrint("Segmentation Error: $e");
+      _handleSegmentationFailure('AI model initializing...');
+    }
+  }
+
+  void _handleSegmentationFailure(String message) {
+    if (mounted) {
+      setState(() => _isIsolating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$message Using original image.'),
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _sendToAI() async {
     final appUser = ref.read(appUserProvider).value;
     final String rawGrade = appUser?.profile.educationLevel ?? '';
 
-    // 🚀 FIX: Safely map UI dropdown values to strict backend Pydantic Enum strings
     String apiSafeGradeLevel;
     switch (rawGrade) {
       case 'Elementary':
-        apiSafeGradeLevel =
-            'Elementary (Grades 1-6)'; // Adjust if your backend expects different
+        apiSafeGradeLevel = 'Elementary (Grades 1-6)';
         break;
       case 'Senior High School':
         apiSafeGradeLevel = 'SHS (Grades 11-12)';
@@ -284,115 +575,357 @@ class _ScanningModalState extends ConsumerState<ScanningModal> {
         break;
       case 'High School':
       default:
-        apiSafeGradeLevel = 'JHS (Grades 7-10)'; // Our known 100% safe fallback
+        apiSafeGradeLevel = 'JHS (Grades 7-10)';
         break;
     }
 
+    // 🚀 We upload the pure file, not the UI background!
+    final imageToUpload = _segmentedImage ?? widget.originalImage;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const _AIQueryModal(),
+    );
+
     final aiResult = await DiscoveryService.analyzeImage(
-      imageFile: widget.imageFile,
-      gradeLevel: apiSafeGradeLevel, // Pass the strictly validated string!
+      imageFile: imageToUpload,
+      gradeLevel: apiSafeGradeLevel,
     );
 
     if (!mounted) return;
-
     Navigator.pop(context);
 
     if (aiResult != null) {
-      debugPrint("🎯 AI RESPONSE: $aiResult");
-
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => TeaserDoorsScreen(
             aiData: aiResult,
-            imagePath: widget.imageFile.path,
-            gradeLevel: apiSafeGradeLevel, // Pass to next screen
+            imagePath: imageToUpload.path,
+            gradeLevel: apiSafeGradeLevel,
           ),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'Failed to analyze image. Ensure you have internet and try again.',
-          ),
+          content: const Text('Failed to analyze. Check your connection.'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
   }
 
+  // 🚀 NEW: The UI trick to create a flawless white sticker outline
+  Widget _buildStickerOutline(File image) {
+    const double stroke = 4.0;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Generate 8 offset shadows to create a perfect white stroke around the alpha layer
+        for (double dx = -stroke; dx <= stroke; dx += stroke)
+          for (double dy = -stroke; dy <= stroke; dy += stroke)
+            if (dx != 0 || dy != 0)
+              Transform.translate(
+                offset: Offset(dx, dy),
+                child: ColorFiltered(
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
+                  child: Image.file(image, fit: BoxFit.contain),
+                ),
+              ),
+        // The actual image sits cleanly on top
+        Image.file(image, fit: BoxFit.contain),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        height: 320,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: theme.shadowColor.withValues(alpha: 0.1),
-              blurRadius: 20,
-              spreadRadius: 5,
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0E17),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            // Header
+            Text(
+              _isIsolating ? 'ANALYZING ARTIFACT' : 'SUBJECT ISOLATED',
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 30),
+
+            // 🚀 NEW: The Framed Photo Card with Grayish Background
+            Expanded(
+              child: Center(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: const Color(
+                      0xFF1E2532,
+                    ), // Premium grayish/blue tech background
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // 1. The Segmented Image (with the cool white outline)
+                      if (_segmentedImage != null)
+                        _buildStickerOutline(_segmentedImage!),
+
+                      // 2. The Original Image (Fading out)
+                      AnimatedOpacity(
+                        opacity: (_isIsolating || _segmentedImage == null)
+                            ? 1.0
+                            : 0.0,
+                        duration: const Duration(milliseconds: 1200),
+                        curve: Curves.easeInOut,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            widget.originalImage,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+
+                      // 3. Loading Spinner Overlay
+                      if (_isIsolating)
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.6),
+                              shape: BoxShape.circle,
+                            ),
+                            child: CircularProgressIndicator(
+                              color: theme.colorScheme.secondary,
+                              strokeWidth: 4,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // THE ACTION BUTTONS
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 40, 20, 40),
+              child: AnimatedOpacity(
+                opacity: _isIsolating ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 500),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _isIsolating
+                            ? null
+                            : () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: theme.colorScheme.primary,
+                            width: 2,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          'RETAKE',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isIsolating ? null : _sendToAI,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 10,
+                        ),
+                        child: const Text(
+                          'ANALYZE',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 6,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      theme.colorScheme.secondary,
-                    ),
-                  ),
-                ),
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.document_scanner_rounded,
-                    size: 36,
-                    color: theme.colorScheme.primary,
-                  ),
+      ),
+    );
+  }
+}
+
+// -------------------------------------------------------------------------
+// DYNAMIC LOADING MODAL FOR AI REQUEST
+// -------------------------------------------------------------------------
+class _AIQueryModal extends StatefulWidget {
+  const _AIQueryModal();
+
+  @override
+  State<_AIQueryModal> createState() => _AIQueryModalState();
+}
+
+class _AIQueryModalState extends State<_AIQueryModal>
+    with SingleTickerProviderStateMixin {
+  late final List<String> _phrases;
+  late final Stream<int> _timerStream;
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _phrases = [
+      'Uplinking to Neural Network...',
+      'Extracting visual metadata...',
+      'Cross-referencing database...',
+      'Synthesizing parameters...',
+    ];
+    _timerStream = Stream.periodic(
+      const Duration(milliseconds: 2000),
+      (i) => i,
+    );
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            height: 280,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A0E17).withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: theme.colorScheme.secondary.withValues(alpha: 0.5),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.3),
+                  blurRadius: 40,
                 ),
               ],
             ),
-            const SizedBox(height: 35),
-            Text(
-              'Analyzing Artifact...',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
-              ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, child) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 100 + (_pulseController.value * 20),
+                          height: 100 + (_pulseController.value * 20),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.1,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: CircularProgressIndicator(
+                            color: theme.colorScheme.primary,
+                            strokeWidth: 3,
+                          ),
+                        ),
+                        Icon(
+                          Icons.wifi_tethering,
+                          size: 36,
+                          color: theme.colorScheme.secondary,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 40),
+                StreamBuilder<int>(
+                  stream: _timerStream,
+                  builder: (context, snapshot) {
+                    final index = (snapshot.data ?? 0) % _phrases.length;
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 500),
+                      child: Text(
+                        _phrases[index].toUpperCase(),
+                        key: ValueKey<int>(index),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.secondary,
+                          letterSpacing: 2.0,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              'Cross-referencing historical databases',
-              style: TextStyle(
-                fontSize: 14,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

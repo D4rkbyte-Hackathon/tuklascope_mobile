@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 class CareerPath(BaseModel):
     path_type: str = Field(
         ...,
-        description="Must be one of: 'The Specialist', 'The Interdisciplinary', or 'The Object-Driven'",
+        description="Must be one of: 'Master Specialist', 'Hybrid Architect', or 'Future Pioneer'",
     )
     title: str = Field(
         ...,
@@ -34,7 +34,7 @@ class SkillWebResponse(BaseModel):
     xp_distribution: dict[str, int] = Field(
         default_factory=dict, description="Total XP per strand"
     )
-    top_skills: dict[str, int] = Field(
-        default_factory=dict,
-        description="Dictionary of specific mastered topics and their levels",
+    top_skills: list[str] = Field(
+        default_factory=list,
+        description="List of specific mastered topics and their levels",
     )

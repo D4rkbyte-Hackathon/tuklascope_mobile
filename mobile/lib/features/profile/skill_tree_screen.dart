@@ -61,7 +61,6 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
       curve: Curves.elasticOut,
     );
 
-    // 🚀 Fetch real user data immediately
     _loadTreeData();
   }
 
@@ -92,7 +91,6 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
     final abmColor = Colors.blue[600]!;
     final tvlColor = Colors.red[500]!;
 
-    // Extract XP safely (default to 0)
     final xpDist = data?['xp_distribution'] as Map<String, dynamic>? ?? {};
     final int stemXp = (xpDist['STEM'] ?? 0) as int;
     final int abmXp = (xpDist['ABM'] ?? 0) as int;
@@ -100,7 +98,6 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
     final int tvlXp = (xpDist['TVL'] ?? 0) as int;
 
     nodes = [
-      // ROOT
       SkillNode(
         id: 'root',
         title: 'You',
@@ -111,8 +108,6 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
         position: const Offset(0.50, 0.90),
         radius: 40.0,
       ),
-
-      // BASE STRANDS (Injected with real XP)
       SkillNode(
         id: 'stem',
         title: 'STEM',
@@ -155,10 +150,8 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
       ),
     ];
 
-    // 🚀 DYNAMICALLY SPAWN UNLOCKED SKILLS
     final topSkills = (data?['top_skills'] as List<dynamic>?) ?? [];
 
-    // Grid positioning constants to orbit them at the top of the screen
     final List<Offset> dynamicPositions = [
       const Offset(0.50, 0.25),
       const Offset(0.25, 0.15),
@@ -172,21 +165,18 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
 
     for (int i = 0; i < topSkills.length && i < dynamicPositions.length; i++) {
       final skillString = topSkills[i].toString();
-
-      // Parse backend string: "Material Properties (Materials Science) - Lv.3"
       final regex = RegExp(r'^(.*?) \((.*?)\) - Lv\.(\d+)$');
       final match = regex.firstMatch(skillString);
 
       String skillName = skillString;
       String domainName = 'Discipline';
-      int calculatedXp = 0; // Base 0 XP for level 1
+      int calculatedXp = 0;
 
       if (match != null) {
         skillName = match.group(1)?.trim() ?? skillName;
         domainName = match.group(2)?.trim() ?? domainName;
-        int level = int.tryParse(match.group(3) ?? '1') ?? 1;
-        calculatedXp =
-            (level - 1) * 50; // Convert level back to base XP for the UI
+        final int level = int.tryParse(match.group(3) ?? '1') ?? 1;
+        calculatedXp = (level - 1) * 50;
       }
 
       nodes.add(
@@ -196,9 +186,7 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
           description: 'Domain: $domainName',
           career: 'Advanced Mastery',
           xp: calculatedXp,
-          color: theme
-              .colorScheme
-              .primary, // Highlight dynamically unlocked skills
+          color: theme.colorScheme.primary,
           position: dynamicPositions[i],
           radius: 25.0,
           icon: Icons.star_border,
@@ -268,7 +256,7 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
                   flex: 3,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final size = Size(
+                      final Size size = Size(
                         constraints.maxWidth,
                         constraints.maxHeight,
                       );
@@ -298,7 +286,6 @@ class _KaalamanSkillTreeScreenState extends State<KaalamanSkillTreeScreen>
                     },
                   ),
                 ),
-
                 Expanded(
                   flex: 1,
                   child: Container(
@@ -475,21 +462,16 @@ class _OrganicTreePainter extends CustomPainter {
       canvas.drawPath(path, paint);
     }
 
-    // 🚀 FIX: DYNAMICALLY DRAW LINES TO ALL NODES
     for (var node in nodes) {
       if (node.id == 'root') continue;
 
-      // Base strands connect to root
       if (['stem', 'abm', 'humss', 'tvl'].contains(node.id)) {
         drawOrganicBranch(root, node, node.color);
-      }
-      // Newly unlocked skills connect dynamically to the root web
-      else if (node.id.startsWith('skill_')) {
+      } else if (node.id.startsWith('skill_')) {
         drawOrganicBranch(root, node, theme.colorScheme.primary);
       }
     }
 
-    // DRAW ALL LEAVES AND TEXT
     for (var node in nodes) {
       final center = getOffset(node);
       final isSelected = node.id == selectedNodeId;
@@ -540,9 +522,7 @@ class _OrganicTreePainter extends CustomPainter {
         } else {
           final textPainter = TextPainter(
             text: TextSpan(
-              text: node.title.split(
-                ' ',
-              )[0], // Only show first word of dynamic skills to keep it clean
+              text: node.title.split(' ')[0],
               style: TextStyle(
                 color: node.id == 'root'
                     ? theme.colorScheme.onSurface
@@ -563,7 +543,6 @@ class _OrganicTreePainter extends CustomPainter {
           );
         }
 
-        // Draw floating Level badge
         if (node.id != 'root') {
           final TextPainter levelPainter = TextPainter(
             text: TextSpan(
