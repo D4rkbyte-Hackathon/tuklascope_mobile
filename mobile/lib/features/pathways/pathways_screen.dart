@@ -72,7 +72,7 @@ class RewardScreen extends StatelessWidget {
           // 1. BACKGROUND IMAGE (Full Screen or half)
           Image.network(
             data.image,
-            height: MediaQuery.of(context).size.height * 0.6, // Covers top 60%
+            height: MediaQuery.of(context).size.height * 0.45, // Covers top 45%
             width: double.infinity,
             fit: BoxFit.cover,
             // Fallback for dead Discord links so it doesn't crash
@@ -92,14 +92,14 @@ class RewardScreen extends StatelessWidget {
                 // 3. THE BADGE/MEDAL (Overlapping)
                 Center(
                   child: Container(
-                    width: 130,
-                    height: 130,
-                    decoration: BoxDecoration(
-                      color: isCompleted ? Colors.green : theme.colorScheme.surface,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 6),
+                    width: 150,
+                    height: 150,
+                     // Breathing room for the image
+                    child: Image.asset(
+                      data.badgeImage, // Uses the new local asset path
+                      fit:
+                          BoxFit.fill, 
                     ),
-                    child: Icon(Icons.star_rounded, size: 70, color: isCompleted ? Colors.yellow : theme.colorScheme.onSurface.withValues(alpha: 0.3)),
                   ),
                 ),
                 
@@ -310,7 +310,8 @@ class HeaderSection extends StatelessWidget {
 class ProjectData {
   final String title;
   final String description;
-  final String image;
+  final String image; // The .network background image
+  final String badgeImage; // The .asset local badge image
   final String difficulty;
   final int points;
   final int progress;
@@ -319,6 +320,7 @@ class ProjectData {
     required this.title,
     required this.description,
     required this.image,
+    required this.badgeImage,
     required this.difficulty,
     required this.points,
     required this.progress,
@@ -444,43 +446,97 @@ class ProjectCard extends StatelessWidget {
 // CHANGE THIS LATER SO THAT DATA CAN BE RETRIEVE FROM SUPABASE THEN PARSED INTO THE STRUCT
 final List<ProjectData> myProjects = [
   ProjectData(
-    title: "Smiling Masterclass",
-    description: "Smile no matter the situation you're in.",
+    title: "Kitchen Chemist",
+    description:
+        "Discover the chemical reactions happening right in your kitchen.",
     image: "https://picsum.photos/id/10/400/200",
-    difficulty: "Advanced",
-    points: 670,
-    progress: 100,
-  ),
-  ProjectData(
-    title: "Database Basics",
-    description: "Setting up your first Supabase table.",
-    image: "https://picsum.photos/id/10/400/200",
+    badgeImage: "assets/images/badges/badge_chemist.png",
     difficulty: "Beginner",
-    points: 150,
-    progress: 80,
+    points: 100,
+    progress: 0,
   ),
   ProjectData(
-    title: "UI Mastery",
-    description: "Advanced layout and widget nesting.",
+    title: "Backyard Ecologist",
+    description: "Explore the local flora and fauna in your own neighborhood.",
     image: "https://picsum.photos/id/20/400/200",
-    difficulty: "Intermediate",
-    points: 300,
-    progress: 45,
+    badgeImage: "assets/images/badges/badge_ecologist.png",
+    difficulty: "Beginner",
+    points: 100,
+    progress: 0,
   ),
   ProjectData(
-    title: "State Management",
-    description: "Handling data flow across your app.",
+    title: "Code Creator",
+    description: "Learn the fundamentals of logic and software development.",
     image: "https://picsum.photos/id/30/400/200",
-    difficulty: "Advanced",
-    points: 500,
-    progress: 10,
-  ),
-  ProjectData(
-    title: "Final Integration",
-    description: "Connecting the frontend to the backend.",
-    image: "https://picsum.photos/id/40/400/200",
+    badgeImage: "assets/images/badges/badge_code.png",
     difficulty: "Intermediate",
     points: 250,
+    progress: 0,
+  ),
+  ProjectData(
+    title: "Math in Nature",
+    description: "Find the hidden geometric patterns in the natural world.",
+    image: "https://picsum.photos/id/40/400/200",
+    badgeImage: "assets/images/badges/badge_math.png",
+    difficulty: "Intermediate",
+    points: 250,
+    progress: 0,
+  ),
+  ProjectData(
+    title: "Physics Explorer",
+    description: "Understand the forces of motion, gravity, and energy.",
+    image: "https://picsum.photos/id/50/400/200",
+    badgeImage: "assets/images/badges/badge_physics.png",
+    difficulty: "Beginner",
+    points: 150,
+    progress: 0,
+  ),
+  ProjectData(
+    title: "Engineering Innovator",
+    description:
+        "Design and build structural projects using core engineering principles.",
+    image: "https://picsum.photos/id/60/400/200",
+    badgeImage: "assets/images/badges/badge_engineering.png",
+    difficulty: "Advanced",
+    points: 500,
+    progress: 0,
+  ),
+  ProjectData(
+    title: "Market Maestro",
+    description: "Master the basics of economics, supply, demand, and trade.",
+    image: "https://picsum.photos/id/70/400/200",
+    badgeImage: "assets/images/badges/badge_market.png",
+    difficulty: "Advanced",
+    points: 450,
+    progress: 0,
+  ),
+  ProjectData(
+    title: "Community Chronicler",
+    description:
+        "Document local history and engage with your community's story.",
+    image: "https://picsum.photos/id/80/400/200",
+    badgeImage: "assets/images/badges/badge_chronicler.png",
+    difficulty: "Intermediate",
+    points: 300,
+    progress: 0,
+  ),
+  ProjectData(
+    title: "Gourmet Artisan",
+    description: "Elevate your culinary skills with advanced techniques.",
+    image: "https://picsum.photos/id/90/400/200",
+    badgeImage: "assets/images/badges/badge_gourmet.png",
+    difficulty: "Intermediate",
+    points: 300,
+    progress: 0,
+  ),
+  ProjectData(
+    title: "Story Architect",
+    description:
+        "Draft, structure, and refine your own creative writing pieces.",
+    image: "https://picsum.photos/id/100/400/200",
+    badgeImage: "assets/images/badges/badge_architect.png",
+    difficulty: "Advanced",
+    points: 500,
     progress: 0,
   ),
 ];
