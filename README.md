@@ -1,6 +1,6 @@
 ![Tuklascope Logo](mobile/assets/images/Tuklascope-readme.png)
 
-Tuklascope is an AI-powered educational mobile application designed to democratize learning and spark continuous, interdisciplinary curiosity among Filipino youth. By transforming any student's everyday environment into an interactive classroom, the app makes complex concepts across sciences, arts, business, and practical skills highly accessible and culturally relevant. Built to provide personalized education and career guidance by putting a culturally-aware mentor in the pocket of every Filipino student.
+Tuklascope is an AI-powered educational mobile application designed to democratize learning and spark continuous, interdisciplinary curiosity among Filipino youth. By transforming any student's everyday environment into an interactive classroom, the app makes complex concepts across sciences, arts, business, and practical skills highly accessible and culturally relevant. Built to provide personalized education and career guidance by putting a culturally-aware mentor in the pocket of every Filipino student...
 
 ## Features
 
