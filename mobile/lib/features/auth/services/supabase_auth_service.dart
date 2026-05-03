@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart'; // Added for debugPrint
 
 class SupabaseAuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -136,4 +137,51 @@ class SupabaseAuthService {
     await GoogleSignIn.instance.disconnect();
     await _supabase.auth.signOut();
   }
-}
+
+  /// Sends a verification OTP to the user's email during signup
+  Future<bool> sendSignupVerificationOtp({
+    required String email, 
+    required String password,
+  }) async {
+    try {
+      await _supabase.auth.signUp(
+        email: email,
+        password: password,
+      );
+      debugPrint('✅ OTP sent successfully to $email');
+      return true; 
+    } on AuthException catch (e) {
+      debugPrint('❌ Auth Error sending OTP: ${e.message}');
+      return false;
+    } catch (e) {
+      debugPrint('❌ Unexpected error sending OTP: $e');
+      return false;
+    }
+  }
+
+  /// Verifies the 6-digit code sent to the user's inbox
+  Future<bool> verifyEmailWithOtp({
+    required String email, 
+    required String otpCode,
+  }) async {
+    try {
+      final response = await _supabase.auth.verifyOTP(
+        email: email,
+        token: otpCode,
+        type: OtpType.signup, 
+      );
+      if (response.session != null) {
+        debugPrint('✅ Email verified successfully for $email');
+        return true;
+      }
+      debugPrint('❌ OTP verification failed: No session returned');
+      return false;
+    } on AuthException catch (e) {
+      debugPrint('❌ Auth Error verifying OTP: ${e.message}');
+      return false;
+    } catch (e) {
+      debugPrint('❌ Unexpected error verifying OTP: $e');
+      return false;
+    }
+  }
+} // <- Moved the closing bracket here!
