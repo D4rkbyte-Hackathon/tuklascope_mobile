@@ -11,6 +11,9 @@ import '../../providers/auth_controller.dart';
 import '../../../../core/widgets/gradient_scaffold.dart';
 import '../../../../core/navigation/auth_transitions.dart';
 
+// Import your auth service to access the OTP functions
+import '../../services/supabase_auth_service.dart';
+
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
 
@@ -24,6 +27,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _countryController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  // Instantiate the Auth Service here
+  final SupabaseAuthService _authService = SupabaseAuthService();
 
   String? _selectedEducationLevel;
   final List<String> _educationLevels = ['Elementary', 'High School', 'Senior High School', 'Others'];
@@ -57,42 +63,123 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     if (_passwordController.text.trim().length < 6) return _showSnackBar('Password must be at least 6 characters');
     if (_selectedEducationLevel == null) return _showSnackBar('Please select your educational level');
 
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // 🚀 STEP 1: Fast format check (Regex)
+    if (!isValidEmailFormat(email)) {
+      return _showSnackBar('Please enter a valid email format.');
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      final authResponse = await ref.read(authControllerProvider.notifier).signUpWithEmailPassword(
-            _emailController.text.trim(),
-            _passwordController.text.trim(),
-          );
+      // 🚀 STEP 2: Trigger the OTP Send
+      final otpSent = await _authService.sendSignupVerificationOtp(
+        email: email,
+        password: password,
+      );
 
-      final user = authResponse.user;
-
-      if (user != null) {
-        await Supabase.instance.client.from('profiles').update({
-          'full_name': _nameController.text.trim(),
-          'city': _cityController.text.trim(),
-          'country': _countryController.text.trim(),
-          'education_level': _selectedEducationLevel,
-        }).eq('id', user.id);
-
+      if (otpSent) {
         if (!mounted) return;
-        _showSnackBar('Account created successfully!', isError: false);
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const CompassQuestionsScreen()));
-      }
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      String errorMessage = e.message;
-      if (errorMessage.toLowerCase().contains('user') || errorMessage.toLowerCase().contains('already') || errorMessage.toLowerCase().contains('email')) {
+        // 🚀 STEP 3: Show OTP Dialog
+        _showOtpVerificationDialog(email);
+      } else {
+        if (!mounted) return;
         _emailController.clear();
-        errorMessage = 'This email is already registered. Please try logging in.';
+        _showSnackBar('Signup failed. Email might be invalid or already registered.');
       }
-      _showSnackBar(errorMessage);
     } catch (e) {
       if (!mounted) return;
       _showSnackBar('Error: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // 🚀 STEP 4: The OTP Verification Step
+  void _showOtpVerificationDialog(String email) {
+    final TextEditingController otpController = TextEditingController();
+    bool isVerifying = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, 
+      builder: (context) {
+        return StatefulBuilder( // Allows the dialog to show a loading spinner inside itself
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Verify Your Email'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Enter the 6-digit code sent to $email to prove you are human!'),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: otpController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: '6-digit OTP',
+                      hintText: '000000',
+                    ),
+                    enabled: !isVerifying,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isVerifying ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isVerifying ? null : () async {
+                    final code = otpController.text.trim();
+                    if (code.isEmpty) return;
+
+                    setDialogState(() => isVerifying = true);
+
+                    // Validate the code
+                    final verified = await _authService.verifyEmailWithOtp(
+                      email: email, 
+                      otpCode: code,
+                    );
+
+                    if (verified) {
+                      // SUCCESS! User is now verified and logged in.
+                      // Now we can safely insert their profile data.
+                      final user = Supabase.instance.client.auth.currentUser;
+                      if (user != null) {
+                        try {
+                          await Supabase.instance.client.from('profiles').update({
+                            'full_name': _nameController.text.trim(),
+                            'city': _cityController.text.trim(),
+                            'country': _countryController.text.trim(),
+                            'education_level': _selectedEducationLevel,
+                          }).eq('id', user.id);
+                        } catch (e) {
+                          debugPrint('Error updating profile: $e');
+                        }
+                      }
+
+                      if (!mounted) return;
+                      Navigator.pop(context); // Close dialog
+                      _showSnackBar('Account created successfully!', isError: false);
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const CompassQuestionsScreen()));
+                    } else {
+                      setDialogState(() => isVerifying = false);
+                      _showSnackBar('Invalid code. Please try again.');
+                    }
+                  },
+                  child: isVerifying 
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
+                    : const Text('Verify'),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
   }
 
   Future<void> _showEducationLevelPicker() async {
@@ -269,4 +356,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       ),
     );
   }
+}
+
+// 🚀 HELPER FUNCTION: Placed securely at the bottom
+bool isValidEmailFormat(String email) {
+  final RegExp emailRegex = RegExp(
+    r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+"
+  );
+  return emailRegex.hasMatch(email);
 }
