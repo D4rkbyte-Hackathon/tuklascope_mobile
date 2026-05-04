@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/navigation/main_nav_scope.dart';
 import '../../../core/widgets/gradient_scaffold.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../auth/providers/auth_controller.dart';
 import '../../auth/presentation/widgets/auth_gate.dart';
-import '../pathfinder_blueprint_sheet.dart'; // Adjust path if needed
-import '../screens/change_password_screen.dart'; // Adjust path if needed
+import '../pathfinder_blueprint_sheet.dart'; 
+import '../screens/change_password_screen.dart'; 
 
 import '../providers/profile_provider.dart';
 import '../widgets/profile_header_card.dart';
@@ -17,7 +18,6 @@ import '../widgets/stats_grid_card.dart';
 import '../widgets/skill_tree_visualizer.dart';
 import '../widgets/profile_promo_card.dart';
 import 'edit_profile_screen.dart';
-
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -29,7 +29,10 @@ class ProfileScreen extends ConsumerWidget {
 
     return GradientScaffold(
       appBar: AppBar(
-        title: const Text('Profile & Skill Tree'),
+        title: Text(
+          'Profile & Skill Tree',
+          style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
+        ),
         foregroundColor: theme.colorScheme.primary,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -41,7 +44,7 @@ class ProfileScreen extends ConsumerWidget {
         error: (err, stack) => Center(
           child: Text(
             'Error: $err',
-            style: TextStyle(color: theme.colorScheme.error),
+            style: GoogleFonts.inter(color: theme.colorScheme.error),
           ),
         ),
         data: (appUser) {
@@ -49,7 +52,7 @@ class ProfileScreen extends ConsumerWidget {
             return Center(
               child: Text(
                 'Please log in.',
-                style: TextStyle(color: theme.colorScheme.onSurface),
+                style: GoogleFonts.inter(color: theme.colorScheme.onSurface),
               ),
             );
           }
@@ -151,7 +154,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
               labelColor: widget.theme.colorScheme.onPrimary,
               unselectedLabelColor: widget.theme.colorScheme.onSurface
                   .withValues(alpha: 0.6),
-              labelStyle: const TextStyle(
+              labelStyle: GoogleFonts.montserrat(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),
@@ -215,7 +218,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
             child: RichText(
               textAlign: TextAlign.center,
               text: TextSpan(
-                style: const TextStyle(
+                style: GoogleFonts.montserrat(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                   height: 1.15,
@@ -227,7 +230,9 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                   ),
                   TextSpan(
                     text: 'Skill Tree',
-                    style: TextStyle(color: theme.colorScheme.secondary),
+                    style: GoogleFonts.orbitron(
+                      color: theme.colorScheme.secondary,
+                    ),
                   ),
                 ],
               ),
@@ -238,7 +243,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
             child: Text(
               'Inner nodes track your gamification strands. Outer nodes are dynamic topics you mastered.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                 height: 1.35,
@@ -251,7 +256,9 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 color: theme.colorScheme.primary,
               ),
             ),
-            error: (e, s) => const Center(child: Text('Error loading stats')),
+            error: (e, s) => Center(
+              child: Text('Error loading stats', style: GoogleFonts.inter()),
+            ),
             data: (stats) => Padding(
               padding: const EdgeInsets.only(bottom: 20),
               child: StatsGridCard(theme: theme, stats: stats),
@@ -344,7 +351,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                     ),
                     title: Text(
                       'Dark Mode',
-                      style: TextStyle(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
                       ),
@@ -364,7 +371,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
           padding: const EdgeInsets.only(top: 20, bottom: 10),
           child: Text(
             'Account',
-            style: TextStyle(
+            style: GoogleFonts.montserrat(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.primary,
@@ -389,7 +396,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                   ),
                   title: Text(
                     'Change Password',
-                    style: TextStyle(
+                    style: GoogleFonts.inter(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurface,
                     ),
@@ -404,7 +411,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
               ListTile(
                 title: Text(
                   'Sign Out',
-                  style: TextStyle(
+                  style: GoogleFonts.inter(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.error,
                   ),
@@ -446,7 +453,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
               Text(
                 'Tuklascope is a modern learning companion that helps you discover, track, and engage with educational content. Built with love and purpose to make learning accessible for everyone.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 14,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
                   height: 1.4,
@@ -461,7 +468,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
         // Developers
         Text(
           'Developed by:',
-          style: TextStyle(
+          style: GoogleFonts.montserrat(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.primary,
@@ -480,7 +487,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 leading: Icon(Icons.code, color: theme.colorScheme.secondary),
                 title: Text(
                   'John Michael A. Nave',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
               ),
               Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
@@ -488,7 +495,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 leading: Icon(Icons.code, color: theme.colorScheme.secondary),
                 title: Text(
                   'James Andrew S. Ologuin',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
               ),
               Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
@@ -496,7 +503,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 leading: Icon(Icons.code, color: theme.colorScheme.secondary),
                 title: Text(
                   'John Peter D. Pestaño',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
               ),
               Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
@@ -504,7 +511,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 leading: Icon(Icons.code, color: theme.colorScheme.secondary),
                 title: Text(
                   'Jordan A. Cabandon',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
               ),
               Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
@@ -512,7 +519,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 leading: Icon(Icons.code, color: theme.colorScheme.secondary),
                 title: Text(
                   'John Zachary N. Gillana',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
               ),
             ],

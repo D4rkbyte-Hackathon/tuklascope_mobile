@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../auth/providers/auth_controller.dart';
 import '../../auth/services/supabase_auth_service.dart';
 import '../../../core/navigation/main_nav_scope.dart';
@@ -104,7 +105,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Password changed successfully!'),
+            content: Text('Password changed successfully!', style: GoogleFonts.inter()),
             backgroundColor: Theme.of(context).colorScheme.primary,
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(16),
@@ -133,7 +134,10 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text('Change Password'),
+        title: Text(
+          'Change Password',
+          style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -183,7 +187,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 // Title
                 Text(
                   'Change Password',
-                  style: TextStyle(
+                  style: GoogleFonts.montserrat(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.onSurface,
@@ -194,7 +198,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 // Subtitle
                 Text(
                   'Lorem ipsum dolor sit amet, consectetur adipisicing elit sed eiusmod tempor incididunt.',
-                  style: TextStyle(
+                  style: GoogleFonts.inter(
                     fontSize: 13,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     height: 1.5,
@@ -264,7 +268,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: TextStyle(
+                            style: GoogleFonts.inter(
                               color: theme.colorScheme.error,
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
@@ -310,7 +314,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                                 )
                               : Text(
                                   'CONFIRM CHANGE',
-                                  style: TextStyle(
+                                  style: GoogleFonts.montserrat(
                                     color: theme.colorScheme.onPrimary,
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
@@ -356,7 +360,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         enabled: isEnabled,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(
+          labelStyle: GoogleFonts.inter(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             fontSize: 15,
             fontWeight: FontWeight.w500,
@@ -375,7 +379,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
             ),
           ),
         ),
-        style: TextStyle(
+        style: GoogleFonts.inter(
           color: theme.colorScheme.onSurface,
           fontSize: 16,
           fontWeight: FontWeight.w500,
