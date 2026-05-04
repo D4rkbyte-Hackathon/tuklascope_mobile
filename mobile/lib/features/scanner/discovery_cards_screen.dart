@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 NEW: Added Google Fonts
 import 'package:tuklascope_mobile/features/home/providers/home_provider.dart';
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
 import '../../core/services/discovery_service.dart';
@@ -100,9 +101,9 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
               backgroundColor: theme.colorScheme.primary,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.auto_awesome),
-              label: const Text(
+              label: Text(
                 'Ask Tutor',
-                style: TextStyle(fontWeight: FontWeight.w900),
+                style: GoogleFonts.inter(fontWeight: FontWeight.w900),
               ),
               onPressed: () {
                 final conceptCard =
@@ -137,7 +138,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
           ? Center(
               child: Text(
                 _error!,
-                style: TextStyle(color: theme.colorScheme.error),
+                style: GoogleFonts.inter(color: theme.colorScheme.error),
               ),
             )
           : _buildContent(theme),
@@ -181,7 +182,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                 children: [
                   Text(
                     '${widget.selectedLens.toUpperCase()}: ${widget.objectName}',
-                    style: TextStyle(
+                    style: GoogleFonts.montserrat(
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
                       color: theme.colorScheme.primary,
@@ -247,7 +248,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
               const SizedBox(height: 8),
               Text(
                 label,
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontWeight: FontWeight.bold,
                   color: isSelected
                       ? theme.colorScheme.onSecondary
@@ -316,7 +317,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
               ),
               child: Text(
                 badgeText.toUpperCase(),
-                style: TextStyle(
+                style: GoogleFonts.orbitron(
                   fontSize: 11,
                   fontWeight: FontWeight.w900,
                   color: theme.colorScheme.primary,
@@ -328,7 +329,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
           ],
           Text(
             title.toUpperCase(),
-            style: TextStyle(
+            style: GoogleFonts.montserrat(
               fontSize: 18,
               fontWeight: FontWeight.w900,
               color: theme.colorScheme.primary,
@@ -338,7 +339,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
           const SizedBox(height: 16),
           Text(
             content,
-            style: TextStyle(
+            style: GoogleFonts.inter(
               fontSize: 16,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
               height: 1.7,
@@ -351,7 +352,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
 
   Widget _buildChallengeBottomBar(ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 32, top: 16),
+      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 64, top: 16),
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
         boxShadow: [
@@ -373,17 +374,23 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
           ),
           elevation: 5,
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.sports_esports, size: 24),
-            SizedBox(width: 12),
-            Text(
-              'TAKE CHALLENGE TO EARN XP',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1,
+            const Icon(Icons.sports_esports, size: 24),
+            const SizedBox(width: 12),
+            // 🚀 FIX: Wrapped in Flexible and FittedBox
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'TAKE CHALLENGE TO EARN XP',
+                  style: GoogleFonts.orbitron(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                  ),
+                ),
               ),
             ),
           ],
@@ -392,7 +399,6 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
     );
   }
 
-  // 🚀 REVERTED UI: 2-Tries (Hearts) Logic with standard Tuklascope UI
   void _showChallengeModal() {
     final challengeCard =
         _deckData?['challenge_card'] as Map<String, dynamic>? ?? {};
@@ -420,7 +426,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
             return Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface, // Back to normal color!
+                color: theme.colorScheme.surface,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(32),
                 ),
@@ -437,7 +443,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                         children: [
                           Text(
                             'TUKLAS CHALLENGE',
-                            style: TextStyle(
+                            style: GoogleFonts.orbitron(
                               color: theme.colorScheme.secondary,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 2,
@@ -451,7 +457,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                                 child: Icon(
                                   index < attemptsLeft
                                       ? Icons.favorite
-                                      : Icons.favorite_border, // Hearts!
+                                      : Icons.favorite_border,
                                   size: 24,
                                   color: Colors.redAccent,
                                 ),
@@ -463,7 +469,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                       const SizedBox(height: 24),
                       Text(
                         question,
-                        style: TextStyle(
+                        style: GoogleFonts.montserrat(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
                           color: theme.colorScheme.onSurface,
@@ -499,8 +505,8 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                             onTap: isEvaluating
                                 ? null
                                 : () => setModalState(
-                                    () => selectedOption = option,
-                                  ),
+                                      () => selectedOption = option,
+                                    ),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
                               padding: const EdgeInsets.all(20),
@@ -514,7 +520,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                               ),
                               child: Text(
                                 option,
-                                style: TextStyle(
+                                style: GoogleFonts.inter(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: theme.colorScheme.onSurface,
@@ -583,9 +589,9 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: const Text(
+                          child: Text(
                             'SUBMIT ANSWER',
-                            style: TextStyle(
+                            style: GoogleFonts.inter(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1,
@@ -626,7 +632,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                                     ? "Incorrect. You have 1 attempt remaining."
                                     : "Incorrect. The door closes...",
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
+                                style: GoogleFonts.inter(
                                   color: lastResult == true
                                       ? Colors.green
                                       : Colors.red,
@@ -648,9 +654,9 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                                     backgroundColor: Colors.green,
                                     foregroundColor: Colors.white,
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     'CLAIM XP',
-                                    style: TextStyle(
+                                    style: GoogleFonts.orbitron(
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: 1.5,
                                     ),
@@ -803,7 +809,7 @@ class _DeckQueryModalState extends State<_DeckQueryModal>
                       child: Text(
                         _phrases[index].toUpperCase(),
                         key: ValueKey<int>(index),
-                        style: TextStyle(
+                        style: GoogleFonts.orbitron(
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
                           color: theme.colorScheme.primary,
