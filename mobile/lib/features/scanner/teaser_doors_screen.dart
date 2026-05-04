@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'discovery_cards_screen.dart';
 
 class TeaserDoorsScreen extends StatefulWidget {
@@ -76,8 +77,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
 
     if (_teaserDoors.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Error')),
-        body: const Center(child: Text('No pathways found.')),
+        appBar: AppBar(title: Text('Error', style: GoogleFonts.montserrat())),
+        body: Center(child: Text('No pathways found.', style: GoogleFonts.inter())),
       );
     }
 
@@ -86,9 +87,9 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Choose your lens',
-          style: TextStyle(
+          style: GoogleFonts.montserrat(
             color: Colors.white70,
             fontWeight: FontWeight.w600,
             fontSize: 16,
@@ -121,7 +122,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                   child: Text(
                     _objectName,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: GoogleFonts.montserrat(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0,
@@ -140,8 +141,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                         builder: (context, child) {
                           final double page =
                               _pageController.position.haveDimensions
-                              ? _pageController.page!
-                              : 1000.0;
+                                  ? _pageController.page!
+                                  : 1000.0;
                           final double difference = (page - index).abs();
                           final double scale = (1 - (difference * 0.1)).clamp(
                             0.9,
@@ -256,7 +257,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                       const SizedBox(width: 4),
                       Text(
                         isSecured ? 'SECURED' : '+$xp XP',
-                        style: TextStyle(
+                        style: GoogleFonts.orbitron(
                           color: isSecured
                               ? Colors.green
                               : theme.colorScheme.primary,
@@ -271,7 +272,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
             const SizedBox(height: 30),
             Text(
               lens.toUpperCase(),
-              style: TextStyle(
+              style: GoogleFonts.orbitron(
                 color: strandColor,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 2,
@@ -282,7 +283,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
             Text(
               isSecured ? "Data Extracted" : title,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: GoogleFonts.montserrat(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface,
@@ -295,7 +296,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                   ? "You have successfully absorbed the knowledge from this pathway. Choose another lens to continue extracting."
                   : teaser,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 16,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 height: 1.5,
@@ -348,7 +349,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen> {
                       },
                 child: Text(
                   isSecured ? 'PORTAL CLOSED' : 'ENTER PORTAL',
-                  style: const TextStyle(
+                  style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.5,

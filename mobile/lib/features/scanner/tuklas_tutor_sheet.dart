@@ -1,6 +1,6 @@
-// mobile/lib/features/scanner/tuklas_tutor_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 NEW
 import '../../core/services/chat_service.dart';
 
 class ChatMessage {
@@ -9,7 +9,6 @@ class ChatMessage {
 
   ChatMessage({required this.text, required this.isAI});
 
-  // Helper to map to the backend schema
   Map<String, String> toBackendSchema() {
     return {"role": isAI ? "assistant" : "user", "content": text};
   }
@@ -60,7 +59,6 @@ class _TuklasTutorSheetState extends State<TuklasTutorSheet> {
   @override
   void initState() {
     super.initState();
-    // Contextual greeting based on the object
     _messages.add(
       ChatMessage(
         text:
@@ -74,7 +72,6 @@ class _TuklasTutorSheetState extends State<TuklasTutorSheet> {
     final text = _textController.text.trim();
     if (text.isEmpty || _isTyping) return;
 
-    // Build the history array for the backend (excluding the current message we are about to send)
     final history = _messages.map((m) => m.toBackendSchema()).toList();
 
     setState(() {
@@ -85,7 +82,6 @@ class _TuklasTutorSheetState extends State<TuklasTutorSheet> {
     _textController.clear();
     _scrollToBottom();
 
-    // 🚀 Call the actual Render Backend
     final aiReply = await ChatService.sendMessage(
       objectName: widget.objectName,
       strand: widget.strand,
@@ -183,7 +179,7 @@ class _TuklasTutorSheetState extends State<TuklasTutorSheet> {
                         const SizedBox(width: 8),
                         Text(
                           'Tuklas Tutor',
-                          style: TextStyle(
+                          style: GoogleFonts.montserrat(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
                             color: theme.colorScheme.primary,
@@ -251,13 +247,16 @@ class _TuklasTutorSheetState extends State<TuklasTutorSheet> {
                             textInputAction: TextInputAction.send,
                             onSubmitted: (_) => _sendMessage(),
                             enabled: !_isTyping,
-                            style: TextStyle(
+                            style: GoogleFonts.inter(
                               color: theme.colorScheme.onSurface,
                             ),
                             decoration: InputDecoration(
                               hintText: _isTyping
                                   ? 'Tutor is thinking...'
                                   : 'Ask a question...',
+                              hintStyle: GoogleFonts.inter(
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                              ),
                               border: InputBorder.none,
                             ),
                           ),
@@ -338,7 +337,7 @@ class _TuklasTutorSheetState extends State<TuklasTutorSheet> {
               ),
               child: Text(
                 message.text,
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 15,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
                   height: 1.4,
@@ -386,7 +385,7 @@ class _TuklasTutorSheetState extends State<TuklasTutorSheet> {
                 const SizedBox(width: 8),
                 Text(
                   "Thinking...",
-                  style: TextStyle(
+                  style: GoogleFonts.orbitron(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
