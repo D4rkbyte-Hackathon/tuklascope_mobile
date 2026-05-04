@@ -7,7 +7,7 @@ import 'core/navigation/main_nav_scope.dart';
 import 'features/home/home_screen.dart';
 import 'features/scanner/live_feed_screen.dart';
 import 'features/pathways/screens/pathways_screen.dart';
-import 'features/profile/profile_screen.dart';
+import 'features/profile/screens/profile_screen.dart';
 import 'features/explore/presentation/screens/explore_screen.dart';
 
 class MainNavigation extends StatefulWidget {
