@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_subject_segmentation/google_mlkit_subject_segmentation.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:tuklascope_mobile/core/services/discovery_service.dart';
 import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
 import 'package:tuklascope_mobile/features/auth/providers/auth_controller.dart';
+import 'package:tuklascope_mobile/core/widgets/gradient_scaffold.dart';
 import 'teaser_doors_screen.dart';
 
 class LiveFeedScreen extends StatefulWidget {
@@ -89,7 +91,6 @@ class _LiveFeedScreenState extends State<LiveFeedScreen>
 
       if (!mounted) return;
 
-      // 🚀 FIX: rootNavigator: true forces the new screen OVER the bottom nav bar!
       Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (context) => ConfirmImageScreen(originalImage: imageFile),
@@ -112,8 +113,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen>
     final theme = Theme.of(context);
 
     if (!_isCameraInitialized || _controller == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF0A0E17), // Deep tech blue/black
+      return GradientScaffold(
         body: Center(
           child: CircularProgressIndicator(color: theme.colorScheme.primary),
         ),
@@ -122,16 +122,17 @@ class _LiveFeedScreenState extends State<LiveFeedScreen>
 
     final navScope = MainNavScope.maybeOf(context);
     final isNavBarVisible = navScope?.isNavBarVisible ?? true;
-    final extraBottomPadding = isNavBarVisible ? 100.0 : 20.0;
+    
+    final bottomSafePadding = MediaQuery.of(context).padding.bottom;
+    final extraBottomPadding = (isNavBarVisible ? 120.0 : 60.0) + bottomSafePadding; 
 
     const double boxWidth = 280;
     const double boxHeight = 350;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0E17), // Solid Sci-Fi Background
+    return GradientScaffold(
       body: Stack(
         children: [
-          // 1. THE RESTRICTED CAMERA WINDOW (No longer full screen)
+          // 1. THE RESTRICTED CAMERA WINDOW
           Center(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -224,8 +225,8 @@ class _LiveFeedScreenState extends State<LiveFeedScreen>
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'ISOLATION PROTOCOL',
-                        style: TextStyle(
+                        'SUBJECT TRACKING',
+                        style: GoogleFonts.orbitron(
                           color: theme.colorScheme.primary,
                           fontSize: 10,
                           fontWeight: FontWeight.w900,
@@ -267,7 +268,7 @@ class _LiveFeedScreenState extends State<LiveFeedScreen>
                     onPressed: () {},
                   ),
 
-                  // 🚀 THE NEW, ULTRA-SMOOTH CAPTURE BUTTON
+                  // THE NEW, ULTRA-SMOOTH CAPTURE BUTTON
                   GestureDetector(
                     onTap: _takePictureAndScan,
                     child: Container(
@@ -321,7 +322,6 @@ class _LiveFeedScreenState extends State<LiveFeedScreen>
   }
 }
 
-// 🚀 NEW: Advanced Sci-Fi HUD Painter
 class _AdvancedHudPainter extends CustomPainter {
   final Color primary;
   final Color secondary;
@@ -377,7 +377,7 @@ class _AdvancedHudPainter extends CustomPainter {
 
     // 3. Draw Heavy Sci-Fi Corner Brackets
     const double length = 40.0;
-    const double offset = 8.0; // Distance of brackets from the box
+    const double offset = 8.0;
 
     // Top Left
     canvas.drawLine(
@@ -427,7 +427,7 @@ class _AdvancedHudPainter extends CustomPainter {
       bracketPaint,
     );
 
-    // 4. Draw Telemetry Accents (Tiny secondary dots/lines)
+    // 4. Draw Telemetry Accents
     canvas.drawCircle(Offset(left - offset, top - offset), 4, accentPaint);
     canvas.drawCircle(Offset(right + offset, bottom + offset), 4, accentPaint);
 
@@ -444,39 +444,38 @@ class _AdvancedHudPainter extends CustomPainter {
       Offset(centerX, top + 20),
       Offset(centerX, top + 40),
       crosshairPaint,
-    ); // Top inner
+    ); 
     canvas.drawLine(
       Offset(centerX, bottom - 20),
       Offset(centerX, bottom - 40),
       crosshairPaint,
-    ); // Bottom inner
+    ); 
     canvas.drawLine(
       Offset(left + 20, centerY),
       Offset(left + 40, centerY),
       crosshairPaint,
-    ); // Left inner
+    ); 
     canvas.drawLine(
       Offset(right - 20, centerY),
       Offset(right - 40, centerY),
       crosshairPaint,
-    ); // Right inner
+    ); 
 
-    // 6. Draw Fake Text Data
+    // 6. Draw Text Data (🚀 MOVED TO TOP)
     final textPainter = TextPainter(
       text: TextSpan(
-        text:
-            'OBJ_MASK: ACTIVE\nCOORD: [X:${centerX.toInt()}, Y:${centerY.toInt()}]',
-        style: TextStyle(
+        text: 'SCAN STATUS: READY\nPOSITION: OPTIMAL',
+        style: GoogleFonts.orbitron(
           color: primary.withValues(alpha: 0.7),
           fontSize: 8,
-          fontFamily: 'monospace',
           letterSpacing: 1,
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
 
-    textPainter.paint(canvas, Offset(left, bottom + 20));
+    // Changed from `bottom + 20` to `top - 35` and aligned slightly left with the bracket
+    textPainter.paint(canvas, Offset(left - offset, top - 35)); 
   }
 
   @override
@@ -549,7 +548,10 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
       setState(() => _isIsolating = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$message Using original image.'),
+          content: Text(
+            '$message Using original image.',
+            style: GoogleFonts.inter(),
+          ),
           backgroundColor: Theme.of(context).colorScheme.secondary,
           duration: const Duration(seconds: 2),
         ),
@@ -579,7 +581,6 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
         break;
     }
 
-    // 🚀 We upload the pure file, not the UI background!
     final imageToUpload = _segmentedImage ?? widget.originalImage;
 
     showDialog(
@@ -610,20 +611,21 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Failed to analyze. Check your connection.'),
+          content: Text(
+            'Failed to analyze. Check your connection.',
+            style: GoogleFonts.inter(),
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
   }
 
-  // 🚀 NEW: The UI trick to create a flawless white sticker outline
   Widget _buildStickerOutline(File image) {
     const double stroke = 4.0;
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Generate 8 offset shadows to create a perfect white stroke around the alpha layer
         for (double dx = -stroke; dx <= stroke; dx += stroke)
           for (double dy = -stroke; dy <= stroke; dy += stroke)
             if (dx != 0 || dy != 0)
@@ -637,7 +639,6 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
                   child: Image.file(image, fit: BoxFit.contain),
                 ),
               ),
-        // The actual image sits cleanly on top
         Image.file(image, fit: BoxFit.contain),
       ],
     );
@@ -647,34 +648,28 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0E17),
+    return GradientScaffold(
       body: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 20),
             // Header
             Text(
-              _isIsolating ? 'ANALYZING ARTIFACT' : 'SUBJECT ISOLATED',
-              style: TextStyle(
+              _isIsolating ? 'PROCESSING IMAGE' : 'SUBJECT ISOLATED',
+              style: theme.textTheme.titleLarge?.copyWith(
                 color: theme.colorScheme.primary,
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
                 letterSpacing: 2,
               ),
             ),
             const SizedBox(height: 30),
 
-            // 🚀 NEW: The Framed Photo Card with Grayish Background
             Expanded(
               child: Center(
                 child: Container(
                   width: MediaQuery.of(context).size.width * 0.85,
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: const Color(
-                      0xFF1E2532,
-                    ), // Premium grayish/blue tech background
+                    color: const Color(0xFF1E2532), 
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: theme.colorScheme.primary.withValues(alpha: 0.3),
@@ -692,11 +687,9 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // 1. The Segmented Image (with the cool white outline)
                       if (_segmentedImage != null)
                         _buildStickerOutline(_segmentedImage!),
 
-                      // 2. The Original Image (Fading out)
                       AnimatedOpacity(
                         opacity: (_isIsolating || _segmentedImage == null)
                             ? 1.0
@@ -712,7 +705,6 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
                         ),
                       ),
 
-                      // 3. Loading Spinner Overlay
                       if (_isIsolating)
                         Center(
                           child: Container(
@@ -757,9 +749,9 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'RETAKE',
-                          style: TextStyle(
+                          style: GoogleFonts.inter(
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.5,
                           ),
@@ -779,9 +771,9 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
                           ),
                           elevation: 10,
                         ),
-                        child: const Text(
+                        child: Text(
                           'ANALYZE',
-                          style: TextStyle(
+                          style: GoogleFonts.inter(
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.5,
                           ),
@@ -819,10 +811,10 @@ class _AIQueryModalState extends State<_AIQueryModal>
   void initState() {
     super.initState();
     _phrases = [
-      'Uplinking to Neural Network...',
-      'Extracting visual metadata...',
-      'Cross-referencing database...',
-      'Synthesizing parameters...',
+      'Connecting to server...',
+      'Processing visual data...',
+      'Analyzing features...',
+      'Generating results...',
     ];
     _timerStream = Stream.periodic(
       const Duration(milliseconds: 2000),
@@ -912,7 +904,7 @@ class _AIQueryModalState extends State<_AIQueryModal>
                       child: Text(
                         _phrases[index].toUpperCase(),
                         key: ValueKey<int>(index),
-                        style: TextStyle(
+                        style: GoogleFonts.orbitron(
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
                           color: theme.colorScheme.secondary,
