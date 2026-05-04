@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 import '../../../core/navigation/main_nav_scope.dart';
 
 class HomeHeader extends StatelessWidget {
@@ -54,7 +55,7 @@ class HomeHeader extends StatelessWidget {
             children: [
               Text(
                 "Welcome back, $userName",
-                style: TextStyle(
+                style: GoogleFonts.inter( // 🚀 SWAPPED TO INTER
                   fontSize: 14,
                   color: theme.colorScheme.onSurface.withOpacity(0.7),
                   fontWeight: FontWeight.w600,
@@ -62,7 +63,7 @@ class HomeHeader extends StatelessWidget {
               ),
               Text(
                 heroTitle,
-                style: TextStyle(
+                style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
                   color: theme.colorScheme.onSurface,
@@ -84,7 +85,7 @@ class HomeHeader extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 "$xp XP",
-                style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.tertiary),
+                style: GoogleFonts.orbitron(fontWeight: FontWeight.bold, color: theme.colorScheme.tertiary), // 🚀 SWAPPED TO ORBITRON FOR GAMIFIED POINTS
               ),
             ],
           ),

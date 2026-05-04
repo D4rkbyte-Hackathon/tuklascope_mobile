@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 import '../../../core/navigation/main_nav_scope.dart';
 
 class HeroScanButton extends StatelessWidget {
@@ -65,9 +66,9 @@ class HeroScanButton extends StatelessWidget {
                         .animate(onPlay: (c) => c.repeat(reverse: true))
                         .slideY(begin: -0.1, end: 0.1, duration: 1.seconds),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       "SCAN",
-                      style: TextStyle(
+                      style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                         fontSize: 22,
