@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 
 class DailyMotivation extends StatelessWidget {
   final int streak;
@@ -45,7 +46,11 @@ class DailyMotivation extends StatelessWidget {
               Text(
                 "$streak Day\nStreak",
                 textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.secondary, height: 1.2),
+                style: GoogleFonts.orbitron( // 🚀 SWAPPED TO ORBITRON FOR GAMIFIED STAT
+                  fontWeight: FontWeight.bold, 
+                  color: theme.colorScheme.secondary, 
+                  height: 1.2
+                ),
               )
             ],
           ),
@@ -64,14 +69,22 @@ class DailyMotivation extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       "Did you know?", 
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: theme.colorScheme.primary)
+                      style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT FOR HEADING
+                        fontWeight: FontWeight.w900, 
+                        fontSize: 14, 
+                        color: theme.colorScheme.primary
+                      )
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
                   dailyFact,
-                  style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.8), height: 1.3),
+                  style: GoogleFonts.inter( // 🚀 SWAPPED TO INTER FOR CLEAN READABILITY
+                    fontSize: 13, 
+                    color: theme.colorScheme.onSurface.withOpacity(0.8), 
+                    height: 1.3
+                  ),
                 ),
               ],
             ),

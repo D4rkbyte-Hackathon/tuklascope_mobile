@@ -1,6 +1,6 @@
-// mobile/lib/features/home/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 
 import '../../core/widgets/gradient_scaffold.dart';
 

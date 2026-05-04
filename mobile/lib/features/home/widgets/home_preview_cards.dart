@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 import '../../../core/navigation/main_nav_scope.dart';
 // 🚀 Add this import at the top to access the Scan Detail Screen
 import '../../explore/presentation/screens/scan_detail_screen.dart';
@@ -26,7 +27,7 @@ class QuickRecommendationCard extends StatelessWidget {
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 14),
+                style: GoogleFonts.inter(color: theme.colorScheme.onSurface, fontSize: 14), // 🚀 SWAPPED TO INTER
                 children: [
                   const TextSpan(text: "You might like... \n", style: TextStyle(fontWeight: FontWeight.bold)),
                   TextSpan(
@@ -89,7 +90,7 @@ class MiniSkillTreeCard extends StatelessWidget {
                 ),
                 child: Text(
                   "Lv.$level",
-                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: GoogleFonts.orbitron(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white), // 🚀 SWAPPED TO ORBITRON
                 ),
               ),
             ),
@@ -98,7 +99,7 @@ class MiniSkillTreeCard extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           label,
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withOpacity(0.8)),
+          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withOpacity(0.8)), // 🚀 SWAPPED TO INTER
         )
       ],
     );
@@ -116,7 +117,7 @@ class MiniSkillTreeCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("Skill Tree Mastery", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+              Text("Skill Tree Mastery", style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)), // 🚀 SWAPPED TO MONTSERRAT
               Icon(Icons.arrow_forward_ios_rounded, size: 14, color: theme.colorScheme.primary),
             ],
           ),
@@ -159,8 +160,8 @@ class QuestBoardPreview extends StatelessWidget {
           children: [
             Icon(Icons.map_rounded, color: theme.colorScheme.primary),
             const SizedBox(height: 8),
-            Text("Active Quest", style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6))),
-            Text("Batang Siyentista", style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+            Text("Active Quest", style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6))), // 🚀 SWAPPED TO INTER
+            Text("Batang Siyentista", style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)), // 🚀 SWAPPED TO MONTSERRAT
             const SizedBox(height: 8),
             LinearProgressIndicator(
               value: 0.3,
@@ -220,18 +221,18 @@ class LeaderboardTeaser extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text("Global Rank", style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6))),
+            Text("Global Rank", style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6))), // 🚀 SWAPPED TO INTER
             Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
                 Text(
                   rank != null ? "#$rank" : "--", 
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: theme.colorScheme.tertiary),
+                  style: GoogleFonts.orbitron(fontWeight: FontWeight.w900, fontSize: 24, color: theme.colorScheme.tertiary), // 🚀 SWAPPED TO ORBITRON
                 ),
                 Text(
                   " / $totalUsers", 
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                  style: GoogleFonts.orbitron(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withOpacity(0.5)), // 🚀 SWAPPED TO ORBITRON
                 ),
               ],
             ),
@@ -262,7 +263,7 @@ class RecentDiscoveriesSection extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text("Recent Discoveries", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+            Text("Recent Discoveries", style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)), // 🚀 SWAPPED TO MONTSERRAT
             GestureDetector(
               onTap: () => MainNavScope.maybeOf(context)?.goToTab(4), // Jump to History/Explore
               child: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: theme.colorScheme.primary),
@@ -329,14 +330,14 @@ class RecentDiscoveriesSection extends StatelessWidget {
                           children: [
                             Text(
                               objectName, 
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.colorScheme.onSurface), 
+                              style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: theme.colorScheme.onSurface), // 🚀 SWAPPED TO INTER
                               maxLines: 1, 
                               overflow: TextOverflow.ellipsis
                             ),
                             const SizedBox(height: 4),
                             Text(
                               lens.toUpperCase(), 
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: theme.colorScheme.secondary, letterSpacing: 0.5)
+                              style: GoogleFonts.montserrat(fontSize: 10, fontWeight: FontWeight.w900, color: theme.colorScheme.secondary, letterSpacing: 0.5) // 🚀 SWAPPED TO MONTSERRAT
                             ),
                           ],
                         ),
