@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 import '../models/project_data.dart';
 import '../utils/pathway_utils.dart';
 
@@ -26,11 +27,15 @@ class StatsBlock extends StatelessWidget {
                 children: [
                   Text( 
                     data.progress == 100 ? "Completion Date" : "Current Progress", 
-                    style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))
+                    style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)) // 🚀 SWAPPED TO INTER
                   ),
                   Text(
                     data.progress == 100 ? "December 13, 2025" : "${data.progress}% Done",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: getProgressColor(data.progress)),
+                    style: GoogleFonts.orbitron( // 🚀 SWAPPED TO ORBITRON FOR STATS
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 16, 
+                      color: getProgressColor(data.progress)
+                    ),
                   ),
                 ],
               ),
@@ -39,8 +44,18 @@ class StatsBlock extends StatelessWidget {
             Expanded(
               child: Column(
                 children: [
-                  Text("Points", style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
-                  Text("${data.points}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: theme.colorScheme.primary)),
+                  Text(
+                    "Points", 
+                    style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)) // 🚀 SWAPPED TO INTER
+                  ),
+                  Text(
+                    "${data.points}", 
+                    style: GoogleFonts.orbitron( // 🚀 SWAPPED TO ORBITRON FOR STATS
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 24, 
+                      color: theme.colorScheme.primary
+                    )
+                  ),
                 ],
               ),
             ),

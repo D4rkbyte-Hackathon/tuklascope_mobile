@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 import '../models/project_data.dart';
 import '../widgets/stats_block.dart';
 
@@ -47,7 +48,13 @@ class RewardScreen extends StatelessWidget {
                 Text(
                   data.title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1, shadows: [Shadow(color: Colors.black54, blurRadius: 10)]),
+                  style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
+                    fontSize: 28, 
+                    fontWeight: FontWeight.bold, 
+                    color: Colors.white, 
+                    height: 1.1, 
+                    shadows: const [Shadow(color: Colors.black54, blurRadius: 10)]
+                  ),
                 ),
                 const SizedBox(height: 40),
                 Container(
@@ -64,12 +71,22 @@ class RewardScreen extends StatelessWidget {
                             ? "Congratulations! You've completed the ${data.title} journey."
                             : "You have not completed this task yet. Track your milestones below.",
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.9)),
+                        style: GoogleFonts.inter( // 🚀 SWAPPED TO INTER
+                          fontSize: 16, 
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.9)
+                        ),
                       ),
                       const SizedBox(height: 25),
                       StatsBlock(data: data),
                       const SizedBox(height: 30),
-                      Text("Quest Milestones", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                      Text(
+                        "Quest Milestones", 
+                        style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
+                          fontSize: 18, 
+                          fontWeight: FontWeight.bold, 
+                          color: theme.colorScheme.onSurface
+                        )
+                      ),
                       ...data.tasks.asMap().entries.map((entry) {
                         final isDone = entry.key < (data.progress / 100 * data.tasks.length).floor();
                         return _buildMilestone(entry.value, isDone, theme);
@@ -106,7 +123,12 @@ class RewardScreen extends StatelessWidget {
         isDone ? Icons.check_circle : Icons.radio_button_unchecked,
         color: isDone ? Colors.green : theme.colorScheme.onSurface.withValues(alpha: 0.4),
       ),
-      title: Text(title, style: TextStyle(color: isDone ? theme.colorScheme.onSurface : theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+      title: Text(
+        title, 
+        style: GoogleFonts.inter( // 🚀 SWAPPED TO INTER
+          color: isDone ? theme.colorScheme.onSurface : theme.colorScheme.onSurface.withValues(alpha: 0.6)
+        )
+      ),
     );
   }
 }

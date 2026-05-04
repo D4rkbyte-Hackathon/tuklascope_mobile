@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 import '../models/project_data.dart';
 import '../utils/pathway_utils.dart';
 import '../screens/reward_screen.dart';
@@ -54,14 +55,14 @@ class ProjectCard extends StatelessWidget {
                     children: [
                       Text(
                         data.difficulty,
-                        style: TextStyle(
+                        style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,
                         ),
                       ),
                       Text(
                         "${data.points} Points",
-                        style: TextStyle(
+                        style: GoogleFonts.orbitron( // 🚀 SWAPPED TO ORBITRON FOR GAMIFIED POINTS
                           color: theme.colorScheme.secondary,
                           fontWeight: FontWeight.bold,
                         ),
@@ -71,7 +72,7 @@ class ProjectCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     data.title,
-                    style: TextStyle(
+                    style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurface,
@@ -80,22 +81,34 @@ class ProjectCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     data.description,
-                    style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13),
+                    style: GoogleFonts.inter( // 🚀 SWAPPED TO INTER
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6), 
+                      fontSize: 13
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Text("Progress:", style: TextStyle(color: theme.colorScheme.onSurface)),
+                      Text(
+                        "Progress:", 
+                        style: GoogleFonts.inter(color: theme.colorScheme.onSurface) // 🚀 SWAPPED TO INTER
+                      ),
                       const SizedBox(width: 8),
                       SizedBox(
                         width: 30,
                         child: Text(
                           "${data.progress}",
                           textAlign: TextAlign.end,
-                          style: TextStyle(fontWeight: FontWeight.bold, color: getProgressColor(data.progress)),
+                          style: GoogleFonts.orbitron( // 🚀 SWAPPED TO ORBITRON FOR PERCENTAGE
+                            fontWeight: FontWeight.bold, 
+                            color: getProgressColor(data.progress)
+                          ),
                         ),
                       ),
-                      Text("% Completed", style: TextStyle(color: getProgressColor(data.progress))),
+                      Text(
+                        "% Completed", 
+                        style: GoogleFonts.inter(color: getProgressColor(data.progress)) // 🚀 SWAPPED TO INTER
+                      ),
                     ],
                   ),
                 ],
