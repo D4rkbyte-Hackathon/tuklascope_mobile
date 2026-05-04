@@ -6,7 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'core/navigation/main_nav_scope.dart';
 import 'features/home/home_screen.dart';
 import 'features/scanner/live_feed_screen.dart';
-import 'features/pathways/pathways_screen.dart';
+import 'features/pathways/screens/pathways_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/explore/presentation/screens/explore_screen.dart';
 
