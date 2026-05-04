@@ -548,8 +548,7 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
             streak: widget.streak,
             profilePictureUrl: widget.profilePictureUrl,
             onEditPressed: () {
-              Navigator.push(
-                context,
+              Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(builder: (_) => const EditProfileScreen()),
               ).then((_) => ref.invalidate(appUserProvider));
             },
@@ -1815,7 +1814,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  final theme = Theme.of(context);
     return GradientScaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
@@ -1823,44 +1822,56 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Container(
-              height: 50,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                indicator: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                labelColor: theme.colorScheme.onPrimary,
-                tabs: const [
-                  Tab(text: 'Profile'),
-                  Tab(text: 'Settings'),
-                  Tab(text: 'About'),
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _buildProfileTab(theme),
-                const Center(child: Text("Settings")),
-                const Center(child: Text("About")),
-              ],
-            ),
-          ),
-        ],
-      ),
+      body: _buildProfileTab(theme), // Just show the edit form directly
     );
   }
+  // Widget build(BuildContext context) {
+  //   final theme = Theme.of(context);
+  //   return GradientScaffold(
+  //     appBar: AppBar(
+  //       title: const Text('Edit Profile'),
+  //       foregroundColor: theme.colorScheme.primary,
+  //       backgroundColor: Colors.transparent,
+  //       elevation: 0,
+  //     ),
+  //     body: Column(
+  //       children: [
+  //         Padding(
+  //           padding: const EdgeInsets.all(20),
+  //           child: Container(
+  //             height: 50,
+  //             decoration: BoxDecoration(
+  //               color: theme.colorScheme.surface,
+  //               borderRadius: BorderRadius.circular(25),
+  //             ),
+  //             child: TabBar(
+  //               controller: _tabController,
+  //               indicator: BoxDecoration(
+  //                 color: theme.colorScheme.primary,
+  //                 borderRadius: BorderRadius.circular(25),
+  //               ),
+  //               labelColor: theme.colorScheme.onPrimary,
+  //               tabs: const [
+  //                 Tab(text: 'Profile'),
+  //                 Tab(text: 'Settings'),
+  //                 Tab(text: 'About'),
+  //               ],
+  //             ),
+  //           ),
+  //         ),
+  //         Expanded(
+  //           child: TabBarView(
+  //             controller: _tabController,
+  //             physics: const NeverScrollableScrollPhysics(),
+  //             children: [
+  //               _buildProfileTab(theme),
+  //               const Center(child: Text("Settings")),
+  //               const Center(child: Text("About")),
+  //             ],
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 }
