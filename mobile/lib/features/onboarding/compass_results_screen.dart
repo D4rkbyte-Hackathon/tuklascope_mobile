@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 
 import '../../core/widgets/gradient_scaffold.dart';
 import '../../main_navigation.dart';
@@ -67,11 +68,10 @@ class CompassResultsScreen extends StatelessWidget {
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
-                  style: const TextStyle(
+                  style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT, REMOVED ROBOTO
                     fontSize: 36,
                     fontWeight: FontWeight.w900,
                     height: 1.2,
-                    fontFamily: 'Roboto',
                   ),
                   children: [
                     TextSpan(
@@ -135,7 +135,7 @@ class CompassResultsScreen extends StatelessWidget {
 
                           Text(
                             persona['title'],
-                            style: TextStyle(
+                            style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
                               fontSize: 26,
                               fontWeight: FontWeight.w900,
                               color: primaryColor, 
@@ -143,7 +143,7 @@ class CompassResultsScreen extends StatelessWidget {
                           ),
                           Text(
                             '${_getAffinityName(topAffinity)} Affinity',
-                            style: TextStyle(
+                            style: GoogleFonts.inter( // 🚀 SWAPPED TO INTER
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: theme.colorScheme.onSurface.withValues(alpha: 0.6), 
@@ -245,7 +245,7 @@ class CompassResultsScreen extends StatelessWidget {
                   ),
                   child: Text(
                     'Start Your Discovery Journey',
-                    style: TextStyle(
+                    style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSecondary, 

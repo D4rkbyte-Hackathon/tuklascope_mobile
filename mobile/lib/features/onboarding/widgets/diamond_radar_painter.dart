@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 import '../models/compass_data.dart';
 
 class DiamondRadarPainter extends CustomPainter {
@@ -113,7 +114,7 @@ class DiamondRadarPainter extends CustomPainter {
       children: [
         TextSpan(
           text: '$title\n',
-          style: TextStyle(
+          style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
             color: textColor,
             fontWeight: FontWeight.w900,
             fontSize: 14,
@@ -122,7 +123,7 @@ class DiamondRadarPainter extends CustomPainter {
         ),
         TextSpan(
           text: percentage,
-          style: TextStyle(
+          style: GoogleFonts.orbitron( // 🚀 SWAPPED TO ORBITRON FOR GAMIFIED NUMBERS
             color: neonColor, 
             fontWeight: FontWeight.w900,
             fontSize: 16,
