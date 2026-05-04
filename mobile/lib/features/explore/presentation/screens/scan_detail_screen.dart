@@ -1,5 +1,7 @@
+//scan detail screen
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/widgets/gradient_scaffold.dart';
 import '../../../../core/services/scan_service.dart';
 
@@ -122,7 +124,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                     leading: BackButton(color: theme.colorScheme.onSurface),
                     title: Text(
                       'Discovery',
-                      style: TextStyle(
+                      style: GoogleFonts.montserrat(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
@@ -183,9 +185,9 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
             fit: StackFit.expand,
             children: [
               // Image background
-              widget.imagUrl != null && widget.imagUrl!.isNotEmpty
+              widget.imagUrl.isNotEmpty
                   ? Image.network(
-                      widget.imagUrl!,
+                      widget.imagUrl,
                       fit: BoxFit.cover,
                       alignment: Alignment.center,
                       errorBuilder: (context, error, stackTrace) {
@@ -195,8 +197,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                             child: Icon(
                               Icons.photo_outlined,
                               size: 80,
-                              color:
-                                  theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
                             ),
                           ),
                         );
@@ -223,8 +224,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                         child: Icon(
                           Icons.photo_outlined,
                           size: 80,
-                          color:
-                              theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
                         ),
                       ),
                     ),
@@ -294,7 +294,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
               children: [
                 Text(
                   '+$xpAwarded',
-                  style: TextStyle(
+                  style: GoogleFonts.orbitron(
                     fontSize: 56,
                     fontWeight: FontWeight.w900,
                     color: theme.colorScheme.secondary,
@@ -303,7 +303,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                 ),
                 Text(
                   'EXPERIENCE POINTS',
-                  style: TextStyle(
+                  style: GoogleFonts.orbitron(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -321,7 +321,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
             ),
             child: Text(
               '🎉 Excellent Discovery! Keep exploring!',
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
@@ -367,7 +367,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
             ),
             child: Text(
               '💡 SKILL UNLOCKED',
-              style: TextStyle(
+              style: GoogleFonts.orbitron(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 color: theme.colorScheme.primary,
@@ -379,7 +379,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
           // Skill name
           Text(
             _skill,
-            style: TextStyle(
+            style: GoogleFonts.montserrat(
               fontSize: 28,
               fontWeight: FontWeight.w900,
               color: theme.colorScheme.onSurface,
@@ -398,7 +398,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
               const SizedBox(width: 8),
               Text(
                 _domain,
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -455,7 +455,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                 children: [
                   Text(
                     'LESSON',
-                    style: TextStyle(
+                    style: GoogleFonts.montserrat(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -464,7 +464,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                   ),
                   Text(
                     'Learn More',
-                    style: TextStyle(
+                    style: GoogleFonts.montserrat(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurface,
@@ -484,7 +484,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
           // Lesson text
           Text(
             _lessonText,
-            style: TextStyle(
+            style: GoogleFonts.inter(
               fontSize: 14,
               height: 1.8,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
@@ -530,7 +530,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
             ),
             child: Text(
               '🌍 REAL WORLD',
-              style: TextStyle(
+              style: GoogleFonts.montserrat(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 color: Colors.green,
@@ -545,7 +545,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
             children: [
               Text(
                 '✨',
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 20,
                 ),
               ),
@@ -553,7 +553,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
               Expanded(
                 child: Text(
                   _realWorldText,
-                  style: TextStyle(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     height: 1.7,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.85),

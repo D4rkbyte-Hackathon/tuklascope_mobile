@@ -1,4 +1,6 @@
+//discoverer profile sheet
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class DiscovererProfileSheet extends StatelessWidget {
   final Map<String, dynamic> user;
@@ -65,7 +67,6 @@ class DiscovererProfileSheet extends StatelessWidget {
                           end: Alignment.bottomRight,
                         ),
                       ),
-                      // 🚀 ADDED: Premium Drag Handle
                       alignment: Alignment.topCenter,
                       child: Container(
                         margin: const EdgeInsets.only(top: 12),
@@ -94,7 +95,6 @@ class DiscovererProfileSheet extends StatelessWidget {
                     ),
                   ),
                 ),
-                // 🚀 REMOVED: The "X" Close Button
               ],
             ),
           ),
@@ -109,7 +109,7 @@ class DiscovererProfileSheet extends StatelessWidget {
               children: [
                 Text(
                   isMe ? '$name (You)' : name,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, height: 1.2),
+                  style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.bold, height: 1.2),
                   textAlign: TextAlign.center,
                 ),
                 if (locationText.isNotEmpty) ...[
@@ -121,7 +121,7 @@ class DiscovererProfileSheet extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         locationText,
-                        style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                        style: GoogleFonts.inter(fontSize: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                       ),
                     ],
                   ),
@@ -136,7 +136,7 @@ class DiscovererProfileSheet extends StatelessWidget {
                   runSpacing: 8,
                   alignment: WrapAlignment.center,
                   children: [
-                    _buildTag(theme, 'Rank #$rank', theme.colorScheme.secondary),
+                    _buildTag(theme, 'Rank #$rank', theme.colorScheme.secondary, isGamified: true),
                     _buildTag(theme, grade, theme.colorScheme.primary),
                   ],
                 ),
@@ -169,29 +169,28 @@ class DiscovererProfileSheet extends StatelessWidget {
                 // ==========================================
                 // 5. BIO SECTION
                 // ==========================================
-                const Align(
+                Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('About', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: Text('About', style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     bio,
-                    style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.7), height: 1.4),
+                    style: GoogleFonts.inter(fontSize: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.7), height: 1.4),
                   ),
                 ),
               ],
             ),
           ),
-          // 🚀 ADDED: +90 to clear the bottom navigation bar completely!
           SizedBox(height: MediaQuery.paddingOf(context).bottom + 90),
         ],
       ),
     );
   }
 
-  Widget _buildTag(ThemeData theme, String text, Color color) {
+  Widget _buildTag(ThemeData theme, String text, Color color, {bool isGamified = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -201,7 +200,9 @@ class DiscovererProfileSheet extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12),
+        style: isGamified 
+          ? GoogleFonts.orbitron(color: color, fontWeight: FontWeight.w700, fontSize: 12)
+          : GoogleFonts.montserrat(color: color, fontWeight: FontWeight.w700, fontSize: 12),
       ),
     );
   }
@@ -212,9 +213,9 @@ class DiscovererProfileSheet extends StatelessWidget {
         children: [
           Icon(icon, color: iconColor, size: 28),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(value, style: GoogleFonts.orbitron(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)), textAlign: TextAlign.center),
+          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)), textAlign: TextAlign.center),
         ],
       ),
     );

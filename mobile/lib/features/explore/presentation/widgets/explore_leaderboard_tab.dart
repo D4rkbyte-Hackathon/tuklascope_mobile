@@ -1,10 +1,12 @@
+//explore leaderboard tab
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart'; 
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; 
 
 import 'discoverer_row_card.dart';
-import 'leaderboard_podium.dart'; // 🚀 NEW
-import 'discoverer_profile_sheet.dart'; // 🚀 NEW
+import 'leaderboard_podium.dart'; 
+import 'discoverer_profile_sheet.dart'; 
 
 class ExploreLeaderboardTab extends StatefulWidget {
   const ExploreLeaderboardTab({super.key});
@@ -34,14 +36,12 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     });
   }
 
-  // 🚀 1. UPDATED QUERY to fetch avatar_url and bio
   Future<void> _fetchLeaderboard() async {
     setState(() => _isLoadingLeaderboard = true);
     
     try {
       final currentUser = Supabase.instance.client.auth.currentUser;
       
-      // Added avatar_url and bio to the select statement!
       var query = Supabase.instance.client
           .from('profiles')
           .select('id, full_name, total_xp, education_level, profile_picture_url, bio, country, city, current_streak, current_level')
@@ -81,15 +81,14 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     }
   }
 
-  // 🚀 2. BOTTOM SHEET TRIGGER
   void _showUserProfile(Map<String, dynamic> user, int rank) {
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
     final isMe = user['id'] == currentUserId;
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Allows sheet to be sized by content
-      backgroundColor: Colors.transparent, // Let our custom widget handle corners
+      isScrollControlled: true, 
+      backgroundColor: Colors.transparent, 
       builder: (context) => DiscovererProfileSheet(
         user: user,
         rank: rank,
@@ -97,7 +96,6 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
       ),
     );
   }
-
 
   @override
   void dispose() {
@@ -119,7 +117,7 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
           child: Text.rich(
             textAlign: TextAlign.center,
             TextSpan(
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, height: 1.15),
+              style: GoogleFonts.montserrat(fontSize: 26, fontWeight: FontWeight.bold, height: 1.15),
               children: [
                 TextSpan(text: 'Top ', style: TextStyle(color: theme.colorScheme.primary)), 
                 TextSpan(text: 'Discoverers', style: TextStyle(color: theme.colorScheme.secondary)), 
@@ -136,27 +134,23 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
           child: _isLoadingLeaderboard
             ? Center(child: CircularProgressIndicator(color: theme.colorScheme.secondary)) 
             : _leaderboardData.isEmpty
-              ? Center(child: Text('No explorers found.', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))))
-              : _buildGamifiedList(currentUserId, bottomInset, theme), // 🚀 3. CALLED NEW METHOD
+              ? Center(child: Text('No explorers found.', style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))))
+              : _buildGamifiedList(currentUserId, bottomInset, theme), 
         ),
       ],
     );
   }
 
-  // 🚀 4. BUILD LIST WITH PODIUM AT THE TOP
   Widget _buildGamifiedList(String? currentUserId, double bottomInset, ThemeData theme) {
-    // Split the data!
     final top3 = _leaderboardData.take(3).toList();
     final remaining = _leaderboardData.skip(3).toList();
 
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset),
       physics: const BouncingScrollPhysics(),
-      // Add +1 to length if we have a podium to show
       itemCount: remaining.length + (top3.isNotEmpty ? 1 : 0),
       itemBuilder: (context, index) {
         
-        // If it's the very first item, render the Podium!
         if (index == 0 && top3.isNotEmpty) {
           return LeaderboardPodium(
             topUsers: top3,
@@ -164,17 +158,15 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
           ).animate().fade(duration: 600.ms).slideY(begin: 0.1);
         }
 
-        // Adjust index for the remaining users list
         final remainingIndex = top3.isNotEmpty ? index - 1 : index;
         final user = remaining[remainingIndex];
-        final actualRank = remainingIndex + 4; // Ranks start at 4 because 1-3 are on podium
+        final actualRank = remainingIndex + 4; 
         
         final isMe = user['id'] == currentUserId;
         final name = user['full_name'] ?? 'Anonymous Explorer';
         final xp = user['total_xp'] ?? 0;
         final displayName = isMe ? '$name (You)' : name;
         
-        // 🚀 Extract avatar
         final avatarUrl = user['profile_picture_url'];
 
         return Padding(
@@ -182,9 +174,9 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
           child: DiscovererRowCard(
             name: displayName,
             xpLabel: '$xp XP',
-            avatarUrl: avatarUrl, // 🚀 Pass it to the card
+            avatarUrl: avatarUrl, 
             orangeBorder: isMe ? theme.colorScheme.secondary : theme.colorScheme.onSurface.withValues(alpha: 0.1),
-            trophyColor: theme.colorScheme.onSurface.withValues(alpha: 0.3), // Everyone here gets grey
+            trophyColor: theme.colorScheme.onSurface.withValues(alpha: 0.3), 
             rank: actualRank,
             onTap: () => _showUserProfile(user, actualRank), 
           )
@@ -215,7 +207,7 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
         ),
         labelColor: theme.colorScheme.onPrimary, 
         unselectedLabelColor: theme.colorScheme.onSurface.withValues(alpha: 0.6), 
-        labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        labelStyle: GoogleFonts.montserrat(fontWeight: FontWeight.w600, fontSize: 13),
         tabs: const [
           Tab(text: 'By Grade Level'),
           Tab(text: 'All Users'),

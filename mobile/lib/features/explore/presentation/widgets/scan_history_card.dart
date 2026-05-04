@@ -1,4 +1,6 @@
+//scan history card
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ScanHistoryCard extends StatelessWidget {
   const ScanHistoryCard({
@@ -74,19 +76,19 @@ class ScanHistoryCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                    style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6), height: 1.3),
+                    style: GoogleFonts.inter(fontSize: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6), height: 1.3),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     tag.toUpperCase(),
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: accent),
+                    style: GoogleFonts.montserrat(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: accent),
                   ),
                 ],
               ),

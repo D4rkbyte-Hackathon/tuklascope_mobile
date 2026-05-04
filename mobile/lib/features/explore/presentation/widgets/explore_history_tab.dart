@@ -1,5 +1,7 @@
+//explore history tab
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart'; 
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/services/scan_service.dart';
 import 'scan_history_card.dart';
 import '../screens/scan_detail_screen.dart';
@@ -87,10 +89,10 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
           // 🔥 Now this ONLY rebuilds the History Tab! Not the whole screen!
           setState(() => _searchQuery = value);
         },
-        style: TextStyle(color: theme.colorScheme.onSurface), // Themed Input Text
+        style: GoogleFonts.inter(color: theme.colorScheme.onSurface), // Themed Input Text
         decoration: InputDecoration(
           hintText: 'Search your previously scanned stuff...',
-          hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 15), 
+          hintStyle: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 15), 
           prefixIcon: Icon(Icons.search, color: theme.colorScheme.secondary, size: 28), 
           isDense: true,
           filled: true,
@@ -127,7 +129,7 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
             const SizedBox(height: 16),
             Text(
               _searchQuery.isEmpty ? 'No scans yet' : 'No results for "$_searchQuery"',
-              style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              style: GoogleFonts.inter(fontSize: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
             ),
           ],
         ),

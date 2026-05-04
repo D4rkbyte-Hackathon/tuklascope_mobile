@@ -1,4 +1,6 @@
+//leaderboard podium
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class LeaderboardPodium extends StatelessWidget {
   final List<Map<String, dynamic>> topUsers;
@@ -38,7 +40,6 @@ class LeaderboardPodium extends StatelessWidget {
     final name = user['full_name']?.split(' ')[0] ?? 'Explorer'; // First name only
     final xp = user['total_xp'] ?? 0;
     
-    // 🚀 FIX: Used the correct database column name!
     final avatarUrl = user['profile_picture_url'];
 
     // Make Rank 1 slightly wider and larger
@@ -82,11 +83,11 @@ class LeaderboardPodium extends StatelessWidget {
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 13),
             ),
             Text(
               '$xp XP',
-              style: TextStyle(color: theme.colorScheme.secondary, fontSize: 11, fontWeight: FontWeight.bold),
+              style: GoogleFonts.orbitron(color: theme.colorScheme.secondary, fontSize: 11, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
 
@@ -107,7 +108,7 @@ class LeaderboardPodium extends StatelessWidget {
               padding: const EdgeInsets.only(top: 12),
               child: Text(
                 '$rank',
-                style: TextStyle(
+                style: GoogleFonts.orbitron(
                   fontSize: isFirst ? 32 : 24,
                   fontWeight: FontWeight.w900,
                   color: color,
