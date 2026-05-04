@@ -776,22 +776,22 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
   Widget _buildAboutTab(ThemeData theme) {
     return ListView(
       padding: const EdgeInsets.all(20),
+      physics: const BouncingScrollPhysics(),
       children: [
+        // App Info
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-            ),
+            border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
           ),
           child: Column(
             children: [
               Icon(Icons.school, size: 48, color: theme.colorScheme.primary),
               const SizedBox(height: 16),
               Text(
-                'Tuklascope is a modern learning companion that helps you discover, track, and engage with educational content.',
+                'Tuklascope is a modern learning companion that helps you discover, track, and engage with educational content. Built with love and purpose to make learning accessible for everyone.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -802,6 +802,69 @@ class _ProfileTabsState extends ConsumerState<_ProfileTabs>
             ],
           ),
         ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
+
+        const SizedBox(height: 20),
+
+        // Developers
+        Text(
+          'Developed by:',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            children: [
+              ListTile(
+                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
+                title: Text(
+                  'John Michael A. Nave',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                ),
+              ),
+              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+              ListTile(
+                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
+                title: Text(
+                  'James Andrew S. Ologuin',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                ),
+              ),
+              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+              ListTile(
+                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
+                title: Text(
+                  'John Peter D. Pestaño',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                ),
+              ),
+              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+              ListTile(
+                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
+                title: Text(
+                  'Jordan A. Cabandon',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                ),
+              ),
+              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+              ListTile(
+                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
+                title: Text(
+                  'John Zachary N. Gillana',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                ),
+              ),
+            ],
+          ),
+        ).animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1),
       ],
     );
   }
