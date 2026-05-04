@@ -160,7 +160,7 @@ class MainNavigationState extends State<MainNavigation> {
                             _buildNavItem(Icons.home_rounded, 'Home', 0),
                             _buildNavItem(Icons.camera_alt_rounded, 'Scan', 1),
                             _buildNavItem(Icons.map_rounded, 'Pathways', 2),
-                            _buildNavItem(Icons.person_rounded, 'Pathfinder', 3),
+                            _buildNavItem(Icons.person_rounded, 'Profile', 3),
                             _buildNavItem(Icons.explore_rounded, 'Explore', 4),
                           ],
                         ),
