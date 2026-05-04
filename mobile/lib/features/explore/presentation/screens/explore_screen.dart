@@ -1,4 +1,6 @@
+//explore screen
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // Core imports
 import '../../../../core/widgets/gradient_scaffold.dart';
@@ -79,7 +81,7 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
         ),
         labelColor: theme.colorScheme.onSecondary, 
         unselectedLabelColor: theme.colorScheme.onSurface.withValues(alpha: 0.6), 
-        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        labelStyle: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 14),
         tabs: const [
           Tab(text: 'History'),
           Tab(text: 'View Leaderboards'),

@@ -1,4 +1,6 @@
+//discoverer row card
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class DiscovererRowCard extends StatelessWidget {
   const DiscovererRowCard({
@@ -9,7 +11,7 @@ class DiscovererRowCard extends StatelessWidget {
     required this.trophyColor,
     required this.rank,
     required this.onTap,
-    this.avatarUrl, // 🚀 ADDED: Avatar parameter
+    this.avatarUrl,
   });
 
   final String name;
@@ -18,7 +20,7 @@ class DiscovererRowCard extends StatelessWidget {
   final Color trophyColor;
   final int rank;
   final VoidCallback onTap;
-  final String? avatarUrl; // 🚀 ADDED: Avatar parameter
+  final String? avatarUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +40,6 @@ class DiscovererRowCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              // 🚀 UPDATED: Avatar with an overlapping rank badge
               SizedBox(
                 width: 46,
                 height: 46,
@@ -59,7 +60,6 @@ class DiscovererRowCard extends StatelessWidget {
                             : null,
                       ),
                     ),
-                    // Floating Rank Badge
                     Positioned(
                       top: -4,
                       left: -4,
@@ -72,7 +72,7 @@ class DiscovererRowCard extends StatelessWidget {
                         ),
                         child: Text(
                           '$rank',
-                          style: TextStyle(
+                          style: GoogleFonts.orbitron(
                             fontSize: 10, 
                             fontWeight: FontWeight.bold, 
                             color: trophyColor,
@@ -91,12 +91,12 @@ class DiscovererRowCard extends StatelessWidget {
                   children: [
                     Text(
                       name,
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                      style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       xpLabel,
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.secondary),
+                      style: GoogleFonts.orbitron(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.secondary),
                     ),
                   ],
                 ),
