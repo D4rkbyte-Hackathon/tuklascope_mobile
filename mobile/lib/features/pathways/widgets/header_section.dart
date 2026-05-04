@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 
 class HeaderSection extends StatelessWidget {
-  // Best Practice: Pass these in as parameters instead of reading globals
   final int activePathways;
   final double averageProgress;
   final int totalPoints;
@@ -23,7 +23,10 @@ class HeaderSection extends StatelessWidget {
         children: [
           RichText(
             text: TextSpan(
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
+                fontSize: 32, 
+                fontWeight: FontWeight.bold
+              ),
               children: [
                 TextSpan(
                   text: 'Learning ',
@@ -40,7 +43,9 @@ class HeaderSection extends StatelessWidget {
           Text(
             "Structured learning journeys that elevate the experience...",
             textAlign: TextAlign.center,
-            style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
+            style: GoogleFonts.inter( // 🚀 SWAPPED TO INTER
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.8)
+            ),
           ),
           const SizedBox(height: 30),
           Row(
@@ -62,7 +67,7 @@ class HeaderSection extends StatelessWidget {
       children: [
         Text(
           value,
-          style: TextStyle(
+          style: GoogleFonts.orbitron( // 🚀 SWAPPED TO ORBITRON FOR NUMBERS
             fontSize: 28,
             fontWeight: FontWeight.bold,
             color: numcolor,
@@ -70,7 +75,7 @@ class HeaderSection extends StatelessWidget {
         ),
         Text(
           label,
-          style: TextStyle(
+          style: GoogleFonts.inter( // 🚀 SWAPPED TO INTER
             fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
