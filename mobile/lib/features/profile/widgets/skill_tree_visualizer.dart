@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:google_fonts/google_fonts.dart';
 import '../models/profile_models.dart';
 
 // --- BOTTOM SHEET UI ---
@@ -43,7 +44,7 @@ void showNodeDetailsBottomSheet(BuildContext context, SkillNode node) {
               Text(
                 node.title,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: GoogleFonts.montserrat(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
                   color: theme.colorScheme.primary,
@@ -53,7 +54,7 @@ void showNodeDetailsBottomSheet(BuildContext context, SkillNode node) {
               Text(
                 node.description,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 16,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
@@ -91,7 +92,7 @@ Widget buildStatPill(String label, String value, Color color) {
       children: [
         Text(
           value,
-          style: TextStyle(
+          style: GoogleFonts.orbitron(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: color,
@@ -99,7 +100,7 @@ Widget buildStatPill(String label, String value, Color color) {
         ),
         Text(
           label,
-          style: TextStyle(
+          style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.bold,
             color: color,
@@ -235,7 +236,7 @@ class DynamicSkillTreeNetwork extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'Tap to expand & explore interactively',
-                    style: TextStyle(
+                    style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.1,
@@ -312,7 +313,10 @@ class _FullScreenSkillTreeState extends State<FullScreenSkillTree> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: widget.theme.colorScheme.primary,
-        title: const Text('Interactive Skill Tree'),
+        title: Text(
+          'Interactive Skill Tree',
+          style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -332,7 +336,7 @@ class _FullScreenSkillTreeState extends State<FullScreenSkillTree> {
                   const SizedBox(width: 8),
                   Text(
                     'Pinch to zoom • Drag to pan',
-                    style: TextStyle(
+                    style: GoogleFonts.inter(
                       color: widget.theme.colorScheme.onSurface.withValues(
                         alpha: 0.6,
                       ),
@@ -480,7 +484,7 @@ class OrganicTreePainter extends CustomPainter {
       final textPainter = TextPainter(
         text: TextSpan(
           text: text,
-          style: TextStyle(
+          style: GoogleFonts.inter(
             color: node.id == 'root'
                 ? Colors.white
                 : theme.colorScheme.onSurface,
@@ -502,7 +506,7 @@ class OrganicTreePainter extends CustomPainter {
         final levelPainter = TextPainter(
           text: TextSpan(
             text: 'Lv.${node.level}',
-            style: TextStyle(
+            style: GoogleFonts.orbitron(
               color: theme.colorScheme.onSurface,
               fontSize: 13,
               fontWeight: FontWeight.w900,

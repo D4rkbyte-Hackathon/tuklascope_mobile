@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/widgets/gradient_scaffold.dart';
 import '../services/profile_service.dart';
@@ -28,10 +29,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: theme.colorScheme.surface,
-        title: Text(title, style: TextStyle(color: theme.colorScheme.primary)),
+        title: Text(
+          title, 
+          style: GoogleFonts.montserrat(
+            color: theme.colorScheme.primary, 
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: TextField(
           controller: controller,
-          style: TextStyle(color: theme.colorScheme.onSurface),
+          style: GoogleFonts.inter(color: theme.colorScheme.onSurface),
           decoration: InputDecoration(
             focusedBorder: UnderlineInputBorder(
               borderSide: BorderSide(color: theme.colorScheme.secondary),
@@ -43,7 +50,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               'Cancel',
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
@@ -63,8 +70,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   ref.invalidate(profileStatsProvider);
                   nav.pop();
                   messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Updated successfully!'),
+                    SnackBar(
+                      content: Text('Updated successfully!', style: GoogleFonts.inter()),
                       backgroundColor: Colors.green,
                     ),
                   );
@@ -72,7 +79,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   nav.pop();
                   messenger.showSnackBar(
                     SnackBar(
-                      content: Text('Error: $e'),
+                      content: Text('Error: $e', style: GoogleFonts.inter()),
                       backgroundColor: theme.colorScheme.error,
                     ),
                   );
@@ -81,7 +88,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 Navigator.of(dialogContext).pop();
               }
             },
-            child: const Text('Save'),
+            child: Text('Save', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -108,7 +115,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 children: [
                   CircularProgressIndicator(color: theme.colorScheme.primary),
                   const SizedBox(height: 20),
-                  const Text('Uploading...'),
+                  Text('Uploading...', style: GoogleFonts.inter()),
                 ],
               ),
             ),
@@ -120,8 +127,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         nav.pop();
         ref.invalidate(appUserProvider);
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Profile picture updated!'),
+          SnackBar(
+            content: Text('Profile picture updated!', style: GoogleFonts.inter()),
             backgroundColor: Colors.green,
           ),
         );
@@ -133,7 +140,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       } catch (_) {}
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text('Error: $e', style: GoogleFonts.inter()),
           backgroundColor: theme.colorScheme.error,
         ),
       );
@@ -144,9 +151,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final appUserState = ref.watch(appUserProvider);
     return appUserState.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => const Center(child: Text("Error")),
+      error: (e, s) => Center(child: Text("Error", style: GoogleFonts.inter())),
       data: (appUser) {
-        if (appUser == null) return const Center(child: Text("Not logged in"));
+        if (appUser == null) return Center(child: Text("Not logged in", style: GoogleFonts.inter()));
         final profile = appUser.profile;
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
@@ -190,7 +197,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         const SizedBox(width: 8),
                         Text(
                           'Change profile picture',
-                          style: TextStyle(
+                          style: GoogleFonts.inter(
                             color: theme.colorScheme.secondary,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -214,8 +221,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               child: Column(
                 children: [
                   ListTile(
-                    title: const Text('Full Name'),
-                    subtitle: Text(profile.fullName ?? 'Explorer'),
+                    title: Text('Full Name', style: GoogleFonts.montserrat(fontWeight: FontWeight.w600)),
+                    subtitle: Text(profile.fullName ?? 'Explorer', style: GoogleFonts.inter()),
                     trailing: const Icon(Icons.edit),
                     onTap: () => _showEditDialog(
                       'Edit Name',
@@ -227,8 +234,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     ),
                   ),
                   ListTile(
-                    title: const Text('City'),
-                    subtitle: Text(profile.city ?? 'Not set'),
+                    title: Text('City', style: GoogleFonts.montserrat(fontWeight: FontWeight.w600)),
+                    subtitle: Text(profile.city ?? 'Not set', style: GoogleFonts.inter()),
                     trailing: const Icon(Icons.edit),
                     onTap: () => _showEditDialog(
                       'Edit City',
@@ -240,8 +247,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     ),
                   ),
                   ListTile(
-                    title: const Text('Country'),
-                    subtitle: Text(profile.country ?? 'Not set'),
+                    title: Text('Country', style: GoogleFonts.montserrat(fontWeight: FontWeight.w600)),
+                    subtitle: Text(profile.country ?? 'Not set', style: GoogleFonts.inter()),
                     trailing: const Icon(Icons.edit),
                     onTap: () => _showEditDialog(
                       'Edit Country',
@@ -253,8 +260,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     ),
                   ),
                   ListTile(
-                    title: const Text('Bio'),
-                    subtitle: Text(profile.bio ?? 'Not set'),
+                    title: Text('Bio', style: GoogleFonts.montserrat(fontWeight: FontWeight.w600)),
+                    subtitle: Text(profile.bio ?? 'Not set', style: GoogleFonts.inter()),
                     trailing: const Icon(Icons.edit),
                     onTap: () => _showEditDialog(
                       'Edit Bio',
@@ -276,7 +283,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final theme = Theme.of(context);
     return GradientScaffold(
       appBar: AppBar(
-        title: const Text('Edit Profile'),
+        title: Text('Edit Profile', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
         foregroundColor: theme.colorScheme.primary,
         backgroundColor: Colors.transparent,
         elevation: 0,

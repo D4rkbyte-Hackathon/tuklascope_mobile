@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/profile_models.dart'; // Make sure this matches your models file
+import 'package:google_fonts/google_fonts.dart';
+import '../models/profile_models.dart';
 
 class StatsGridCard extends StatelessWidget {
   final ThemeData theme;
@@ -90,7 +91,7 @@ class StatCell extends StatelessWidget {
           Text(
             value,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: GoogleFonts.orbitron(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: valueColor,
@@ -100,7 +101,7 @@ class StatCell extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),

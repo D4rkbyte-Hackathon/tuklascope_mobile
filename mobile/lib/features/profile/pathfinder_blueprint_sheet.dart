@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import '../../core/services/pathfinder_service.dart';
 
@@ -78,7 +79,7 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
             child: Center(
               child: Text(
                 'Uplink failed. Please check your connection and try again.',
-                style: TextStyle(color: theme.colorScheme.error),
+                style: GoogleFonts.inter(color: theme.colorScheme.error),
               ),
             ),
           );
@@ -117,25 +118,27 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    height: 1.2,
-                  ),
                   children: [
                     TextSpan(
                       text: 'TUKLASCOPE\n',
-                      style: TextStyle(
+                      style: GoogleFonts.orbitron(
                         color: theme.colorScheme.onSurface.withValues(
                           alpha: 0.5,
                         ),
                         fontSize: 12,
+                        fontWeight: FontWeight.w900,
                         letterSpacing: 2.0,
+                        height: 1.2,
                       ),
                     ),
                     TextSpan(
                       text: 'Career Blueprint',
-                      style: TextStyle(color: theme.colorScheme.primary),
+                      style: GoogleFonts.montserrat(
+                        color: theme.colorScheme.primary,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        height: 1.2,
+                      ),
                     ),
                   ],
                 ),
@@ -162,7 +165,7 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
                     Expanded(
                       child: Text(
                         profileSummary,
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: theme.colorScheme.onSurface.withValues(
@@ -188,7 +191,7 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
 
               Text(
                 'AI Recommendations',
-                style: TextStyle(
+                style: GoogleFonts.montserrat(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.onSurface,
@@ -375,7 +378,7 @@ class _NeuralLinkOverlayState extends State<_NeuralLinkOverlay> {
                   _currentIndex,
                 ), // Important for AnimatedSwitcher
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: GoogleFonts.orbitron(
                   color: theme.colorScheme.primary,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -432,7 +435,7 @@ class _StrongestFieldsCard extends StatelessWidget {
         children: [
           Text(
             'Your Graph Distribution',
-            style: TextStyle(
+            style: GoogleFonts.montserrat(
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -491,7 +494,7 @@ class _FieldProgressRow extends StatelessWidget {
           width: 60,
           child: Text(
             label,
-            style: TextStyle(
+            style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
@@ -525,7 +528,7 @@ class _FieldProgressRow extends StatelessWidget {
           child: Text(
             '$pct%',
             textAlign: TextAlign.right,
-            style: TextStyle(
+            style: GoogleFonts.orbitron(
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: color,
@@ -621,7 +624,7 @@ class _CareerRecommendationCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       pathType.toUpperCase(),
-                      style: TextStyle(
+                      style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,
@@ -635,7 +638,7 @@ class _CareerRecommendationCard extends StatelessWidget {
                 children: [
                   Text(
                     '$matchConfidence%',
-                    style: TextStyle(
+                    style: GoogleFonts.orbitron(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
                       color: theme.colorScheme.onSurface,
@@ -663,7 +666,7 @@ class _CareerRecommendationCard extends StatelessWidget {
           // Title
           Text(
             title,
-            style: TextStyle(
+            style: GoogleFonts.montserrat(
               fontSize: 20,
               fontWeight: FontWeight.w900,
               color: theme.colorScheme.onSurface,
@@ -675,7 +678,7 @@ class _CareerRecommendationCard extends StatelessWidget {
           // Description
           Text(
             description,
-            style: TextStyle(
+            style: GoogleFonts.inter(
               fontSize: 15,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
               height: 1.5,
@@ -718,7 +721,7 @@ class _BlueprintCtaCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'Keep Evolving',
-            style: TextStyle(
+            style: GoogleFonts.montserrat(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
@@ -728,7 +731,7 @@ class _BlueprintCtaCard extends StatelessWidget {
           Text(
             'Scan new objects to alter your trajectory and unlock new career paths.',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: GoogleFonts.inter(
               fontSize: 13,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -737,7 +740,10 @@ class _BlueprintCtaCard extends StatelessWidget {
           FilledButton.icon(
             onPressed: onStartDiscovery,
             icon: const Icon(Icons.camera_alt, size: 18),
-            label: const Text('Resume Discovery'),
+            label: Text(
+              'Resume Discovery',
+              style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+            ),
             style: FilledButton.styleFrom(
               backgroundColor: theme.colorScheme.primary,
               foregroundColor: theme.colorScheme.onPrimary,
