@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 
 import '../../core/widgets/gradient_scaffold.dart';
 import 'compass_results_screen.dart';
@@ -97,7 +98,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
         centerTitle: true, 
         title: RichText(
           text: TextSpan(
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, fontFamily: 'Roboto'),
+            style: GoogleFonts.orbitron(fontSize: 24, fontWeight: FontWeight.w900), // 🚀 SWAPPED TO ORBITRON
             children: [
               TextSpan(text: 'Tuklascope ', style: TextStyle(color: primaryBlue)), 
               TextSpan(text: 'Compass', style: TextStyle(color: neonOrange)), 
@@ -193,7 +194,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                   ),
                   child: Text(
                     _isAllAnswered ? 'Discover Your Path' : 'Answer ${_activeQuestions.length - _selectedAnswers.length} more to proceed',
-                    style: TextStyle(
+                    style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
                       fontSize: 18, 
                       fontWeight: FontWeight.bold, 
                       color: _isAllAnswered ? theme.colorScheme.onSecondary : theme.colorScheme.surface,

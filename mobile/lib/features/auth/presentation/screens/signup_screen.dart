@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 
 import '../../../onboarding/compass_questions_screen.dart';
 import 'login_screen.dart';
@@ -109,11 +110,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         return StatefulBuilder( // Allows the dialog to show a loading spinner inside itself
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Verify Your Email'),
+              title: Text('Verify Your Email', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)), // 🚀 SWAPPED TO MONTSERRAT
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Enter the 6-digit code sent to $email to prove you are human!'),
+                  Text('Enter the 6-digit code sent to $email to prove you are human!', style: GoogleFonts.inter()), // 🚀 SWAPPED TO INTER
                   const SizedBox(height: 20),
                   TextField(
                     controller: otpController,
@@ -129,7 +130,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               actions: [
                 TextButton(
                   onPressed: isVerifying ? null : () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text('Cancel', style: GoogleFonts.inter()), // 🚀 SWAPPED TO INTER
                 ),
                 ElevatedButton(
                   onPressed: isVerifying ? null : () async {
@@ -172,7 +173,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   },
                   child: isVerifying 
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
-                    : const Text('Verify'),
+                    : Text('Verify', style: GoogleFonts.inter(fontWeight: FontWeight.bold)), // 🚀 SWAPPED TO INTER
                 ),
               ],
             );
@@ -208,7 +209,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     width: 40, height: 5, margin: const EdgeInsets.only(bottom: 24),
                     decoration: BoxDecoration(color: theme.colorScheme.onSurface.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
                   ),
-                  Text('Select Educational Level', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                  Text('Select Educational Level', style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)), // 🚀 SWAPPED TO MONTSERRAT
                   const SizedBox(height: 16),
                   
                   ..._educationLevels.map((level) {
@@ -220,7 +221,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       },
                       title: Text(
                         level,
-                        style: TextStyle(fontSize: 16, fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500, color: isSelected ? primaryNeon : theme.colorScheme.onSurface),
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500, color: isSelected ? primaryNeon : theme.colorScheme.onSurface), // 🚀 SWAPPED TO INTER
                       ).animate(target: isSelected ? 1 : 0).scaleXY(end: 1.05, duration: 200.ms),
                       trailing: isSelected ? Icon(Icons.check_circle_rounded, color: primaryNeon).animate().scale(curve: Curves.easeOutBack, duration: 300.ms) : null,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
@@ -255,7 +256,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 Text(
                   'Create Account',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
                     fontSize: 36,
                     fontWeight: FontWeight.w900,
                     color: theme.colorScheme.primary,
@@ -308,10 +309,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text("Already have an account? ", style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 15)),
+                      Text("Already have an account? ", style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 15)), // 🚀 SWAPPED TO INTER
                       GestureDetector(
                         onTap: () => Navigator.pushReplacement(context, createAnimatedAuthRoute(const LoginScreen(), slideLeft: false)),
-                        child: Text('Log In', style: TextStyle(color: theme.colorScheme.primary, fontSize: 15, fontWeight: FontWeight.bold)),
+                        child: Text('Log In', style: GoogleFonts.montserrat(color: theme.colorScheme.primary, fontSize: 15, fontWeight: FontWeight.bold)), // 🚀 SWAPPED TO MONTSERRAT
                       ),
                     ],
                   ).animate().fade(duration: 600.ms, delay: 550.ms),
@@ -347,7 +348,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             const SizedBox(width: 12),
             Text(
               _selectedEducationLevel ?? 'Educational Level',
-              style: TextStyle(fontSize: 16, color: isPopulated ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              style: GoogleFonts.inter(fontSize: 16, color: isPopulated ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.6)), // 🚀 SWAPPED TO INTER
             ),
             const Spacer(),
             Icon(Icons.arrow_drop_down_rounded, color: isFocused ? primaryNeon : theme.colorScheme.onSurface.withValues(alpha: 0.4), size: 28),

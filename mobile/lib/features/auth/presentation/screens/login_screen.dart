@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 
 import 'signup_screen.dart';
 import '../widgets/auth_gate.dart';
@@ -128,7 +129,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Text(
                   'Login',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
                     fontSize: 40,
                     fontWeight: FontWeight.w900,
                     color: theme.colorScheme.primary,
@@ -180,7 +181,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Expanded(child: Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.3))),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text('Or sign in with', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14)),
+                        child: Text('Or sign in with', style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14)), // 🚀 SWAPPED TO INTER
                       ),
                       Expanded(child: Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.3))),
                     ],
@@ -207,10 +208,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text("Don't have an account? ", style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 15)),
+                      Text("Don't have an account? ", style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 15)), // 🚀 SWAPPED TO INTER
                       GestureDetector(
                         onTap: () => Navigator.pushReplacement(context, createAnimatedAuthRoute(const SignupScreen(), slideLeft: true)),
-                        child: Text('Create Account', style: TextStyle(color: theme.colorScheme.secondary, fontSize: 15, fontWeight: FontWeight.bold)),
+                        child: Text('Create Account', style: GoogleFonts.montserrat(color: theme.colorScheme.secondary, fontSize: 15, fontWeight: FontWeight.bold)), // 🚀 SWAPPED TO MONTSERRAT
                       ),
                     ],
                   ).animate().fade(duration: 600.ms, delay: 800.ms),

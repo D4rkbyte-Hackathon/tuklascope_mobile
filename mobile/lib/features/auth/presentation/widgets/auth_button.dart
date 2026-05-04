@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 
 class PrimaryAuthButton extends StatelessWidget {
   final String label;
@@ -42,7 +43,11 @@ class PrimaryAuthButton extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
+            fontSize: 18, 
+            fontWeight: FontWeight.bold, 
+            letterSpacing: 1.2,
+          ),
         ),
       ),
     );
@@ -80,7 +85,11 @@ class SocialAuthButton extends StatelessWidget {
         icon: Image.asset(imagePath, width: 24, height: 24),
         label: Text(
           label,
-          style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600),
+          style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
+            color: theme.colorScheme.onSurface, 
+            fontSize: 16, 
+            fontWeight: FontWeight.w600,
+          ),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: theme.colorScheme.surface,

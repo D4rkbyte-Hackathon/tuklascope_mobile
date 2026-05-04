@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../models/compass_data.dart'; // Ensure this points to your new data file
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
+import '../models/compass_data.dart'; 
 
 class CompassQuestionCard extends StatelessWidget {
   final int questionIndex;
@@ -51,7 +52,7 @@ class CompassQuestionCard extends StatelessWidget {
             children: [
               Text(
                 'QUESTION ${questionIndex + 1} OF $totalQuestions',
-                style: TextStyle(
+                style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: isAnswered ? theme.colorScheme.secondary : theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -66,7 +67,7 @@ class CompassQuestionCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             questionData.question,
-            style: TextStyle(
+            style: GoogleFonts.inter( // 🚀 SWAPPED TO INTER (Clean readability)
               fontSize: 20,
               fontWeight: FontWeight.w900,
               color: theme.colorScheme.onSurface,
@@ -120,7 +121,7 @@ class CompassQuestionCard extends StatelessWidget {
                 child: Center(
                   child: Text(
                     optionLetter,
-                    style: TextStyle(
+                    style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
                       fontWeight: FontWeight.bold,
                       color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
@@ -131,7 +132,7 @@ class CompassQuestionCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   option.text,
-                  style: TextStyle(
+                  style: GoogleFonts.inter( // 🚀 SWAPPED TO INTER (Clean readability)
                     fontSize: 15,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.8),

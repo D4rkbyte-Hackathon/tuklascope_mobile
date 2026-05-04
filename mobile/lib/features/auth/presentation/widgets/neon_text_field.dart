@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 
 class NeonTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -58,10 +59,10 @@ class _NeonTextFieldState extends State<NeonTextField> {
         focusNode: _focusNode,
         obscureText: widget.obscureText,
         keyboardType: widget.keyboardType,
-        style: TextStyle(color: theme.colorScheme.onSurface),
+        style: GoogleFonts.inter(color: theme.colorScheme.onSurface), // 🚀 SWAPPED TO INTER
         decoration: InputDecoration(
           labelText: widget.label,
-          labelStyle: TextStyle(color: _isFocused ? widget.neonColor : theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+          labelStyle: GoogleFonts.inter(color: _isFocused ? widget.neonColor : theme.colorScheme.onSurface.withValues(alpha: 0.6)), // 🚀 SWAPPED TO INTER
           prefixIcon: Icon(widget.icon, color: _isFocused ? widget.neonColor : theme.colorScheme.onSurface.withValues(alpha: 0.4)),
           suffixIcon: widget.suffixIcon,
           filled: true,
