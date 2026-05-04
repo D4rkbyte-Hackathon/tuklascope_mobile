@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ProfileHeaderCard extends StatelessWidget {
   final ThemeData theme;
@@ -70,7 +71,7 @@ class ProfileHeaderCard extends StatelessWidget {
                   children: [
                     Text(
                       fullName,
-                      style: TextStyle(
+                      style: GoogleFonts.montserrat(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.primary,
@@ -81,7 +82,7 @@ class ProfileHeaderCard extends StatelessWidget {
                       location.isNotEmpty
                           ? '$educationLevel • $location'
                           : educationLevel,
-                      style: TextStyle(
+                      style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.secondary,
@@ -90,7 +91,7 @@ class ProfileHeaderCard extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text.rich(
                       TextSpan(
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           fontSize: 13,
                           color: theme.colorScheme.onSurface.withValues(
                             alpha: 0.6,
@@ -100,7 +101,7 @@ class ProfileHeaderCard extends StatelessWidget {
                           const TextSpan(text: 'Daily Streak '),
                           TextSpan(
                             text: '$streak',
-                            style: TextStyle(
+                            style: GoogleFonts.orbitron(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: theme.colorScheme.secondary,
@@ -121,7 +122,7 @@ class ProfileHeaderCard extends StatelessWidget {
               onTap: onEditPressed,
               child: Text(
                 'Edit Profile →',
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.tertiary,

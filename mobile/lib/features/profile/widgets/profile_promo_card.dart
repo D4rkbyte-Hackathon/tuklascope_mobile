@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ProfilePromoCard extends StatelessWidget {
   final ThemeData theme;
@@ -32,7 +33,7 @@ class ProfilePromoCard extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: GoogleFonts.montserrat(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.primary,
@@ -42,7 +43,7 @@ class ProfilePromoCard extends StatelessWidget {
           Text(
             description,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: GoogleFonts.inter(
               fontSize: 14,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.35,
@@ -61,7 +62,10 @@ class ProfilePromoCard extends StatelessWidget {
                 ),
                 shape: const StadiumBorder(),
               ),
-              child: Text(buttonLabel),
+              child: Text(
+                buttonLabel,
+                style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ],
