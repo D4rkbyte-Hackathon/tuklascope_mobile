@@ -67,7 +67,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    // 🚀 STEP 1: Fast format check (Regex)
     if (!isValidEmailFormat(email)) {
       return _showSnackBar('Please enter a valid email format.');
     }
@@ -75,26 +74,25 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Trigger the OTP Send
-      final otpSent = await _authService.sendSignupVerificationOtp(
+      // 🚀 Trigger the OTP Send
+      await _authService.sendSignupVerificationOtp(
         email: email,
         password: password,
       );
 
-      if (otpSent) {
-        if (!mounted) return;
-        // Show OTP Dialog ONLY if an email was actually sent
-        _showOtpVerificationDialog(email);
-      } else {
-        if (!mounted) return;
-        _passwordController.clear();
-        
-        // 🚀 CHANGED: Updated the warning text here
-        _showSnackBar('Email already exists. Please log in.'); 
-      }
+      // 🚀 If the code reaches this line without throwing an error, it was a success!
+      if (!mounted) return;
+      _showOtpVerificationDialog(email);
+
+    } on AuthException catch (e) {
+      // 🚀 Catches Supabase errors (like rate limits) AND our custom "Email exists" error
+      if (!mounted) return;
+      _passwordController.clear();
+      _showSnackBar(e.message); 
     } catch (e) {
       if (!mounted) return;
-      _showSnackBar('Error: ${e.toString()}');
+      _passwordController.clear();
+      _showSnackBar('Unexpected error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -149,16 +147,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
                     if (verified) {
                       // SUCCESS! User is now verified and logged in.
-                      // Now we can safely insert their profile data.
                       final user = Supabase.instance.client.auth.currentUser;
                       if (user != null) {
                         try {
-                          await Supabase.instance.client.from('profiles').update({
+                          // 🚀 FIXED: Added 'id' inside the map, and removed .eq() at the end
+                          await Supabase.instance.client.from('profiles').upsert({
+                            'id': user.id, // 👈 CRITICAL: Must be inside the payload
                             'full_name': _nameController.text.trim(),
                             'city': _cityController.text.trim(),
                             'country': _countryController.text.trim(),
                             'education_level': _selectedEducationLevel,
-                          }).eq('id', user.id);
+                          });
                         } catch (e) {
                           debugPrint('Error updating profile: $e');
                         }
@@ -168,9 +167,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       Navigator.pop(context); // Close dialog
                       _showSnackBar('Account created successfully!', isError: false);
                       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const CompassQuestionsScreen()));
-                    } else {
-                      setDialogState(() => isVerifying = false);
-                      _showSnackBar('Invalid code. Please try again.');
                     }
                   },
                   child: isVerifying 
