@@ -125,32 +125,36 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
           ),
         ),
       ),
-      body: Stack(
-        children: [
-          ListView.separated(
-            padding: EdgeInsets.only(
-              top: 24.0, 
-              left: 24.0, 
-              right: 24.0, 
-              bottom: MediaQuery.paddingOf(context).bottom + 120.0, 
+      // 🚀 STEP 1: Wrap the body in a SafeArea to protect from landscape notches/side nav bars
+      body: SafeArea(
+        bottom: false, // Let the floating bar handle the bottom edge
+        child: Stack(
+          children: [
+            ListView.separated(
+              padding: EdgeInsets.only(
+                top: 24.0, 
+                left: 24.0, 
+                right: 24.0, 
+                bottom: MediaQuery.paddingOf(context).bottom + 120.0, 
+              ),
+              physics: const BouncingScrollPhysics(),
+              itemCount: _activeQuestions.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 32),
+              itemBuilder: (context, questionIndex) {
+                return CompassQuestionCard(
+                  questionIndex: questionIndex,
+                  totalQuestions: _activeQuestions.length,
+                  questionData: _activeQuestions[questionIndex],
+                  selectedOption: _selectedAnswers[questionIndex],
+                  onOptionSelected: (option) => setState(() => _selectedAnswers[questionIndex] = option),
+                ).animate().fade(duration: 600.ms, delay: (100 * questionIndex).ms)
+                 .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (100 * questionIndex).ms);
+              },
             ),
-            physics: const BouncingScrollPhysics(),
-            itemCount: _activeQuestions.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 32),
-            itemBuilder: (context, questionIndex) {
-              return CompassQuestionCard(
-                questionIndex: questionIndex,
-                totalQuestions: _activeQuestions.length,
-                questionData: _activeQuestions[questionIndex],
-                selectedOption: _selectedAnswers[questionIndex],
-                onOptionSelected: (option) => setState(() => _selectedAnswers[questionIndex] = option),
-              ).animate().fade(duration: 600.ms, delay: (100 * questionIndex).ms)
-               .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (100 * questionIndex).ms);
-            },
-          ),
-          
-          _buildFloatingSubmitBar(theme, neonOrange),
-        ],
+            
+            _buildFloatingSubmitBar(theme, neonOrange),
+          ],
+        ),
       ),
     );
   }
@@ -161,44 +165,48 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
       child: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Container(
-            padding: EdgeInsets.only(
-              left: 24.0, right: 24.0, top: 20.0,
-              bottom: MediaQuery.of(context).padding.bottom + 20.0,
-            ),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface.withValues(alpha: 0.15),
-              border: Border(top: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2))),
-            ),
-            child: SizedBox(
-              height: 56,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 400),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: _isAllAnswered ? [
-                    BoxShadow(color: neonOrange.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5))
-                  ] : [],
-                  gradient: LinearGradient(
-                    colors: _isAllAnswered 
-                        ? [theme.colorScheme.tertiary, neonOrange] 
-                        : [theme.colorScheme.onSurface.withValues(alpha: 0.4), theme.colorScheme.onSurface.withValues(alpha: 0.5)],
+          // 🚀 STEP 2: Wrap the Container in a SafeArea to dynamically avoid bottom navigation bars
+          child: SafeArea(
+            top: false, 
+            child: Container(
+              padding: const EdgeInsets.only(
+                left: 24.0, right: 24.0, top: 20.0,
+                bottom: 20.0, // 🚀 STEP 3: Removed manual MediaQuery padding
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withValues(alpha: 0.15),
+                border: Border(top: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2))),
+              ),
+              child: SizedBox(
+                height: 56,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 400),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: _isAllAnswered ? [
+                      BoxShadow(color: neonOrange.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5))
+                    ] : [],
+                    gradient: LinearGradient(
+                      colors: _isAllAnswered 
+                          ? [theme.colorScheme.tertiary, neonOrange] 
+                          : [theme.colorScheme.onSurface.withValues(alpha: 0.4), theme.colorScheme.onSurface.withValues(alpha: 0.5)],
+                    ),
                   ),
-                ),
-                child: ElevatedButton(
-                  onPressed: _isAllAnswered ? _submitAnswers : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: Text(
-                    _isAllAnswered ? 'Discover Your Path' : 'Answer ${_activeQuestions.length - _selectedAnswers.length} more to proceed',
-                    style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
-                      fontSize: 18, 
-                      fontWeight: FontWeight.bold, 
-                      color: _isAllAnswered ? theme.colorScheme.onSecondary : theme.colorScheme.surface,
-                      letterSpacing: 1.1
+                  child: ElevatedButton(
+                    onPressed: _isAllAnswered ? _submitAnswers : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text(
+                      _isAllAnswered ? 'Discover Your Path' : 'Answer ${_activeQuestions.length - _selectedAnswers.length} more to proceed',
+                      style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
+                        fontSize: 18, 
+                        fontWeight: FontWeight.bold, 
+                        color: _isAllAnswered ? theme.colorScheme.onSecondary : theme.colorScheme.surface,
+                        letterSpacing: 1.1
+                      ),
                     ),
                   ),
                 ),

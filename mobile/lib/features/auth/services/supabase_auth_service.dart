@@ -169,32 +169,21 @@ class SupabaseAuthService {
 
   /// Sends a verification OTP to the user's email during signup
   /// Sends a verification OTP to the user's email during signup
-  Future<bool> sendSignupVerificationOtp({
+  /// Sends a verification OTP to the user's email during signup
+  Future<void> sendSignupVerificationOtp({
     required String email, 
     required String password,
   }) async {
-    try {
-      final response = await _supabase.auth.signUp(
-        email: email,
-        password: password,
-      );
+    // 🚀 We no longer use try/catch here. We let the error bubble up to the UI.
+    final response = await _supabase.auth.signUp(
+      email: email,
+      password: password,
+    );
 
-      // 🚀 THE FIX: Supabase Email Enumeration Protection Check
-      // If the user object is returned but 'identities' is empty, 
-      // it means the email is already registered in the system.
-      if (response.user != null && response.user!.identities != null && response.user!.identities!.isEmpty) {
-        debugPrint('❌ Email already exists (Caught by Enumeration Protection)');
-        return false; 
-      }
-
-      debugPrint('✅ OTP sent successfully to $email');
-      return true; 
-    } on AuthException catch (e) {
-      debugPrint('❌ Auth Error sending OTP: ${e.message}');
-      return false;
-    } catch (e) {
-      debugPrint('❌ Unexpected error sending OTP: $e');
-      return false;
+    // Supabase Email Enumeration Protection Check
+    if (response.user != null && response.user!.identities != null && response.user!.identities!.isEmpty) {
+      // We manually throw an AuthException so the UI catches it properly
+      throw const AuthException('Email already exists. Please log in.'); 
     }
   }
 
