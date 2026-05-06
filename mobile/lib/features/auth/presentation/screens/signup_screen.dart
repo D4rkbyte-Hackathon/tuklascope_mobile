@@ -75,7 +75,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 🚀 STEP 2: Trigger the OTP Send
+      // Trigger the OTP Send
       final otpSent = await _authService.sendSignupVerificationOtp(
         email: email,
         password: password,
@@ -83,12 +83,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
       if (otpSent) {
         if (!mounted) return;
-        // 🚀 STEP 3: Show OTP Dialog
+        // Show OTP Dialog ONLY if an email was actually sent
         _showOtpVerificationDialog(email);
       } else {
         if (!mounted) return;
-        _emailController.clear();
-        _showSnackBar('Signup failed. Email might be invalid or already registered.');
+        _passwordController.clear();
+        
+        // 🚀 CHANGED: Updated the warning text here
+        _showSnackBar('Email already exists. Please log in.'); 
       }
     } catch (e) {
       if (!mounted) return;

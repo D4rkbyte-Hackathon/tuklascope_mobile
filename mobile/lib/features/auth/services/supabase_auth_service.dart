@@ -42,10 +42,11 @@ class SupabaseAuthService {
       await googleSignIn.initialize(serverClientId: webClientId);
 
       // Trigger the native popup
-      final GoogleSignInAccount googleUser = await googleSignIn.authenticate();
+      final GoogleSignInAccount? googleUser = await googleSignIn.authenticate();
+      if (googleUser == null) return null; // User canceled the sign-in
 
       // Extract the authentication data
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
       // 🚀 V7 FIX: We ONLY grab the idToken.
       // accessToken was removed in v7, but Supabase doesn't need it anyway!
@@ -80,6 +81,7 @@ class SupabaseAuthService {
       rethrow;
     }
   }
+
   // Check if the current user is a Google sign-in user
   bool isGoogleUser() {
     final user = currentUser;
@@ -138,16 +140,53 @@ class SupabaseAuthService {
     await _supabase.auth.signOut();
   }
 
+  // ===========================================================================
+  // 🚀 ADDED: EMAIL EXISTENCE CHECK
+  // ===========================================================================
+  /// Checks the database to see if an email is already registered.
+  /// Ensure your RLS policies on the 'profiles' table allow unauthenticated SELECTs on the email column.
+  Future<bool> checkIfEmailExists(String email) async {
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle();
+
+      // If we got a response back, the email already exists in the database
+      return response != null;
+    } catch (e) {
+      debugPrint('Error checking email existence: $e');
+      // If it fails (e.g. due to RLS), we return false so we don't completely lock out signups,
+      // but ideally, your RLS allows this read, or you use a secure RPC function instead.
+      return false;
+    }
+  }
+
+  // ===========================================================================
+  // OTP METHODS
+  // ===========================================================================
+
+  /// Sends a verification OTP to the user's email during signup
   /// Sends a verification OTP to the user's email during signup
   Future<bool> sendSignupVerificationOtp({
     required String email, 
     required String password,
   }) async {
     try {
-      await _supabase.auth.signUp(
+      final response = await _supabase.auth.signUp(
         email: email,
         password: password,
       );
+
+      // 🚀 THE FIX: Supabase Email Enumeration Protection Check
+      // If the user object is returned but 'identities' is empty, 
+      // it means the email is already registered in the system.
+      if (response.user != null && response.user!.identities != null && response.user!.identities!.isEmpty) {
+        debugPrint('❌ Email already exists (Caught by Enumeration Protection)');
+        return false; 
+      }
+
       debugPrint('✅ OTP sent successfully to $email');
       return true; 
     } on AuthException catch (e) {
@@ -184,4 +223,4 @@ class SupabaseAuthService {
       return false;
     }
   }
-} // <- Moved the closing bracket here!
+}
