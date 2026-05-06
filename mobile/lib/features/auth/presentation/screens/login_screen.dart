@@ -77,7 +77,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final user = Supabase.instance.client.auth.currentUser;
         
         if (user != null && isSocialLogin) {
-          // For social logins, navigate to profile completion screen
+          // Check if profile is already complete
+          try {
+            final profileData = await Supabase.instance.client
+                .from('profiles')
+                .select('full_name, education_level')
+                .eq('id', user.id)
+                .single();
+
+            final isProfileComplete = profileData['full_name'] != null &&
+                profileData['full_name'].toString().isNotEmpty &&
+                profileData['education_level'] != null &&
+                profileData['education_level'].toString().isNotEmpty;
+
+            if (isProfileComplete) {
+              // Profile already complete → Go to home
+              if (!mounted) return;
+              _showSuccess('Welcome back!');
+              Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const AuthGate()),
+                (route) => false,
+              );
+              return;
+            }
+          } catch (e) {
+            debugPrint('Error checking profile: $e');
+            // Profile might not exist yet, continue to profile screen
+          }
+
+          // For social logins with incomplete profile, show completion screen
           String? displayName;
           String userEmail = user.email ?? '';
           
@@ -87,6 +115,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             displayName = userMetadata['full_name'] as String?;
           }
           
+          if (!mounted) return;
           Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
             MaterialPageRoute(
               builder: (context) => SocialLoginProfileScreen(

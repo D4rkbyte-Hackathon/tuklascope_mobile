@@ -135,8 +135,18 @@ final appUserProvider = StreamProvider<AppUser?>((ref) async* {
   profileStream,
   skillTreeStream,
   (profile, skillTree) {
-    if (profile == null || skillTree == null) return null;
-    return AppUser(auth: user, profile: profile, skillTree: skillTree);
+    if (profile == null) return null; // Profile is required
+    
+    // Provide default skill tree for new users if missing
+    final finalSkillTree = skillTree ?? SkillTree(
+      userId: user.id,
+      aghamMathXp: 0,
+      siningWikaXp: 0,
+      negosyoPamamahalaXp: 0,
+      buhayKasanayanXp: 0,
+    );
+    
+    return AppUser(auth: user, profile: profile, skillTree: finalSkillTree);
   },
 ).where((user) => user != null).timeout(
   const Duration(seconds: 5),
