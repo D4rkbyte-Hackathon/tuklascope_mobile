@@ -150,16 +150,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       final user = Supabase.instance.client.auth.currentUser;
                       if (user != null) {
                         try {
-                          // 🚀 FIXED: Added 'id' inside the map, and removed .eq() at the end
-                          await Supabase.instance.client.from('profiles').upsert({
-                            'id': user.id, // 👈 CRITICAL: Must be inside the payload
+                          // 🚀 FIXED: Swapped 'upsert' to 'update' and added .eq() to respect the database trigger
+                          await Supabase.instance.client.from('profiles').update({
                             'full_name': _nameController.text.trim(),
                             'city': _cityController.text.trim(),
                             'country': _countryController.text.trim(),
                             'education_level': _selectedEducationLevel,
-                          });
+                          }).eq('id', user.id); // 👈 CRITICAL: Targets the row created by the trigger
                         } catch (e) {
                           debugPrint('Error updating profile: $e');
+                          if (mounted) {
+                            _showSnackBar('Database Error: $e'); // Added so you can see if it fails
+                          }
                         }
                       }
 
@@ -167,6 +169,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       Navigator.pop(context); // Close dialog
                       _showSnackBar('Account created successfully!', isError: false);
                       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const CompassQuestionsScreen()));
+                    } else {
+                      // Handle invalid OTP
+                      setDialogState(() => isVerifying = false);
+                      if (mounted) {
+                         _showSnackBar('Invalid OTP code. Please try again.');
+                      }
                     }
                   },
                   child: isVerifying 
