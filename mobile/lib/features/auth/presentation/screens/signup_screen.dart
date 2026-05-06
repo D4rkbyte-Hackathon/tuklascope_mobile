@@ -266,7 +266,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
                 const SizedBox(height: 32),
 
-                NeonTextField(controller: _nameController, label: 'Name', icon: Icons.person_outline, neonColor: primaryNeon).animate().fade(duration: 600.ms, delay: 150.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
+                // 🚀 ADDED: isRequired: true
+                NeonTextField(
+                  controller: _nameController, 
+                  label: 'Name', 
+                  icon: Icons.person_outline, 
+                  neonColor: primaryNeon, 
+                  isRequired: true
+                ).animate().fade(duration: 600.ms, delay: 150.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
                 const SizedBox(height: 16),
                 NeonTextField(controller: _cityController, label: 'City (Optional)', icon: Icons.location_city_outlined, neonColor: primaryNeon).animate().fade(duration: 600.ms, delay: 200.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
                 const SizedBox(height: 16),
@@ -276,15 +283,26 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 _buildNeonEducationSelector(theme, primaryNeon).animate().fade(duration: 600.ms, delay: 300.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
                 
                 const SizedBox(height: 16),
-                NeonTextField(controller: _emailController, label: 'Email', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress, neonColor: primaryNeon).animate().fade(duration: 600.ms, delay: 350.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
+                
+                // 🚀 ADDED: isRequired: true
+                NeonTextField(
+                  controller: _emailController, 
+                  label: 'Email', 
+                  icon: Icons.email_outlined, 
+                  keyboardType: TextInputType.emailAddress, 
+                  neonColor: primaryNeon, 
+                  isRequired: true
+                ).animate().fade(duration: 600.ms, delay: 350.ms).slideX(begin: 0.1, end: 0, duration: 600.ms),
                 const SizedBox(height: 16),
                 
+                // 🚀 ADDED: isRequired: true
                 NeonTextField(
                   controller: _passwordController,
                   label: 'Password',
                   icon: Icons.lock_outline,
                   obscureText: _obscurePassword,
                   neonColor: primaryNeon,
+                  isRequired: true,
                   suffixIcon: IconButton(
                     icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                     onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
@@ -346,9 +364,24 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           children: [
             Icon(Icons.school_outlined, color: isFocused ? primaryNeon : theme.colorScheme.onSurface.withValues(alpha: 0.4)),
             const SizedBox(width: 12),
-            Text(
-              _selectedEducationLevel ?? 'Educational Level',
-              style: GoogleFonts.inter(fontSize: 16, color: isPopulated ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.6)), // 🚀 SWAPPED TO INTER
+            // 🚀 CHANGED: Swapped standard Text for RichText to support the required asterisk
+            RichText(
+              text: TextSpan(
+                text: _selectedEducationLevel ?? 'Educational Level',
+                style: GoogleFonts.inter(
+                  fontSize: 16, 
+                  color: isPopulated ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.6)
+                ), 
+                children: const [
+                  TextSpan(
+                    text: ' *',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const Spacer(),
             Icon(Icons.arrow_drop_down_rounded, color: isFocused ? primaryNeon : theme.colorScheme.onSurface.withValues(alpha: 0.4), size: 28),

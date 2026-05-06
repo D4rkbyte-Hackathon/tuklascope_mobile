@@ -9,6 +9,7 @@ class NeonTextField extends StatefulWidget {
   final Widget? suffixIcon;
   final TextInputType keyboardType;
   final Color neonColor;
+  final bool isRequired; // 🚀 ADDED: Controls the display of the required indicator
 
   const NeonTextField({
     super.key,
@@ -19,6 +20,7 @@ class NeonTextField extends StatefulWidget {
     this.suffixIcon,
     this.keyboardType = TextInputType.text,
     required this.neonColor,
+    this.isRequired = false, // 🚀 ADDED: Defaults to false
   });
 
   @override
@@ -61,8 +63,26 @@ class _NeonTextFieldState extends State<NeonTextField> {
         keyboardType: widget.keyboardType,
         style: GoogleFonts.inter(color: theme.colorScheme.onSurface), // 🚀 SWAPPED TO INTER
         decoration: InputDecoration(
-          labelText: widget.label,
-          labelStyle: GoogleFonts.inter(color: _isFocused ? widget.neonColor : theme.colorScheme.onSurface.withValues(alpha: 0.6)), // 🚀 SWAPPED TO INTER
+          // 🚀 CHANGED: Replaced labelText with a RichText label to support the red asterisk
+          label: RichText(
+            text: TextSpan(
+              text: widget.label,
+              style: GoogleFonts.inter(
+                color: _isFocused ? widget.neonColor : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                fontSize: 16,
+              ),
+              children: [
+                if (widget.isRequired)
+                  const TextSpan(
+                    text: ' *',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+              ],
+            ),
+          ),
           prefixIcon: Icon(widget.icon, color: _isFocused ? widget.neonColor : theme.colorScheme.onSurface.withValues(alpha: 0.4)),
           suffixIcon: widget.suffixIcon,
           filled: true,
