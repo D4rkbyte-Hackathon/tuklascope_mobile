@@ -8,6 +8,7 @@ import 'signup_screen.dart';
 import '../widgets/auth_gate.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/neon_text_field.dart';
+import 'social_login_profile_screen.dart'; // 🚀 NEW SCREEN FOR DISPLAYING SOCIAL LOGIN INFORMATION
 import '../../providers/auth_controller.dart';
 import '../../../../core/widgets/gradient_scaffold.dart';
 import '../../../../core/navigation/auth_transitions.dart';
@@ -57,8 +58,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _signInWithProvider(Future<AuthResponse?> Function() providerAuth, String providerName) async {
-    if (ref.read(authStateProvider).value != null) {
+  Future<void> _signInWithProvider(
+    Future<AuthResponse?> Function() providerAuth,
+    String providerName,
+    bool isSocialLogin,
+  ) async {
+    if (ref.read(authStateProvider).value != null && !isSocialLogin) {
       _showSuccess('You are already signed in.');
       return;
     }
@@ -69,11 +74,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (!mounted) return;
       if (authResponse != null) {
-        _showSuccess('Successfully signed in with $providerName!');
-        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const AuthGate()),
-          (route) => false,
-        );
+        final user = Supabase.instance.client.auth.currentUser;
+        
+        if (user != null && isSocialLogin) {
+          // For social logins, navigate to profile completion screen
+          String? displayName;
+          String userEmail = user.email ?? '';
+          
+          // Get name from user metadata
+          final userMetadata = user.userMetadata;
+          if (userMetadata != null) {
+            displayName = userMetadata['full_name'] as String?;
+          }
+          
+          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => SocialLoginProfileScreen(
+                initialName: displayName,
+                userEmail: userEmail,
+              ),
+            ),
+            (route) => false,
+          );
+        } else {
+          // For regular login, go to AuthGate
+          _showSuccess('Successfully signed in with $providerName!');
+          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const AuthGate()),
+            (route) => false,
+          );
+        }
       }
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -192,7 +222,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   SocialAuthButton(
                     imagePath: 'assets/images/google.png',
                     label: 'Google',
-                    onPressed: () => _signInWithProvider(ref.read(authControllerProvider.notifier).signInWithGoogle, 'Google'),
+                    onPressed: () => _signInWithProvider(ref.read(authControllerProvider.notifier).signInWithGoogle, 'Google', true),
                   ).animate().fade(duration: 600.ms, delay: 600.ms),
                   
                   const SizedBox(height: 16),
@@ -200,7 +230,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   SocialAuthButton(
                     imagePath: 'assets/images/facebook.png',
                     label: 'Facebook',
-                    onPressed: () => _signInWithProvider(ref.read(authControllerProvider.notifier).signInWithFacebook, 'Facebook'),
+                    onPressed: () => _signInWithProvider(ref.read(authControllerProvider.notifier).signInWithFacebook, 'Facebook', true),
                   ).animate().fade(duration: 600.ms, delay: 700.ms),
                   
                   const SizedBox(height: 32),
