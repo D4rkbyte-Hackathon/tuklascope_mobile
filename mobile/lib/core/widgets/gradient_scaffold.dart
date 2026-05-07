@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 
 class GradientScaffold extends StatelessWidget {
   final Widget body;
-  final PreferredSizeWidget? appBar; // We keep the generic type
+  final PreferredSizeWidget? appBar; 
   final Widget? bottomNavigationBar;
-  
-  // 1. Add the floatingActionButton field
   final Widget? floatingActionButton;
 
   const GradientScaffold({
@@ -13,17 +11,15 @@ class GradientScaffold extends StatelessWidget {
     required this.body,
     this.appBar,
     this.bottomNavigationBar,
-    this.floatingActionButton, // 2. Add to constructor
+    this.floatingActionButton, 
   });
 
   @override
   Widget build(BuildContext context) {
-    // 1. Check if the app is currently in dark mode
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
-        // 2. Your existing gradient acts as the base layer
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -37,23 +33,12 @@ class GradientScaffold extends StatelessWidget {
                 Color(0xFFD9D7CE),
               ],
         ),
-        // 3. Add the texture image overlay here
         image: const DecorationImage(
           image: AssetImage('assets/images/background.png'),
-          // Use BoxFit.cover if it's a full-screen image. 
-          // If it's a small seamless texture tile, change this to:
-          // repeat: ImageRepeat.repeat,
           fit: BoxFit.cover, 
-          
-          // 4. Lower the opacity to make it a subtle texture (0.0 to 1.0)
           opacity: 0.1, 
-          
-          // Optional: If you want Photoshop-like blending (e.g., Multiply, Overlay)
-          // instead of simple opacity, uncomment the colorFilter below:
-          // colorFilter: ColorFilter.mode(Colors.grey, BlendMode.overlay),
         ),
       ),
-      // 5. We wrap the Scaffold in a Theme
       child: Theme(
         data: Theme.of(context).copyWith(
           appBarTheme: const AppBarTheme(
@@ -65,9 +50,17 @@ class GradientScaffold extends StatelessWidget {
         child: Scaffold(
           backgroundColor: Colors.transparent,
           appBar: appBar,
-          body: body,
+          // 🚀 FIX: Wrap the body in a SafeArea to protect from landscape notches,
+          // but set top and bottom to false because your scroll views handle that.
+          body: SafeArea(
+            left: true,
+            right: true,
+            top: false,
+            bottom: false,
+            child: body,
+          ),
           bottomNavigationBar: bottomNavigationBar,
-          floatingActionButton: floatingActionButton, // 3. Pass it to the actual Scaffold
+          floatingActionButton: floatingActionButton, 
         ),
       ),
     );

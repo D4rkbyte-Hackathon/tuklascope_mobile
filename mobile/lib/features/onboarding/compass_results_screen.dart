@@ -51,9 +51,6 @@ class CompassResultsScreen extends StatelessWidget {
     final persona = _getPersonaDetails(topAffinity);
     final neonOrange = theme.colorScheme.secondary; 
     final primaryColor = theme.colorScheme.primary; 
-    
-    // 🚀 Check if the device is currently in landscape mode
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     return GradientScaffold(
       appBar: AppBar(
@@ -62,12 +59,10 @@ class CompassResultsScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
-        // 🚀 STEP 1: LayoutBuilder gives us the constraints of the safe area
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(), // Adds a nice bounce effect when scrolling
-              // 🚀 STEP 2: ConstrainedBox ensures the content fills the screen in portrait mode
+              physics: const BouncingScrollPhysics(),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minHeight: constraints.maxHeight,
@@ -106,10 +101,9 @@ class CompassResultsScreen extends StatelessWidget {
 
                       const SizedBox(height: 24),
 
-                      // 🚀 STEP 3: Replaced Expanded with a responsive SizedBox.
-                      // This gives the inner Expanded widgets the bounded height they need to render safely.
-                      SizedBox(
-                        height: isLandscape ? 400 : constraints.maxHeight * 0.55,
+                      // 🚀 THE FIX: Removed the restrictive SizedBox height percentage entirely.
+                      // We now use a standard Container so it grows naturally.
+                      Container(
                         width: double.infinity,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(32),
@@ -133,6 +127,8 @@ class CompassResultsScreen extends StatelessWidget {
                                 ],
                               ),
                               child: Column(
+                                // 🚀 Shrink-wrap the column so it exactly fits its children
+                                mainAxisSize: MainAxisSize.min,
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
                                   Container(
@@ -169,11 +165,12 @@ class CompassResultsScreen extends StatelessWidget {
                                   
                                   const SizedBox(height: 20),
                                   Divider(thickness: 1.5, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)), 
-                                  const Spacer(flex: 1),
+                                  const SizedBox(height: 24), // 🚀 Replaced Spacer with fixed padding
 
-                                  // This inner Expanded works perfectly now because the parent SizedBox has a specific height!
-                                  Expanded(
-                                    flex: 8,
+                                  // 🚀 THE FIX: Instead of Expanded, give the graph a guaranteed fixed minimum height
+                                  SizedBox(
+                                    height: 260, // Gives the diamond plenty of room to breathe!
+                                    width: double.infinity,
                                     child: TweenAnimationBuilder<double>(
                                       tween: Tween<double>(begin: 0.0, end: 1.0),
                                       duration: const Duration(milliseconds: 1500),
@@ -193,19 +190,19 @@ class CompassResultsScreen extends StatelessWidget {
                                       },
                                     ),
                                   ),
-                                  const Spacer(flex: 1),
+                                  const SizedBox(height: 12), // 🚀 Replaced Spacer with fixed padding
                                 ],
                               ),
                             ),
                           ),
-                        ).animate().fade(duration: 600.ms, delay: 200.ms).slideY(
-                              begin: 0.1,
-                              end: 0,
-                              duration: 600.ms,
-                              curve: Curves.easeOutCubic,
-                              delay: 200.ms,
-                            ),
-                      ),
+                        ),
+                      ).animate().fade(duration: 600.ms, delay: 200.ms).slideY(
+                            begin: 0.1,
+                            end: 0,
+                            duration: 600.ms,
+                            curve: Curves.easeOutCubic,
+                            delay: 200.ms,
+                          ),
 
                       const SizedBox(height: 24),
 
