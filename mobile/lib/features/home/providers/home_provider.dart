@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/services/pathfinder_service.dart';
 
 class HomeStats {
   final int dailyStreak;
@@ -73,8 +74,22 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
         .order('created_at', ascending: false)
         .limit(3);
 
-    // 5. Skill Tree Branch XP (Mocked)
-    final branchXp = {'STEM': 120, 'HUMSS': 90, 'ABM': 150, 'TVL': 60};
+    // 5. Fetch Real Skill Tree Branch XP from Neo4j
+    Map<String, int> branchXp = {'STEM': 0, 'HUMSS': 0, 'ABM': 0, 'TVL': 0};
+    try {
+      final skillData = await PathfinderService.getSkillWeb();
+      if (skillData != null && skillData['xp_distribution'] != null) {
+        final dist = skillData['xp_distribution'] as Map<String, dynamic>;
+        branchXp = {
+          'STEM': (dist['STEM'] ?? 0) as int,
+          'HUMSS': (dist['HUMSS'] ?? 0) as int,
+          'ABM': (dist['ABM'] ?? 0) as int,
+          'TVL': (dist['TVL'] ?? 0) as int,
+        };
+      }
+    } catch (e) {
+      // If Neo4j fetch fails, we keep branchXp as zeros
+    }
 
     return HomeStats(
       dailyStreak: profileData?['current_streak'] ?? 0,

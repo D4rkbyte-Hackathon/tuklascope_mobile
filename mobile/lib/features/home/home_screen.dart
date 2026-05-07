@@ -48,7 +48,7 @@ class HomeScreen extends ConsumerWidget {
                   16.0,
                   20.0,
                   16.0,
-                  MediaQuery.paddingOf(context).bottom + 80,
+                  MediaQuery.paddingOf(context).bottom + 20,
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
@@ -69,7 +69,7 @@ class HomeScreen extends ConsumerWidget {
                     RecentDiscoveriesSection(recentScans: recentScans),
                     if (recentScans.isNotEmpty) const SizedBox(height: 32),
 
-                    const QuickRecommendationCard(),
+                    QuickRecommendationCard(branchXp: branchXp),
                     const SizedBox(height: 24),
 
                     MiniSkillTreeCard(branchXp: branchXp),
