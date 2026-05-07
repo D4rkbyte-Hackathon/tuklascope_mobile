@@ -21,10 +21,9 @@ class MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
   late PageController _pageController;
 
-  // --- STATE VARIABLES ---
   Timer? _inactivityTimer;
   bool _isNavBarVisible = true;
-  bool _isProgrammaticScroll = false; // 1. Added anti-glitch lock
+  bool _isProgrammaticScroll = false; 
 
   final List<Widget> _screens = const [
     TabWrapper(rootScreen: HomeScreen()),
@@ -62,34 +61,30 @@ class MainNavigationState extends State<MainNavigation> {
     });
   }
 
-  // New method to control nav bar visibility from child screens
   void _setNavBarVisibility(bool visible) {
     if (mounted) {
       setState(() => _isNavBarVisible = visible);
     }
     if (visible) {
-      _startInactivityTimer(); // Reset timer when showing nav bar
+      _startInactivityTimer(); 
     }
   }
 
-  // 2. REFACTORED GOTOTAB LOGIC
   void goToTab(int index) async {
     if (index >= 0 && index < _screens.length && _currentIndex != index) {
       _startInactivityTimer(); 
       
       setState(() {
         _currentIndex = index;
-        _isProgrammaticScroll = true; // Lock the physical swipe listener
+        _isProgrammaticScroll = true; 
       });
       
-      // Wait for the page slide animation to completely finish
       await _pageController.animateToPage(
         index,
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOutCubic,
       );
       
-      // Unlock the listener so physical swiping works again
       if (mounted) {
         _isProgrammaticScroll = false; 
       }
@@ -98,9 +93,11 @@ class MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.paddingOf(context).bottom;
-    
-    // We remove activeNeonColor from here since it was unused!
+    // 🚀 FIX: Grab ALL padding sides, not just the bottom
+    final padding = MediaQuery.paddingOf(context);
+    final bottomPadding = padding.bottom;
+    final leftPadding = padding.left;
+    final rightPadding = padding.right;
 
     return MainNavScope(
       goToTab: goToTab,
@@ -120,7 +117,6 @@ class MainNavigationState extends State<MainNavigation> {
                 controller: _pageController,
                 physics: const BouncingScrollPhysics(),
                 onPageChanged: (index) {
-                  // 3. IGNORE INTERMEDIATE SCREENS DURING ANIMATION
                   if (!_isProgrammaticScroll) {
                     setState(() => _currentIndex = index);
                   }
@@ -132,8 +128,9 @@ class MainNavigationState extends State<MainNavigation> {
                 duration: const Duration(milliseconds: 2000),
                 curve: Curves.easeOutQuint,
                 bottom: _isNavBarVisible ? (16 + bottomPadding) : -120,
-                left: 20,
-                right: 20,
+                // 🚀 FIX: Add left and right padding to prevent landscape clipping
+                left: 20 + leftPadding,
+                right: 20 + rightPadding,
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 400),
                   opacity: _isNavBarVisible ? 1.0 : 0.0,
@@ -144,7 +141,6 @@ class MainNavigationState extends State<MainNavigation> {
                       child: Container(
                         height: 70,
                         decoration: BoxDecoration(
-                          // Use values() instead of withOpacity() to allow const where possible
                           color: const Color(0xFF0D3B66).withValues(alpha: 0.85), 
                           borderRadius: BorderRadius.circular(35),
                           boxShadow: [
@@ -229,7 +225,6 @@ class MainNavigationState extends State<MainNavigation> {
             alignment: Alignment.center,
             clipBehavior: Clip.none,
             children: [
-              // --- THE GLOWING ORB BACKDROP ---
               if (isSelected)
                 Container(
                   width: 35,
@@ -246,7 +241,6 @@ class MainNavigationState extends State<MainNavigation> {
                   ),
                 ).animate().scale(duration: 400.ms, curve: Curves.easeOutCubic),
 
-              // The actual icon and text content
               content,
             ],
           ),
