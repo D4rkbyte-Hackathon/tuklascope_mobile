@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/pathfinder_service.dart';
+import '../../auth/providers/auth_controller.dart';
 
 class HomeStats {
   final int dailyStreak;
@@ -29,7 +30,10 @@ class HomeStats {
 
 final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
   
-  // 🚀 Keeps the data alive so switching tabs doesn't trigger a reload
+  // 🚀 Watch auth state - when user changes, provider automatically re-runs
+  ref.watch(authStateProvider);
+  
+  // Keeps the data alive so switching tabs doesn't trigger a reload
   ref.keepAlive();
 
   final client = Supabase.instance.client;
