@@ -19,14 +19,28 @@ class ConfirmImageScreen extends ConsumerStatefulWidget {
   ConsumerState<ConfirmImageScreen> createState() => _ConfirmImageScreenState();
 }
 
-class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
+class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with SingleTickerProviderStateMixin {
   bool _isIsolating = true;
   File? _segmentedImage;
+  late AnimationController _glitchController;
+  late Animation<Color?> _glowAnimation; // Added for the breathing outline
 
   @override
   void initState() {
     super.initState();
+    _glitchController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
     _isolateSubject();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Initialize color tween here because it needs Theme.of(context)
+    final theme = Theme.of(context);
+    _glowAnimation = ColorTween(
+      begin: theme.colorScheme.secondary, 
+      end: theme.colorScheme.primary,
+    ).animate(CurvedAnimation(parent: _glitchController, curve: Curves.easeInOut));
   }
 
   Future<void> _isolateSubject() async {
@@ -35,10 +49,7 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
         options: SubjectSegmenterOptions(
           enableForegroundBitmap: true,
           enableForegroundConfidenceMask: false,
-          enableMultipleSubjects: SubjectResultOptions(
-            enableConfidenceMask: false,
-            enableSubjectBitmap: false,
-          ),
+          enableMultipleSubjects: SubjectResultOptions(enableConfidenceMask: false, enableSubjectBitmap: false),
         ),
       );
 
@@ -46,8 +57,7 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
       final result = await segmenter.processImage(inputImage);
 
       if (result.foregroundBitmap != null) {
-        final segmentedPath =
-            '${widget.originalImage.parent.path}/segmented_${DateTime.now().millisecondsSinceEpoch}.png';
+        final segmentedPath = '${widget.originalImage.parent.path}/segmented_${DateTime.now().millisecondsSinceEpoch}.png';
         final segmentedFile = File(segmentedPath);
         await segmentedFile.writeAsBytes(result.foregroundBitmap!);
 
@@ -62,7 +72,6 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
       }
       segmenter.close();
     } catch (e) {
-      debugPrint("Segmentation Error: $e");
       _handleSegmentationFailure('AI model initializing...');
     }
   }
@@ -72,9 +81,8 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
       setState(() => _isIsolating = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$message Using original image.', style: GoogleFonts.inter()),
-          backgroundColor: Theme.of(context).colorScheme.secondary,
-          duration: const Duration(seconds: 2),
+          content: Text('$message Using original image.', style: GoogleFonts.orbitron()),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -86,77 +94,65 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
 
     String apiSafeGradeLevel;
     switch (rawGrade) {
-      case 'Elementary':
-        apiSafeGradeLevel = 'Elementary (Grades 1-6)';
-        break;
-      case 'Senior High School':
-        apiSafeGradeLevel = 'SHS (Grades 11-12)';
-        break;
-      case 'College':
-      case 'Others':
-        apiSafeGradeLevel = 'College/Undergrad';
-        break;
-      case 'High School':
-      default:
-        apiSafeGradeLevel = 'JHS (Grades 7-10)';
-        break;
+      case 'Elementary': apiSafeGradeLevel = 'Elementary (Grades 1-6)'; break;
+      case 'Senior High School': apiSafeGradeLevel = 'SHS (Grades 11-12)'; break;
+      case 'College': case 'Others': apiSafeGradeLevel = 'College/Undergrad'; break;
+      case 'High School': default: apiSafeGradeLevel = 'JHS (Grades 7-10)'; break;
     }
 
     final imageToUpload = _segmentedImage ?? widget.originalImage;
+    showDialog(context: context, barrierDismissible: false, builder: (context) => const AiQueryModal());
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AiQueryModal(),
-    );
-
-    final aiResult = await DiscoveryService.analyzeImage(
-      imageFile: imageToUpload,
-      gradeLevel: apiSafeGradeLevel,
-    );
+    final aiResult = await DiscoveryService.analyzeImage(imageFile: imageToUpload, gradeLevel: apiSafeGradeLevel);
 
     if (!mounted) return;
     Navigator.pop(context);
 
     if (aiResult != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TeaserDoorsScreen(
-            aiData: aiResult,
-            imagePath: imageToUpload.path,
-            gradeLevel: apiSafeGradeLevel,
-          ),
-        ),
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(
+        builder: (context) => TeaserDoorsScreen(aiData: aiResult, imagePath: imageToUpload.path, gradeLevel: apiSafeGradeLevel),
+      ));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to analyze. Check your connection.', style: GoogleFonts.inter()),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Failed to analyze. Check your connection.', style: GoogleFonts.orbitron()),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ));
     }
   }
 
+  // Smooth alternating outline renderer
   Widget _buildStickerOutline(File image) {
-    const double stroke = 4.0;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        for (double dx = -stroke; dx <= stroke; dx += stroke)
-          for (double dy = -stroke; dy <= stroke; dy += stroke)
-            if (dx != 0 || dy != 0)
-              Transform.translate(
-                offset: Offset(dx, dy),
-                child: ColorFiltered(
-                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                  child: Image.file(image, fit: BoxFit.contain),
-                ),
-              ),
-        Image.file(image, fit: BoxFit.contain),
-      ],
+    const double stroke = 6.0; 
+    return AnimatedBuilder(
+      animation: _glowAnimation,
+      builder: (context, child) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            for (double dx = -stroke; dx <= stroke; dx += stroke / 1.5)
+              for (double dy = -stroke; dy <= stroke; dy += stroke / 1.5)
+                if (dx != 0 || dy != 0)
+                  Transform.translate(
+                    offset: Offset(dx, dy),
+                    child: ColorFiltered(
+                      colorFilter: ColorFilter.mode(
+                        _glowAnimation.value ?? Colors.white, // Alternates colors smoothly
+                        BlendMode.srcIn,
+                      ),
+                      child: Image.file(image, fit: BoxFit.contain),
+                    ),
+                  ),
+            Image.file(image, fit: BoxFit.contain),
+          ],
+        );
+      }
     );
+  }
+
+  @override
+  void dispose() {
+    _glitchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -168,69 +164,105 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            Text(
-              _isIsolating ? 'PROCESSING IMAGE' : 'SUBJECT ISOLATED',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.primary,
-                letterSpacing: 2,
+            // HEADER 
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: _isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary, width: 4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(_isIsolating ? Icons.hourglass_empty : Icons.check_circle_outline, 
+                       color: _isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary),
+                  const SizedBox(width: 10),
+                  AnimatedBuilder(
+                    animation: _glitchController,
+                    builder: (context, child) {
+                      return Text(
+                        _isIsolating ? 'PROCESSING IMAGE' : 'SUBJECT ISOLATED',
+                        style: GoogleFonts.orbitron(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                          shadows: [
+                            if (_isIsolating) BoxShadow(
+                              color: theme.colorScheme.primary.withValues(alpha: _glitchController.value), 
+                              blurRadius: 10
+                            )
+                          ]
+                        ),
+                      );
+                    }
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 30),
-            Expanded(
-              child: Center(
-                child: Container(
-                  width: MediaQuery.of(context).size.width * 0.85,
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E2532), 
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+            
+            const Spacer(),
+
+            // INCUBATOR CHAMBER
+            Center(
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.85,
+                height: MediaQuery.of(context).size.height * 0.55,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D1117), 
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isIsolating ? theme.colorScheme.primary.withValues(alpha: 0.5) : theme.colorScheme.secondary,
+                    width: 2,
                   ),
-                  padding: const EdgeInsets.all(24),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (_segmentedImage != null) _buildStickerOutline(_segmentedImage!),
-                      AnimatedOpacity(
-                        opacity: (_isIsolating || _segmentedImage == null) ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 1200),
-                        curve: Curves.easeInOut,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.file(widget.originalImage, fit: BoxFit.cover),
-                        ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary).withValues(alpha: 0.2),
+                      blurRadius: 30,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Grid Background
+                    CustomPaint(
+                      painter: _GridPainter(color: theme.colorScheme.primary.withValues(alpha: 0.1)),
+                    ),
+
+                    // The image or breathing segmented sticker
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: _segmentedImage != null && !_isIsolating
+                            ? _buildStickerOutline(_segmentedImage!) 
+                            : Image.file(widget.originalImage, fit: BoxFit.cover),
                       ),
-                      if (_isIsolating)
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.6),
-                              shape: BoxShape.circle,
-                            ),
-                            child: CircularProgressIndicator(
-                              color: theme.colorScheme.secondary,
-                              strokeWidth: 4,
-                            ),
+                    ),
+
+                    // Scanning Loader Overlay
+                    if (_isIsolating)
+                      Container(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: theme.colorScheme.secondary,
+                            strokeWidth: 3,
                           ),
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
             ),
+            
+            const Spacer(),
+
+            // ACTIONS
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 40, 20, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
               child: AnimatedOpacity(
                 opacity: _isIsolating ? 0.0 : 1.0,
                 duration: const Duration(milliseconds: 500),
@@ -243,23 +275,32 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
                           foregroundColor: Colors.white,
                           side: BorderSide(color: theme.colorScheme.primary, width: 2),
                           padding: const EdgeInsets.symmetric(vertical: 20),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: Text('RETAKE', style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                        child: Text('RETAKE', style: GoogleFonts.orbitron(fontWeight: FontWeight.bold, letterSpacing: 2)),
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
+                      flex: 2,
                       child: ElevatedButton(
                         onPressed: _isIsolating ? null : _sendToAI,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: Colors.white,
+                          backgroundColor: theme.colorScheme.secondary, 
+                          foregroundColor: Colors.black, 
                           padding: const EdgeInsets.symmetric(vertical: 20),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 10,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 15,
+                          shadowColor: theme.colorScheme.secondary,
                         ),
-                        child: Text('ANALYZE', style: GoogleFonts.inter(fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('ANALYZE', style: GoogleFonts.orbitron(fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.satellite_alt, size: 18),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -271,4 +312,18 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> {
       ),
     );
   }
+}
+
+class _GridPainter extends CustomPainter {
+  final Color color;
+  _GridPainter({required this.color});
+  
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color..strokeWidth = 1;
+    for (double i = 0; i < size.width; i += 20) canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    for (double i = 0; i < size.height; i += 20) canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
