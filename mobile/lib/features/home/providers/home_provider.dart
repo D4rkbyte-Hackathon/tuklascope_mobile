@@ -6,24 +6,22 @@ class HomeStats {
   final int totalPoints;
   final int todayScansCount;
   final String userName;
-  final String heroTitle;
   final String? avatarUrl;
   final int? userRank;          
   final int totalUsers;         
   final Map<String, int> branchXp; 
-  final List<Map<String, dynamic>> recentScans; // 🚀 Added Recent Scans
+  final List<Map<String, dynamic>> recentScans; 
 
   HomeStats({
     required this.dailyStreak,
     required this.totalPoints,
     required this.todayScansCount,
     required this.userName,
-    required this.heroTitle,
     this.avatarUrl,
     this.userRank,
     required this.totalUsers,
     required this.branchXp,
-    required this.recentScans, // 🚀
+    required this.recentScans, 
   });
 }
 
@@ -34,7 +32,7 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
   if (user == null) {
     return HomeStats(
       dailyStreak: 0, totalPoints: 0, todayScansCount: 0,
-      userName: 'Explorer', heroTitle: 'Novice Discoverer', avatarUrl: null,
+      userName: 'Explorer', avatarUrl: null,
       userRank: null, totalUsers: 0, branchXp: {'STEM': 0, 'HUMSS': 0, 'ABM': 0, 'TVL': 0},
       recentScans: [],
     );
@@ -67,7 +65,7 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
     final rankIndex = profilesList.indexWhere((p) => p['id'] == user.id);
     final userRank = rankIndex != -1 ? rankIndex + 1 : null;
 
-    // 4. 🚀 Fetch 3 Most Recent Discoveries
+    // 4. Fetch 3 Most Recent Discoveries
     final recentScansData = await client
         .from('scans')
         .select('id, object_name, chosen_lens, created_at, image_url')
@@ -83,17 +81,16 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
       totalPoints: profileData?['total_xp'] ?? 0,
       todayScansCount: (scansData as List).length,
       userName: profileData?['full_name'] ?? 'Explorer',
-      heroTitle: 'Curious Scientist', 
       avatarUrl: profileData?['profile_picture_url'], 
       userRank: userRank,
       totalUsers: profilesList.length,
       branchXp: branchXp,
-      recentScans: List<Map<String, dynamic>>.from(recentScansData), // 🚀 Mapped
+      recentScans: List<Map<String, dynamic>>.from(recentScansData), 
     );
   } catch (e) {
     return HomeStats(
       dailyStreak: 0, totalPoints: 0, todayScansCount: 0,
-      userName: 'Explorer', heroTitle: 'Curious Scientist',
+      userName: 'Explorer',
       userRank: null, totalUsers: 0, branchXp: {'STEM': 0, 'HUMSS': 0, 'ABM': 0, 'TVL': 0},
       recentScans: [],
     );

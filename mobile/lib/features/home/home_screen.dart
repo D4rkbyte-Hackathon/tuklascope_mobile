@@ -20,7 +20,7 @@ class HomeScreen extends ConsumerWidget {
     final statsAsync = ref.watch(homeStatsProvider);
 
     final userName = statsAsync.value?.userName ?? '...';
-    final heroTitle = statsAsync.value?.heroTitle ?? '...';
+    // 🚀 Removed heroTitle here
     final xp = statsAsync.value?.totalPoints ?? 0;
     final streak = statsAsync.value?.dailyStreak ?? 0;
     final avatarUrl = statsAsync.value?.avatarUrl;
@@ -52,30 +52,9 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    
-                    // 🚀 EMERGENCY ESCAPE HATCH ADDED HERE
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        // Kills the session and forces AuthGate to kick you to login
-                        await Supabase.instance.client.auth.signOut();
-                      },
-                      icon: const Icon(Icons.warning_amber_rounded),
-                      label: Text(
-                        'EMERGENCY SIGN OUT', 
-                        style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    // 🚀 END EMERGENCY ESCAPE HATCH
 
                     HomeHeader(
                       userName: userName,
-                      heroTitle: heroTitle,
                       xp: xp,
                       avatarUrl: avatarUrl,
                     ),
