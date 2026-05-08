@@ -49,9 +49,9 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
             Expanded(
               child: TabBarView(
                 controller: _mainTabController,
-                physics: const BouncingScrollPhysics(),
+                // 💥 FIX: Disable inner swiping so the Main PageView gets all the swipes
+                physics: const NeverScrollableScrollPhysics(), 
                 children: const [
-                  // 🔥 'const' means these tabs will never unnecessarily rebuild!
                   ExploreHistoryTab(),
                   ExploreLeaderboardTab(),
                 ],
