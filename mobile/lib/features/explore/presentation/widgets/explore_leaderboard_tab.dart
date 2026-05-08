@@ -1,4 +1,5 @@
 //explore leaderboard tab
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart'; 
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +9,6 @@ import 'discoverer_row_card.dart';
 import 'leaderboard_podium.dart'; 
 import 'discoverer_profile_sheet.dart'; 
 
-// Enum to cleanly track our location sub-filters
 enum LocationScope { global, country, city }
 
 class ExploreLeaderboardTab extends StatefulWidget {
@@ -26,18 +26,21 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
   bool _isLoadingLeaderboard = true;
   
   int _currentFilterIndex = 0; 
-  LocationScope _currentLocationScope = LocationScope.global; // Default sub-filter
+  LocationScope _currentLocationScope = LocationScope.global; 
   
-  bool _showScrollButtons = false;
-
-  // Track the current user's location to handle null states
+  // Track the current user's profile data
   String? _myCountry;
   String? _myCity;
+  String? _myEducationLevel;
+  int _myIndex = -1;
+
+  // Smart FAB Visibility States
+  bool _showGoToTop = false;
+  bool _showGoToMe = false;
 
   @override
   void initState() {
     super.initState();
-    // Reverted back to 2 main tabs
     _filterTabController = TabController(length: 2, vsync: this);
     _fetchLeaderboard();
 
@@ -48,13 +51,44 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
       }
     });
 
-    _scrollController.addListener(() {
-      if (_scrollController.offset > 200 && !_showScrollButtons) {
-        setState(() => _showScrollButtons = true);
-      } else if (_scrollController.offset <= 200 && _showScrollButtons) {
-        setState(() => _showScrollButtons = false);
+    // Attach the smart scroll listener
+    _scrollController.addListener(_evaluateFabVisibility);
+  }
+
+  // --- SMART FAB LOGIC ---
+  void _evaluateFabVisibility() {
+    if (!_scrollController.hasClients) return;
+    
+    final offset = _scrollController.offset;
+    final viewportHeight = _scrollController.position.viewportDimension;
+
+    // Go To Top Logic
+    bool newShowGoToTop = offset > 250;
+
+    // Go To Me Logic (Calculate if the user's row is currently rendered on screen)
+    bool newShowGoToMe = false;
+    if (_myIndex != -1) {
+      double myEstimatedOffset = 0.0;
+      if (_myIndex < 3) {
+        myEstimatedOffset = 0.0; // Podium area
+      } else {
+        myEstimatedOffset = 220.0 + ((_myIndex - 3) * 80.0); // Podium height + (Index * Row height)
       }
-    });
+      
+      // If the estimated offset is outside the current viewport bounds
+      bool isAboveViewport = myEstimatedOffset < (offset - 80); 
+      bool isBelowViewport = myEstimatedOffset > (offset + viewportHeight - 100);
+      
+      newShowGoToMe = isAboveViewport || isBelowViewport;
+    }
+
+    // Only trigger setState if something actually changed to avoid lag
+    if (_showGoToTop != newShowGoToTop || _showGoToMe != newShowGoToMe) {
+      setState(() {
+        _showGoToTop = newShowGoToTop;
+        _showGoToMe = newShowGoToMe;
+      });
+    }
   }
 
   Future<void> _fetchLeaderboard() async {
@@ -63,7 +97,6 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     try {
       final currentUser = Supabase.instance.client.auth.currentUser;
       
-      // 1. Base SELECT (FilterBuilder)
       var query = Supabase.instance.client
           .from('profiles')
           .select('id, full_name, total_xp, education_level, profile_picture_url, bio, country, city, current_streak, current_level');
@@ -78,24 +111,20 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
         if (myProfile != null) {
           _myCountry = myProfile['country'];
           _myCity = myProfile['city'];
+          _myEducationLevel = myProfile['education_level'];
 
-          // 2. Apply Filters
-          if (_currentFilterIndex == 0 && myProfile['education_level'] != null) {
-            // Grade Level Tab
-            query = query.eq('education_level', myProfile['education_level']);
+          if (_currentFilterIndex == 0 && _myEducationLevel != null) {
+            query = query.eq('education_level', _myEducationLevel!);
           } else if (_currentFilterIndex == 1) {
-            // Location Tab -> Check sub-scope
             if (_currentLocationScope == LocationScope.country && _myCountry != null && _myCountry!.isNotEmpty) {
               query = query.eq('country', _myCountry!);
             } else if (_currentLocationScope == LocationScope.city && _myCity != null && _myCity!.isNotEmpty) {
               query = query.eq('city', _myCity!);
             }
-            // If scope is global, we apply no extra filters
           }
         }
       }
 
-      // Intercept missing locations to save DB reads
       if (_currentFilterIndex == 1) {
         if (_currentLocationScope == LocationScope.country && (_myCountry == null || _myCountry!.isEmpty)) {
           if (mounted) setState(() { _leaderboardData = []; _isLoadingLeaderboard = false; });
@@ -107,7 +136,6 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
         }
       }
 
-      // 3. Modifiers (TransformBuilder)
       final response = await query
           .order('total_xp', ascending: false) 
           .order('current_level', ascending: false) 
@@ -117,8 +145,11 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
       if (mounted) {
         setState(() {
           _leaderboardData = List<Map<String, dynamic>>.from(response);
+          _myIndex = _leaderboardData.indexWhere((user) => user['id'] == currentUser?.id);
           _isLoadingLeaderboard = false;
         });
+        // Run FAB evaluation right after list builds
+        WidgetsBinding.instance.addPostFrameCallback((_) => _evaluateFabVisibility());
       }
     } catch (e) {
       debugPrint('Error fetching leaderboard: $e');
@@ -134,52 +165,37 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
       context: context,
       isScrollControlled: true, 
       backgroundColor: Colors.transparent, 
-      builder: (context) => DiscovererProfileSheet(
-        user: user,
-        rank: rank,
-        isMe: isMe,
-      ),
+      builder: (context) => DiscovererProfileSheet(user: user, rank: rank, isMe: isMe),
     );
   }
 
   void _scrollToTop() {
     if (_scrollController.hasClients) {
-      _scrollController.animateTo(0, duration: const Duration(milliseconds: 500), curve: Curves.easeOutCubic);
+      _scrollController.animateTo(0, duration: const Duration(milliseconds: 600), curve: Curves.easeOutCubic);
     }
   }
 
   void _scrollToMe() {
-    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-    if (currentUserId == null) return;
+    if (_myIndex == -1) return;
 
-    final myIndex = _leaderboardData.indexWhere((user) => user['id'] == currentUserId);
-    
-    if (myIndex == -1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('You are not in the top 50 for this category yet! Keep exploring!'),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    if (myIndex < 3) {
+    if (_myIndex < 3) {
       _scrollToTop();
       return;
     }
 
-    final estimatedOffset = 220.0 + ((myIndex - 3) * 80.0);
+    final estimatedOffset = 220.0 + ((_myIndex - 3) * 80.0);
     
     if (_scrollController.hasClients) {
-      _scrollController.animateTo(estimatedOffset, duration: const Duration(milliseconds: 600), curve: Curves.easeInOutCubic);
+      // Offset slightly to center the user in the screen
+      final target = (estimatedOffset - 150).clamp(0.0, _scrollController.position.maxScrollExtent);
+      _scrollController.animateTo(target, duration: const Duration(milliseconds: 800), curve: Curves.easeInOutCubic);
     }
   }
 
   @override
   void dispose() {
     _filterTabController.dispose();
+    _scrollController.removeListener(_evaluateFabVisibility);
     _scrollController.dispose();
     super.dispose();
   }
@@ -190,51 +206,211 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     final bottomInset = MediaQuery.paddingOf(context).bottom + 72;
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Stack(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
-          child: Text.rich(
-            textAlign: TextAlign.center,
-            TextSpan(
-              style: GoogleFonts.montserrat(fontSize: 26, fontWeight: FontWeight.bold, height: 1.15),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+              child: Text.rich(
+                textAlign: TextAlign.center,
+                TextSpan(
+                  style: GoogleFonts.montserrat(fontSize: 26, fontWeight: FontWeight.bold, height: 1.15),
+                  children: [
+                    TextSpan(text: 'Top ', style: TextStyle(color: theme.colorScheme.primary)), 
+                    TextSpan(text: 'Discoverers', style: TextStyle(color: theme.colorScheme.secondary)), 
+                  ],
+                ),
+              ),
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _buildLeaderboardFilterToggle(theme),
+            ),
+
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOutCubic,
+              child: _currentFilterIndex == 1 
+                  ? _buildLocationSubFilters(theme)
+                  : const SizedBox.shrink(),
+            ),
+
+            // Active Status Indicator Banner
+            if (!_isLoadingLeaderboard && _leaderboardData.isNotEmpty)
+               _buildActiveStatusBanner(theme),
+            
+            Expanded(
+              child: _buildMainContent(theme, currentUserId, bottomInset),
+            ),
+          ],
+        ),
+
+        // Floating Action Buttons Layer (Glassmorphic)
+        _buildSmartFloatingControls(theme, bottomInset),
+      ],
+    );
+  }
+
+  // --- NEW: AESTHETIC STATUS BANNER ---
+  Widget _buildActiveStatusBanner(ThemeData theme) {
+    String statusText = '';
+    IconData statusIcon = Icons.leaderboard_rounded;
+
+    if (_currentFilterIndex == 0) {
+      statusText = _myEducationLevel != null ? 'Showing Top Explorers in $_myEducationLevel' : 'Showing All Grade Levels';
+      statusIcon = Icons.school_rounded;
+    } else {
+      if (_currentLocationScope == LocationScope.global) {
+        statusText = 'Global Leaderboard';
+        statusIcon = Icons.public_rounded;
+      } else if (_currentLocationScope == LocationScope.country) {
+        statusText = _myCountry != null ? 'Showing Top Explorers in $_myCountry' : 'Country Leaderboard';
+        statusIcon = Icons.flag_circle_rounded;
+      } else if (_currentLocationScope == LocationScope.city) {
+        statusText = _myCity != null ? 'Showing Top Explorers in $_myCity' : 'City Leaderboard';
+        statusIcon = Icons.location_city_rounded;
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.secondary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: theme.colorScheme.secondary.withValues(alpha: 0.3), width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(statusIcon, color: theme.colorScheme.secondary, size: 16)
+              .animate(onPlay: (controller) => controller.repeat(reverse: true))
+              .scaleXY(end: 1.1, duration: 1.seconds),
+            const SizedBox(width: 8),
+            Text(
+              statusText,
+              style: GoogleFonts.montserrat(
+                color: theme.colorScheme.secondary, 
+                fontWeight: FontWeight.bold, 
+                fontSize: 12
+              ),
+            ),
+          ],
+        ),
+      ).animate(key: ValueKey('banner_$_currentFilterIndex$_currentLocationScope'))
+       .fade(duration: 400.ms)
+       .slideY(begin: -0.2, end: 0, curve: Curves.easeOut),
+    );
+  }
+
+  // --- NEW: SMART GLASSMORPHIC FABs ---
+  Widget _buildSmartFloatingControls(ThemeData theme, double bottomInset) {
+    return Positioned(
+      bottom: bottomInset - 40,
+      right: 20,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // GO TO ME BUTTON
+          AnimatedScale(
+            scale: _showGoToMe ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutBack,
+            child: AnimatedOpacity(
+              opacity: _showGoToMe ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: _buildGlassFab(
+                theme: theme,
+                icon: Icons.person_pin_circle_rounded,
+                label: 'Find Me',
+                color: theme.colorScheme.secondary,
+                onTap: _scrollToMe,
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // GO TO TOP BUTTON
+          AnimatedScale(
+            scale: _showGoToTop ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutBack,
+            child: AnimatedOpacity(
+              opacity: _showGoToTop ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: _buildGlassFab(
+                theme: theme,
+                icon: Icons.keyboard_double_arrow_up_rounded,
+                label: 'Top',
+                color: theme.colorScheme.primary,
+                onTap: _scrollToTop,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassFab({
+    required ThemeData theme, 
+    required IconData icon, 
+    required String label, 
+    required Color color, 
+    required VoidCallback onTap
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: color.withValues(alpha: 0.5), width: 1.5),
+              boxShadow: [
+                BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                TextSpan(text: 'Top ', style: TextStyle(color: theme.colorScheme.primary)), 
-                TextSpan(text: 'Discoverers', style: TextStyle(color: theme.colorScheme.secondary)), 
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 6),
+                Text(
+                  label, 
+                  style: GoogleFonts.montserrat(
+                    color: color, 
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 12
+                  )
+                ),
               ],
             ),
           ),
         ),
-        
-        // Main 2-Tab Filter
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: _buildLeaderboardFilterToggle(theme),
-        ),
-
-        // Sub-Filter row that only shows when "Location" is selected
-        AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOutCubic,
-          child: _currentFilterIndex == 1 
-              ? _buildLocationSubFilters(theme)
-              : const SizedBox.shrink(),
-        ),
-        
-        Expanded(
-          child: _buildMainContent(theme, currentUserId, bottomInset),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildMainContent(ThemeData theme, String? currentUserId, double bottomInset) {
     if (_isLoadingLeaderboard) {
-      return Center(child: CircularProgressIndicator(color: theme.colorScheme.secondary));
+      return Center(
+        child: CircularProgressIndicator(color: theme.colorScheme.secondary)
+          .animate(onPlay: (c) => c.repeat())
+          .shimmer(duration: 1.seconds, color: theme.colorScheme.primary),
+      );
     }
 
-    // Checking missing states based on the sub-filter
     if (_currentFilterIndex == 1) {
       if (_currentLocationScope == LocationScope.country && (_myCountry == null || _myCountry!.isEmpty)) {
         return _buildMissingLocationPrompt(theme, 'Country');
@@ -245,18 +421,17 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     }
 
     if (_leaderboardData.isEmpty) {
-      return Center(child: Text('No explorers found in this category.', style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))));
+      return Center(
+        child: Text(
+          'No explorers found in this category.', 
+          style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))
+        ).animate().fade().slideY(begin: 0.2),
+      );
     }
 
-    return Stack(
-      children: [
-        _buildGamifiedList(currentUserId, bottomInset, theme),
-        _buildFloatingControls(theme, bottomInset),
-      ],
-    );
+    return _buildGamifiedList(currentUserId, bottomInset, theme);
   }
 
-  // The custom sub-filter UI
   Widget _buildLocationSubFilters(ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -330,7 +505,6 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                // TODO: Navigation to edit profile screen
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Navigate to Edit Profile here!')),
                 );
@@ -356,7 +530,7 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
 
     return ListView.builder(
       controller: _scrollController, 
-      padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset), // added slight top padding to space from tabs
+      padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset),
       physics: const BouncingScrollPhysics(),
       itemCount: remaining.length + (top3.isNotEmpty ? 1 : 0),
       itemBuilder: (context, index) {
@@ -421,41 +595,6 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
         tabs: const [
           Tab(text: 'By Grade Level'),
           Tab(text: 'By Location'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFloatingControls(ThemeData theme, double bottomInset) {
-    return Positioned(
-      bottom: bottomInset - 50, 
-      right: 20,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton.small(
-            heroTag: 'fab_me',
-            backgroundColor: theme.colorScheme.surface,
-            foregroundColor: theme.colorScheme.secondary,
-            onPressed: _scrollToMe,
-            child: const Icon(Icons.person_pin_circle_rounded),
-          ),
-          const SizedBox(height: 8),
-          
-          AnimatedOpacity(
-            opacity: _showScrollButtons ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 200),
-            child: IgnorePointer(
-              ignoring: !_showScrollButtons,
-              child: FloatingActionButton.small(
-                heroTag: 'fab_top',
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-                onPressed: _scrollToTop,
-                child: const Icon(Icons.keyboard_arrow_up_rounded),
-              ),
-            ),
-          ),
         ],
       ),
     );
