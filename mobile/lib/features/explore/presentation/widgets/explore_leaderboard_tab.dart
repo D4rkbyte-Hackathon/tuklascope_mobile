@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'discoverer_row_card.dart';
 import 'leaderboard_podium.dart'; 
 import 'discoverer_profile_sheet.dart'; 
+import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart'; // ADDED NAVBAR LISTENER
 
 enum LocationScope { global, country, city }
 
@@ -28,13 +29,11 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
   int _currentFilterIndex = 0; 
   LocationScope _currentLocationScope = LocationScope.global; 
   
-  // Track the current user's profile data
   String? _myCountry;
   String? _myCity;
   String? _myEducationLevel;
   int _myIndex = -1;
 
-  // Smart FAB Visibility States
   bool _showGoToTop = false;
   bool _showGoToMe = false;
 
@@ -51,38 +50,32 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
       }
     });
 
-    // Attach the smart scroll listener
     _scrollController.addListener(_evaluateFabVisibility);
   }
 
-  // --- SMART FAB LOGIC ---
   void _evaluateFabVisibility() {
     if (!_scrollController.hasClients) return;
     
     final offset = _scrollController.offset;
     final viewportHeight = _scrollController.position.viewportDimension;
 
-    // Go To Top Logic
     bool newShowGoToTop = offset > 250;
-
-    // Go To Me Logic (Calculate if the user's row is currently rendered on screen)
     bool newShowGoToMe = false;
+    
     if (_myIndex != -1) {
       double myEstimatedOffset = 0.0;
       if (_myIndex < 3) {
-        myEstimatedOffset = 0.0; // Podium area
+        myEstimatedOffset = 0.0; 
       } else {
-        myEstimatedOffset = 220.0 + ((_myIndex - 3) * 80.0); // Podium height + (Index * Row height)
+        myEstimatedOffset = 220.0 + ((_myIndex - 3) * 80.0); 
       }
       
-      // If the estimated offset is outside the current viewport bounds
       bool isAboveViewport = myEstimatedOffset < (offset - 80); 
       bool isBelowViewport = myEstimatedOffset > (offset + viewportHeight - 100);
       
       newShowGoToMe = isAboveViewport || isBelowViewport;
     }
 
-    // Only trigger setState if something actually changed to avoid lag
     if (_showGoToTop != newShowGoToTop || _showGoToMe != newShowGoToMe) {
       setState(() {
         _showGoToTop = newShowGoToTop;
@@ -148,7 +141,6 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
           _myIndex = _leaderboardData.indexWhere((user) => user['id'] == currentUser?.id);
           _isLoadingLeaderboard = false;
         });
-        // Run FAB evaluation right after list builds
         WidgetsBinding.instance.addPostFrameCallback((_) => _evaluateFabVisibility());
       }
     } catch (e) {
@@ -186,7 +178,6 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     final estimatedOffset = 220.0 + ((_myIndex - 3) * 80.0);
     
     if (_scrollController.hasClients) {
-      // Offset slightly to center the user in the screen
       final target = (estimatedOffset - 150).clamp(0.0, _scrollController.position.maxScrollExtent);
       _scrollController.animateTo(target, duration: const Duration(milliseconds: 800), curve: Curves.easeInOutCubic);
     }
@@ -203,7 +194,13 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bottomInset = MediaQuery.paddingOf(context).bottom + 72;
+    
+    // NAVBAR VISIBILITY LOGIC
+    final navScope = MainNavScope.maybeOf(context);
+    final isNavBarVisible = navScope?.isNavBarVisible ?? true;
+    final bottomSafePadding = MediaQuery.paddingOf(context).bottom;
+    final extraBottomPadding = (isNavBarVisible ? 100.0 : 30.0) + bottomSafePadding; 
+
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
 
     return Stack(
@@ -238,23 +235,62 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
                   : const SizedBox.shrink(),
             ),
 
-            // Active Status Indicator Banner
             if (!_isLoadingLeaderboard && _leaderboardData.isNotEmpty)
                _buildActiveStatusBanner(theme),
             
             Expanded(
-              child: _buildMainContent(theme, currentUserId, bottomInset),
+              child: _buildMainContent(theme, currentUserId, extraBottomPadding),
             ),
           ],
         ),
 
-        // Floating Action Buttons Layer (Glassmorphic)
-        _buildSmartFloatingControls(theme, bottomInset),
+        // SEPARATED FIND ME BUTTON (LEFT)
+        Positioned(
+          bottom: extraBottomPadding,
+          left: 20,
+          child: AnimatedScale(
+            scale: _showGoToMe ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutBack,
+            child: AnimatedOpacity(
+              opacity: _showGoToMe ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: _buildGlassFab(
+                theme: theme,
+                icon: Icons.person_pin_circle_rounded,
+                label: 'Find Me',
+                color: theme.colorScheme.secondary,
+                onTap: _scrollToMe,
+              ),
+            ),
+          ),
+        ),
+
+        // SEPARATED TOP BUTTON (RIGHT)
+        Positioned(
+          bottom: extraBottomPadding,
+          right: 20,
+          child: AnimatedScale(
+            scale: _showGoToTop ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutBack,
+            child: AnimatedOpacity(
+              opacity: _showGoToTop ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: _buildGlassFab(
+                theme: theme,
+                icon: Icons.keyboard_double_arrow_up_rounded,
+                label: 'Top',
+                color: theme.colorScheme.primary,
+                onTap: _scrollToTop,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  // --- NEW: AESTHETIC STATUS BANNER ---
   Widget _buildActiveStatusBanner(ThemeData theme) {
     String statusText = '';
     IconData statusIcon = Icons.leaderboard_rounded;
@@ -304,57 +340,6 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
       ).animate(key: ValueKey('banner_$_currentFilterIndex$_currentLocationScope'))
        .fade(duration: 400.ms)
        .slideY(begin: -0.2, end: 0, curve: Curves.easeOut),
-    );
-  }
-
-  // --- NEW: SMART GLASSMORPHIC FABs ---
-  Widget _buildSmartFloatingControls(ThemeData theme, double bottomInset) {
-    return Positioned(
-      bottom: bottomInset - 40,
-      right: 20,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // GO TO ME BUTTON
-          AnimatedScale(
-            scale: _showGoToMe ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutBack,
-            child: AnimatedOpacity(
-              opacity: _showGoToMe ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: _buildGlassFab(
-                theme: theme,
-                icon: Icons.person_pin_circle_rounded,
-                label: 'Find Me',
-                color: theme.colorScheme.secondary,
-                onTap: _scrollToMe,
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 12),
-          
-          // GO TO TOP BUTTON
-          AnimatedScale(
-            scale: _showGoToTop ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutBack,
-            child: AnimatedOpacity(
-              opacity: _showGoToTop ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: _buildGlassFab(
-                theme: theme,
-                icon: Icons.keyboard_double_arrow_up_rounded,
-                label: 'Top',
-                color: theme.colorScheme.primary,
-                onTap: _scrollToTop,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
