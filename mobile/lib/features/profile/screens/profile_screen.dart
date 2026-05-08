@@ -19,6 +19,8 @@ import '../widgets/skill_tree_visualizer.dart';
 import '../widgets/profile_promo_card.dart';
 import 'edit_profile_screen.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -123,6 +125,18 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  // 👇 PLACE THE HELPER METHOD RIGHT HERE 👇
+  Future<void> _launchGitHubProfile(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not launch $url')),
+        );
+      }
+    }
   }
 
   @override
@@ -489,6 +503,8 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                   'John Michael A. Nave',
                   style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
+                trailing: Icon(Icons.open_in_new, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+                onTap: () => _launchGitHubProfile('https://github.com/Goldenavs'),
               ),
               Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
               ListTile(
@@ -497,6 +513,8 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                   'James Andrew S. Ologuin',
                   style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
+                trailing: Icon(Icons.open_in_new, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+                onTap: () => _launchGitHubProfile('https://github.com/OJamesAndrew'),
               ),
               Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
               ListTile(
@@ -505,6 +523,8 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                   'John Peter D. Pestaño',
                   style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
+                trailing: Icon(Icons.open_in_new, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+                onTap: () => _launchGitHubProfile('https://github.com/FloatingDust36'),
               ),
               Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
               ListTile(
@@ -513,6 +533,8 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                   'Jordan A. Cabandon',
                   style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
+                trailing: Icon(Icons.open_in_new, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+                onTap: () => _launchGitHubProfile('https://github.com/cabandonjordan'),
               ),
               Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
               ListTile(
@@ -521,6 +543,8 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                   'John Zachary N. Gillana',
                   style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
+                trailing: Icon(Icons.open_in_new, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+                onTap: () => _launchGitHubProfile('https://github.com/jzekken'),
               ),
             ],
           ),
