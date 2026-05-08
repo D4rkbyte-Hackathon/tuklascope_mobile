@@ -5,6 +5,7 @@ import '../../../../core/services/scan_service.dart';
 import 'scan_history_card.dart';
 import '../screens/scan_detail_screen.dart';
 import '../../../../core/navigation/main_nav_scope.dart';
+import 'dart:ui'; // 👈 NEW: Required for BackdropFilter (Glassmorphism)
 
 class ExploreHistoryTab extends StatefulWidget {
   const ExploreHistoryTab({super.key});
@@ -148,81 +149,147 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
     );
   }
 
-  // 🚀 MODAL: Filter Options
+  // 🚀 MODAL: Floating Sci-Fi Filter Dialog (Now using Theme Colors!)
   void _showFilterModal() {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      barrierColor: Colors.black.withValues(alpha: 0.6), // Darken background
       builder: (context) {
-        return StatefulBuilder( // StatefulBuilder to update modal state
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Filters', style: GoogleFonts.montserrat(fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 20),
-                  Text('SORT BY', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      ChoiceChip(
-                        label: const Text('Newest'),
-                        selected: _sortOrder == 'newest',
-                        onSelected: (val) {
-                          setModalState(() => _sortOrder = 'newest');
-                          setState(() {}); // Update main UI
-                        },
-                      ),
-                      ChoiceChip(
-                        label: const Text('Oldest'),
-                        selected: _sortOrder == 'oldest',
-                        onSelected: (val) {
-                          setModalState(() => _sortOrder = 'oldest');
-                          setState(() {}); // Update main UI
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Text('LENS / SUBJECT', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: ['STEM', 'History', 'Art', 'Biology'].map((lens) {
-                      return ChoiceChip(
-                        label: Text(lens),
-                        selected: _selectedLens == lens,
-                        onSelected: (val) {
-                          setModalState(() => _selectedLens = val ? lens : null);
-                          setState(() {}); // Update main UI
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                      child: Text('Apply Filters', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: Colors.white)),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final theme = Theme.of(context);
+            final isDark = theme.brightness == Brightness.dark;
+            
+            // 🚀 dynamically grab the app's iconic colors from the theme
+            final primaryColor = theme.colorScheme.primary; 
+            final accentColor = theme.colorScheme.secondary; 
+
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), // Glassmorphism
+                  child: Container(
+                    padding: const EdgeInsets.all(28.0),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface.withValues(alpha: isDark ? 0.7 : 0.9),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(color: primaryColor.withValues(alpha: 0.1), blurRadius: 30, spreadRadius: -5),
+                      ]
                     ),
-                  )
-                ],
-              ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // HEADER
+                        Row(
+                          children: [
+                            Icon(Icons.tune, color: primaryColor, size: 24),
+                            const SizedBox(width: 10),
+                            Text(
+                              'FILTER PROTOCOL', 
+                              style: GoogleFonts.orbitron(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: primaryColor)
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // SORT SECTION
+                        Text('SORT BY TIMELINE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          children: [
+                            _buildSciFiChip('Newest', _sortOrder == 'newest', accentColor, () {
+                              setDialogState(() => _sortOrder = 'newest');
+                              setState(() {});
+                            }),
+                            _buildSciFiChip('Oldest', _sortOrder == 'oldest', accentColor, () {
+                              setDialogState(() => _sortOrder = 'oldest');
+                              setState(() {});
+                            }),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 28),
+                        
+                        // LENS SECTION
+                        Text('SCANNER LENS', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: ['STEM', 'History', 'Art', 'Biology'].map((lens) {
+                            return _buildSciFiChip(lens, _selectedLens == lens, primaryColor, () {
+                              setDialogState(() => _selectedLens = _selectedLens == lens ? null : lens);
+                              setState(() {});
+                            });
+                          }).toList(),
+                        ),
+                        
+                        const SizedBox(height: 36),
+                        
+                        // APPLY BUTTON
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: primaryColor.withValues(alpha: 0.15),
+                              foregroundColor: primaryColor,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(color: primaryColor.withValues(alpha: 0.5), width: 1.5),
+                              )
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('ENGAGE FILTERS', style: GoogleFonts.orbitron(fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              ).animate().scale(begin: const Offset(0.9, 0.9), duration: 300.ms, curve: Curves.easeOutBack).fade(),
             );
           }
         );
       },
+    );
+  }
+
+  // Helper widget to build consistent Sci-Fi style toggles
+  Widget _buildSciFiChip(String label, bool isSelected, Color accentColor, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? accentColor.withValues(alpha: 0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+          boxShadow: isSelected ? [BoxShadow(color: accentColor.withValues(alpha: 0.2), blurRadius: 8)] : [],
+        ),
+        child: Text(
+          label.toUpperCase(),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected ? accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
     );
   }
 
@@ -293,7 +360,7 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
     );
   }
 
-  // 🚀 UI: The Cool Empty State
+  // 🚀 UI: The Cool Empty State (NOW ANIMATED!)
   Widget _buildCoolEmptyState(ThemeData theme) {
     return Center(
       child: Padding(
@@ -301,7 +368,6 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Floating 3D-like Icon effect
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -324,25 +390,28 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
               style: GoogleFonts.inter(fontSize: 15, color: theme.colorScheme.onSurface.withValues(alpha: 0.6), height: 1.5),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
             
-            // 🚀 Call to Action Button - Now Fully Wired!
+            // 🚀 Call to Action Button - NOW LIVELY!
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: theme.colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                elevation: 4,
-                shadowColor: theme.colorScheme.primary.withValues(alpha: 0.4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
+                elevation: 8, // Higher elevation
+                shadowColor: theme.colorScheme.primary.withValues(alpha: 0.6),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // Smoother curve
               ),
-              icon: const Icon(Icons.camera_alt),
+              icon: const Icon(Icons.camera_alt, size: 22),
               label: Text("Start Discovering", style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 16)),
               onPressed: () {
-                // This talks to your MainNavigationState to instantly slide over to Tab 1 (Scanner)
                 MainNavScope.maybeOf(context)?.goToTab(1);
               },
-            ),
+            )
+            // 💥 The Breathing & Shimmer Animation
+            .animate(onPlay: (c) => c.repeat(reverse: true))
+            .scaleXY(begin: 1.0, end: 1.04, duration: 1500.ms, curve: Curves.easeInOutSine)
+            .shimmer(delay: 2.seconds, duration: 1.seconds, color: Colors.white.withValues(alpha: 0.4)),
           ],
         ).animate().fade(duration: 800.ms).slideY(begin: 0.1, duration: 800.ms, curve: Curves.easeOutQuart),
       ),
