@@ -1,4 +1,5 @@
 //scan detail screen
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +9,7 @@ import '../../../../core/services/scan_service.dart';
 class ScanDetailScreen extends StatefulWidget {
   final String scanId;
   final String objectName;
-  final String imagUrl;
+  final String imagUrl; // Kept your spelling so it doesn't break your navigator!
 
   const ScanDetailScreen({
     super.key,
@@ -99,162 +100,212 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Extra padding at the bottom to ensure scroll doesn't hide behind the floating button
     final bottomPadding = MediaQuery.paddingOf(context).bottom + 100;
 
-    return GradientScaffold(
-      body: SafeArea(
-        bottom: false,
-        child: _isLoadingScan
-            ? Center(
-                child: CircularProgressIndicator(
-                  color: theme.colorScheme.secondary,
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
+      body: Stack(
+        children: [
+          // ==========================================
+          // 1. HERO BACKGROUND IMAGE
+          // ==========================================
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.of(context).size.height * 0.45,
+            child: widget.imagUrl.isNotEmpty
+                ? Image.network(
+                    widget.imagUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+                  )
+                : Container(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+          ),
+
+          // Gradient Fade into content
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.of(context).size.height * 0.45,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.5), // Darken top for back button
+                    Colors.transparent,
+                    theme.colorScheme.surface, // Fade smoothly into the surface below
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
                 ),
-              )
-            : CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  // ==========================================
-                  // FLOATING APP BAR
-                  // ==========================================
-                  SliverAppBar(
-                    floating: true,
-                    snap: true,
-                    elevation: 0,
-                    backgroundColor: Colors.transparent,
-                    leading: BackButton(color: theme.colorScheme.onSurface),
-                    title: Text(
-                      'Discovery',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                  // ==========================================
-                  // CONTENT
-                  // ==========================================
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        const SizedBox(height: 8),
-                        // 1. SCAN IMAGE HERO
-                        _buildScanImageSection(theme),
-                        const SizedBox(height: 32),
-                        // 2. GAMIFIED XP CARD
-                        _buildXPRewardCard(theme),
-                        const SizedBox(height: 28),
-                        // 3. SKILL CARD
-                        _buildSkillCard(theme),
-                        const SizedBox(height: 28),
-                        // 4. LESSON SECTION
-                        _buildLessonSection(theme),
-                        const SizedBox(height: 28),
-                        // 5. REAL WORLD SECTION
-                        if (_realWorldText.isNotEmpty)
-                          _buildRealWorldSection(theme),
-                        SizedBox(height: bottomPadding),
-                      ]),
-                    ),
-                  ),
-                ],
               ),
+            ),
+          ),
+
+          // ==========================================
+          // 2. MAIN CONTENT SHEET (Scrollable)
+          // ==========================================
+          Positioned.fill(
+            child: _isLoadingScan
+                ? Center(
+                    child: CircularProgressIndicator(color: theme.colorScheme.secondary),
+                  )
+                : CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      // Invisible spacer to push content down below the hero image
+                      SliverToBoxAdapter(
+                        child: SizedBox(height: MediaQuery.of(context).size.height * 0.35),
+                      ),
+                      // The Content Sheet
+                      SliverToBoxAdapter(
+                        child: Container(
+                          padding: EdgeInsets.fromLTRB(24, 32, 24, bottomPadding),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.shadowColor.withValues(alpha: 0.1),
+                                blurRadius: 20,
+                                offset: const Offset(0, -5),
+                              )
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Target Object Name Hero Text
+                              Text(
+                                widget.objectName,
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  color: theme.colorScheme.onSurface,
+                                  height: 1.1,
+                                ),
+                              ).animate().fade().slideY(begin: 0.2),
+
+                              const SizedBox(height: 32),
+
+                              // Render your existing beautiful cards!
+                              _buildXPRewardCard(theme),
+                              const SizedBox(height: 28),
+                              _buildSkillCard(theme),
+                              const SizedBox(height: 28),
+                              _buildLessonSection(theme),
+                              const SizedBox(height: 28),
+                              if (_realWorldText.isNotEmpty) _buildRealWorldSection(theme),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+
+          // ==========================================
+          // 3. HUD FLOATING BACK BUTTON
+          // ==========================================
+          Positioned(
+            top: MediaQuery.paddingOf(context).top + 16,
+            left: 20,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 14),
+                        const SizedBox(width: 8),
+                        Text(
+                          "RETURN",
+                          style: GoogleFonts.orbitron(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ).animate().fade().slideX(begin: -0.2),
+          ),
+
+          // ==========================================
+          // 4. FLOATING "ASK TUKLAS TUTOR" BUTTON
+          // ==========================================
+          if (!_isLoadingScan) // Only show when loaded
+            Positioned(
+              bottom: MediaQuery.paddingOf(context).bottom + 20,
+              left: 24,
+              right: 24,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.2), width: 1),
+                  ),
+                  elevation: 10,
+                  shadowColor: theme.colorScheme.primary.withValues(alpha: 0.6),
+                ),
+                icon: const Icon(Icons.smart_toy_outlined, size: 24),
+                label: Text(
+                  "ASK TUKLAS TUTOR",
+                  style: GoogleFonts.orbitron(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                onPressed: () {
+                  // TODO: Wire up to Tuklas Tutor Chat Sheet
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Tuklas Tutor initializing...', style: GoogleFonts.orbitron()),
+                      backgroundColor: theme.colorScheme.primary,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              )
+                  .animate(onPlay: (c) => c.repeat(reverse: true))
+                  .shimmer(duration: 2.seconds, delay: 1.seconds, color: Colors.white.withValues(alpha: 0.3))
+                  .scaleXY(begin: 1.0, end: 1.02, duration: 2.seconds, curve: Curves.easeInOut),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _buildScanImageSection(ThemeData theme) {
-    return Center(
-      child: Container(
-        width: double.infinity,
-        height: 240,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.secondary.withValues(alpha: 0.4),
-              blurRadius: 28,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Image background
-              widget.imagUrl.isNotEmpty
-                  ? Image.network(
-                      widget.imagUrl,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: theme.colorScheme.surface,
-                          child: Center(
-                            child: Icon(
-                              Icons.photo_outlined,
-                              size: 80,
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-                            ),
-                          ),
-                        );
-                      },
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          color: theme.colorScheme.surface,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                              color: theme.colorScheme.secondary,
-                            ),
-                          ),
-                        );
-                      },
-                    )
-                  : Container(
-                      color: theme.colorScheme.surface,
-                      child: Center(
-                        child: Icon(
-                          Icons.photo_outlined,
-                          size: 80,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-                        ),
-                      ),
-                    ),
-              // Overlay gradient
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: 0.15),
-                      Colors.black.withValues(alpha: 0.4),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    )
-        .animate()
-        .fadeIn(duration: 500.ms)
-        .slideY(begin: 0.2, duration: 500.ms, curve: Curves.easeOutCubic);
-  }
+  // =========================================================================
+  // YOUR EXISTING CARD BUILDERS (With minor layout tweaks to fit the new sheet)
+  // =========================================================================
 
   Widget _buildXPRewardCard(ThemeData theme) {
     final xpAwarded = _scanData?['xp_awarded'] as int? ?? 50;
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -339,6 +390,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
 
   Widget _buildSkillCard(ThemeData theme) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -416,6 +468,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
 
   Widget _buildLessonSection(ThemeData theme) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
@@ -502,6 +555,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
 
   Widget _buildRealWorldSection(ThemeData theme) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
