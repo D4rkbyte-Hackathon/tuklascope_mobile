@@ -8,6 +8,9 @@ import 'discoverer_row_card.dart';
 import 'leaderboard_podium.dart'; 
 import 'discoverer_profile_sheet.dart'; 
 
+// Enum to cleanly track our location sub-filters
+enum LocationScope { global, country, city }
+
 class ExploreLeaderboardTab extends StatefulWidget {
   const ExploreLeaderboardTab({super.key});
 
@@ -17,14 +20,24 @@ class ExploreLeaderboardTab extends StatefulWidget {
 
 class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with SingleTickerProviderStateMixin {
   late TabController _filterTabController;
+  final ScrollController _scrollController = ScrollController();
 
   List<Map<String, dynamic>> _leaderboardData = [];
   bool _isLoadingLeaderboard = true;
+  
   int _currentFilterIndex = 0; 
+  LocationScope _currentLocationScope = LocationScope.global; // Default sub-filter
+  
+  bool _showScrollButtons = false;
+
+  // Track the current user's location to handle null states
+  String? _myCountry;
+  String? _myCity;
 
   @override
   void initState() {
     super.initState();
+    // Reverted back to 2 main tabs
     _filterTabController = TabController(length: 2, vsync: this);
     _fetchLeaderboard();
 
@@ -32,6 +45,14 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
       if (_filterTabController.index != _currentFilterIndex) {
         _currentFilterIndex = _filterTabController.index;
         _fetchLeaderboard();
+      }
+    });
+
+    _scrollController.addListener(() {
+      if (_scrollController.offset > 200 && !_showScrollButtons) {
+        setState(() => _showScrollButtons = true);
+      } else if (_scrollController.offset <= 200 && _showScrollButtons) {
+        setState(() => _showScrollButtons = false);
       }
     });
   }
@@ -42,32 +63,56 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     try {
       final currentUser = Supabase.instance.client.auth.currentUser;
       
+      // 1. Base SELECT (FilterBuilder)
       var query = Supabase.instance.client
           .from('profiles')
-          .select('id, full_name, total_xp, education_level, profile_picture_url, bio, country, city, current_streak, current_level')
-          .order('total_xp', ascending: false) 
-          .limit(50); 
+          .select('id, full_name, total_xp, education_level, profile_picture_url, bio, country, city, current_streak, current_level');
 
-      if (_currentFilterIndex == 0 && currentUser != null) {
+      if (currentUser != null) {
         final myProfile = await Supabase.instance.client
             .from('profiles')
-            .select('education_level')
+            .select('education_level, country, city')
             .eq('id', currentUser.id)
             .maybeSingle();
 
-        final myGrade = myProfile?['education_level'];
-        
-        if (myGrade != null && myGrade.isNotEmpty) {
-          query = Supabase.instance.client
-              .from('profiles')
-              .select('id, full_name, total_xp, education_level, profile_picture_url, bio, country, city, current_streak, current_level')
-              .eq('education_level', myGrade) 
-              .order('total_xp', ascending: false)
-              .limit(50);
+        if (myProfile != null) {
+          _myCountry = myProfile['country'];
+          _myCity = myProfile['city'];
+
+          // 2. Apply Filters
+          if (_currentFilterIndex == 0 && myProfile['education_level'] != null) {
+            // Grade Level Tab
+            query = query.eq('education_level', myProfile['education_level']);
+          } else if (_currentFilterIndex == 1) {
+            // Location Tab -> Check sub-scope
+            if (_currentLocationScope == LocationScope.country && _myCountry != null && _myCountry!.isNotEmpty) {
+              query = query.eq('country', _myCountry!);
+            } else if (_currentLocationScope == LocationScope.city && _myCity != null && _myCity!.isNotEmpty) {
+              query = query.eq('city', _myCity!);
+            }
+            // If scope is global, we apply no extra filters
+          }
         }
       }
 
-      final response = await query;
+      // Intercept missing locations to save DB reads
+      if (_currentFilterIndex == 1) {
+        if (_currentLocationScope == LocationScope.country && (_myCountry == null || _myCountry!.isEmpty)) {
+          if (mounted) setState(() { _leaderboardData = []; _isLoadingLeaderboard = false; });
+          return;
+        }
+        if (_currentLocationScope == LocationScope.city && (_myCity == null || _myCity!.isEmpty)) {
+          if (mounted) setState(() { _leaderboardData = []; _isLoadingLeaderboard = false; });
+          return;
+        }
+      }
+
+      // 3. Modifiers (TransformBuilder)
+      final response = await query
+          .order('total_xp', ascending: false) 
+          .order('current_level', ascending: false) 
+          .order('current_streak', ascending: false) 
+          .limit(50);
       
       if (mounted) {
         setState(() {
@@ -97,9 +142,45 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     );
   }
 
+  void _scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(0, duration: const Duration(milliseconds: 500), curve: Curves.easeOutCubic);
+    }
+  }
+
+  void _scrollToMe() {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (currentUserId == null) return;
+
+    final myIndex = _leaderboardData.indexWhere((user) => user['id'] == currentUserId);
+    
+    if (myIndex == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('You are not in the top 50 for this category yet! Keep exploring!'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (myIndex < 3) {
+      _scrollToTop();
+      return;
+    }
+
+    final estimatedOffset = 220.0 + ((myIndex - 3) * 80.0);
+    
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(estimatedOffset, duration: const Duration(milliseconds: 600), curve: Curves.easeInOutCubic);
+    }
+  }
+
   @override
   void dispose() {
     _filterTabController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -125,19 +206,147 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
             ),
           ),
         ),
+        
+        // Main 2-Tab Filter
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: _buildLeaderboardFilterToggle(theme),
         ),
+
+        // Sub-Filter row that only shows when "Location" is selected
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutCubic,
+          child: _currentFilterIndex == 1 
+              ? _buildLocationSubFilters(theme)
+              : const SizedBox.shrink(),
+        ),
         
         Expanded(
-          child: _isLoadingLeaderboard
-            ? Center(child: CircularProgressIndicator(color: theme.colorScheme.secondary)) 
-            : _leaderboardData.isEmpty
-              ? Center(child: Text('No explorers found.', style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))))
-              : _buildGamifiedList(currentUserId, bottomInset, theme), 
+          child: _buildMainContent(theme, currentUserId, bottomInset),
         ),
       ],
+    );
+  }
+
+  Widget _buildMainContent(ThemeData theme, String? currentUserId, double bottomInset) {
+    if (_isLoadingLeaderboard) {
+      return Center(child: CircularProgressIndicator(color: theme.colorScheme.secondary));
+    }
+
+    // Checking missing states based on the sub-filter
+    if (_currentFilterIndex == 1) {
+      if (_currentLocationScope == LocationScope.country && (_myCountry == null || _myCountry!.isEmpty)) {
+        return _buildMissingLocationPrompt(theme, 'Country');
+      }
+      if (_currentLocationScope == LocationScope.city && (_myCity == null || _myCity!.isEmpty)) {
+        return _buildMissingLocationPrompt(theme, 'City');
+      }
+    }
+
+    if (_leaderboardData.isEmpty) {
+      return Center(child: Text('No explorers found in this category.', style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))));
+    }
+
+    return Stack(
+      children: [
+        _buildGamifiedList(currentUserId, bottomInset, theme),
+        _buildFloatingControls(theme, bottomInset),
+      ],
+    );
+  }
+
+  // The custom sub-filter UI
+  Widget _buildLocationSubFilters(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Row(
+        children: [
+          _buildSubFilterChip(theme, 'Global', LocationScope.global),
+          const SizedBox(width: 8),
+          _buildSubFilterChip(theme, 'Country', LocationScope.country),
+          const SizedBox(width: 8),
+          _buildSubFilterChip(theme, 'City', LocationScope.city),
+        ],
+      ).animate().fade().slideY(begin: -0.2, end: 0, curve: Curves.easeOutCubic),
+    );
+  }
+
+  Widget _buildSubFilterChip(ThemeData theme, String label, LocationScope scope) {
+    final isSelected = _currentLocationScope == scope;
+    
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          if (_currentLocationScope != scope) {
+            setState(() => _currentLocationScope = scope);
+            _fetchLeaderboard();
+          }
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? theme.colorScheme.secondary.withValues(alpha: 0.15) : theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? theme.colorScheme.secondary : theme.colorScheme.onSurface.withValues(alpha: 0.1),
+              width: 1.5,
+            ),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.montserrat(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+              color: isSelected ? theme.colorScheme.secondary : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMissingLocationPrompt(ThemeData theme, String locationType) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.location_off_rounded, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+            const SizedBox(height: 16),
+            Text(
+              'Location Required',
+              style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'To see the leaderboard for your $locationType, you need to set it in your profile first.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                // TODO: Navigation to edit profile screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Navigate to Edit Profile here!')),
+                );
+              },
+              icon: const Icon(Icons.edit_location_alt_rounded),
+              label: const Text('Update Profile'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ).animate().fade(duration: 400.ms).slideY(begin: 0.2),
+          ],
+        ),
+      ),
     );
   }
 
@@ -146,7 +355,8 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     final remaining = _leaderboardData.skip(3).toList();
 
     return ListView.builder(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset),
+      controller: _scrollController, 
+      padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset), // added slight top padding to space from tabs
       physics: const BouncingScrollPhysics(),
       itemCount: remaining.length + (top3.isNotEmpty ? 1 : 0),
       itemBuilder: (context, index) {
@@ -180,7 +390,7 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
             rank: actualRank,
             onTap: () => _showUserProfile(user, actualRank), 
           )
-          .animate(key: ValueKey('leaderboard_${_filterTabController.index}_$actualRank'))
+          .animate(key: ValueKey('leaderboard_${_filterTabController.index}_${_currentLocationScope}_$actualRank'))
           .fade(duration: 600.ms, delay: (50 * remainingIndex).ms)
           .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (50 * remainingIndex).ms),
         );
@@ -210,7 +420,42 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
         labelStyle: GoogleFonts.montserrat(fontWeight: FontWeight.w600, fontSize: 13),
         tabs: const [
           Tab(text: 'By Grade Level'),
-          Tab(text: 'All Users'),
+          Tab(text: 'By Location'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingControls(ThemeData theme, double bottomInset) {
+    return Positioned(
+      bottom: bottomInset - 50, 
+      right: 20,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'fab_me',
+            backgroundColor: theme.colorScheme.surface,
+            foregroundColor: theme.colorScheme.secondary,
+            onPressed: _scrollToMe,
+            child: const Icon(Icons.person_pin_circle_rounded),
+          ),
+          const SizedBox(height: 8),
+          
+          AnimatedOpacity(
+            opacity: _showScrollButtons ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 200),
+            child: IgnorePointer(
+              ignoring: !_showScrollButtons,
+              child: FloatingActionButton.small(
+                heroTag: 'fab_top',
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                onPressed: _scrollToTop,
+                child: const Icon(Icons.keyboard_arrow_up_rounded),
+              ),
+            ),
+          ),
         ],
       ),
     );
