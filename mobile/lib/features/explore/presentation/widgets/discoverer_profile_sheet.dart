@@ -1,6 +1,9 @@
 //discoverer profile sheet
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart'; // NAVBAR LISTENER
 
 class DiscovererProfileSheet extends StatelessWidget {
   final Map<String, dynamic> user;
@@ -18,210 +21,271 @@ class DiscovererProfileSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
+    // Extracting User Data
     final name = user['full_name'] ?? 'Anonymous Explorer';
-    final bio = user['bio'] ?? 'This explorer is out charting new territories and hasn\'t written a bio yet.';
-    final avatarUrl = user['profile_picture_url']; 
-    final grade = user['education_level'] ?? 'Unknown Grade';
+    final bio = user['bio'] ?? 'This explorer prefers to keep their journey a mystery... for now.';
     final xp = user['total_xp'] ?? 0;
-    final streak = user['current_streak'] ?? 0;
     final level = user['current_level'] ?? 1;
-    
+    final streak = user['current_streak'] ?? 0;
+    final avatarUrl = user['profile_picture_url'];
     final city = user['city'];
     final country = user['country'];
-    String locationText = '';
-    if (city != null && country != null) {
-      locationText = '$city, $country';
-    } else if (country != null) {
-      locationText = country;
-    } else if (city != null) {
-      locationText = city;
-    }
+    final grade = user['education_level'];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ==========================================
-          // 1. BANNER & AVATAR STACK
-          // ==========================================
-          SizedBox(
-            height: 140,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.bottomCenter,
-              children: [
-                Positioned.fill(
-                  bottom: 40,
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    // Dynamic Bottom Padding for NavBar
+    final navScope = MainNavScope.maybeOf(context);
+    final isNavBarVisible = navScope?.isNavBarVisible ?? true;
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
+    final extraBottomPadding = safeBottom + (isNavBarVisible ? 80.0 : 32.0);
+
+    // Determine the user's primary accent color based on rank
+    Color accentColor = theme.colorScheme.secondary;
+    if (rank == 1) accentColor = Colors.amber;
+    else if (rank == 2) accentColor = Colors.blueGrey[300]!;
+    else if (rank == 3) accentColor = const Color(0xFFCD7F32); 
+    else if (isMe) accentColor = theme.colorScheme.primary;
+
+    String locationText = [city, country].where((e) => e != null && e.isNotEmpty).join(', ');
+    if (locationText.isEmpty) locationText = 'Parts Unknown';
+
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pop(), // Close on background tap
+      child: Container(
+        color: Colors.transparent, // Captures taps outside the sheet
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end, // Push content to bottom
+          children: [
+            // Gesture catcher for the inside of the sheet so tapping it doesn't close it
+            GestureDetector(
+              onTap: () {}, 
+              child: Stack(
+                clipBehavior: Clip.none, // CRITICAL: Allows avatar to break out of its container
+                alignment: Alignment.topCenter,
+                children: [
+                  
+                  // The actual Sheet Body (Pushed down by 48 to make room for Avatar)
+                  Container(
+                    margin: const EdgeInsets.only(top: 48), 
+                    width: double.infinity,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: Container(
+                          // Notice the dynamic bottom padding added here!
+                          padding: EdgeInsets.only(top: 64, left: 24, right: 24, bottom: extraBottomPadding),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface.withValues(alpha: 0.85),
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                            border: Border(
+                              top: BorderSide(color: accentColor.withValues(alpha: 0.5), width: 2),
+                            ),
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                accentColor.withValues(alpha: 0.15),
+                                theme.colorScheme.surface.withValues(alpha: 0.95),
+                              ],
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // --- PROFILE HEADER ---
+                              Text(
+                                name,
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 24, 
+                                  fontWeight: FontWeight.w900, 
+                                  color: theme.colorScheme.onSurface
+                                ),
+                                textAlign: TextAlign.center,
+                              ).animate().fade(duration: 400.ms).slideY(begin: 0.2),
+
+                              const SizedBox(height: 6),
+
+                              // Location & Grade 
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.location_on_rounded, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    locationText,
+                                    style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13),
+                                  ),
+                                  if (grade != null && grade.isNotEmpty) ...[
+                                    const SizedBox(width: 12),
+                                    Container(width: 4, height: 4, decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle)),
+                                    const SizedBox(width: 12),
+                                    Icon(Icons.school_rounded, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      grade,
+                                      style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13),
+                                    ),
+                                  ],
+                                ],
+                              ).animate().fade(delay: 100.ms).slideY(begin: 0.2),
+
+                              const SizedBox(height: 24),
+
+                              // --- STATS ROW ---
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  _buildStatBlock(theme, 'RANK', '#$rank', accentColor),
+                                  _buildStatBlock(theme, 'LEVEL', '$level', theme.colorScheme.primary),
+                                  _buildStatBlock(theme, 'XP', '$xp', theme.colorScheme.secondary),
+                                  _buildStatBlock(theme, 'STREAK', '$streak🔥', Colors.orangeAccent),
+                                ],
+                              ).animate().fade(delay: 200.ms).scaleXY(begin: 0.9, end: 1.0, curve: Curves.easeOutBack),
+
+                              const SizedBox(height: 28),
+
+                              // --- BADGES SECTION ---
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.03),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'FEATURED BADGES',
+                                      style: GoogleFonts.orbitron(
+                                        fontSize: 12, 
+                                        fontWeight: FontWeight.bold, 
+                                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                        letterSpacing: 2.0,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        _buildBadgePlaceholder(theme, accentColor, 0),
+                                        const SizedBox(width: 24),
+                                        _buildBadgePlaceholder(theme, accentColor, 1),
+                                        const SizedBox(width: 24),
+                                        _buildBadgePlaceholder(theme, accentColor, 2),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ).animate().fade(delay: 300.ms).slideY(begin: 0.2),
+
+                              const SizedBox(height: 28),
+
+                              // --- BIO (Left Aligned Fix) ---
+                              Container(
+                                width: double.infinity, // Forces container to span full width
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  border: Border(left: BorderSide(color: accentColor, width: 3)),
+                                ),
+                                child: Text(
+                                  '"$bio"',
+                                  style: GoogleFonts.inter(
+                                    fontStyle: FontStyle.italic, 
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                                    height: 1.5,
+                                  ),
+                                  textAlign: TextAlign.left, // Aligns text to the left boundary
+                                ),
+                              ).animate().fade(delay: 400.ms).slideX(begin: 0.1),
+                              
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // --- AVATAR FIX ---
+                  // Placed at top: 0. Because the sheet has a margin of 48, the avatar sits perfectly half-in/half-out!
+                  Positioned(
+                    top: 0, 
                     child: Container(
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        shape: BoxShape.circle,
+                        color: theme.colorScheme.surface,
+                        boxShadow: [
+                          BoxShadow(color: accentColor.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2),
+                        ],
                       ),
-                      alignment: Alignment.topCenter,
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 12),
-                        height: 5,
-                        width: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                      child: CircleAvatar(
+                        radius: 46,
+                        backgroundColor: theme.colorScheme.surface,
+                        backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                        child: avatarUrl == null 
+                            ? Icon(Icons.person, color: accentColor, size: 40) 
+                            : null,
                       ),
-                    ),
+                    ).animate().scaleXY(begin: 0.0, curve: Curves.easeOutBack, duration: 600.ms)
+                     .shimmer(delay: 600.ms, color: Colors.white54, duration: 1.seconds),
                   ),
-                ),
-                Positioned(
-                  bottom: -10,
-                  child: CircleAvatar(
-                    radius: 46,
-                    backgroundColor: theme.scaffoldBackgroundColor,
-                    child: CircleAvatar(
-                      radius: 40,
-                      backgroundColor: theme.colorScheme.surface,
-                      backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                      child: avatarUrl == null
-                          ? Icon(Icons.person, size: 40, color: theme.colorScheme.primary)
-                          : null,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // ==========================================
-          // 2. HEADER: NAME & LOCATION
-          // ==========================================
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                Text(
-                  isMe ? '$name (You)' : name,
-                  style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.bold, height: 1.2),
-                  textAlign: TextAlign.center,
-                ),
-                if (locationText.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.location_on, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                      const SizedBox(width: 4),
-                      Text(
-                        locationText,
-                        style: GoogleFonts.inter(fontSize: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-                      ),
-                    ],
-                  ),
+                  
                 ],
-                const SizedBox(height: 12),
-                
-                // ==========================================
-                // 3. TAGS: RANK & EDUCATION
-                // ==========================================
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _buildTag(theme, 'Rank #$rank', theme.colorScheme.secondary, isGamified: true),
-                    _buildTag(theme, grade, theme.colorScheme.primary),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                
-                // ==========================================
-                // 4. STATS GRID
-                // ==========================================
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.05)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStatColumn(theme, Icons.auto_awesome, Colors.amber[600]!, '$xp', 'Total XP'),
-                      _buildDivider(theme),
-                      _buildStatColumn(theme, Icons.local_fire_department, Colors.deepOrange, '$streak', 'Day Streak'),
-                      _buildDivider(theme),
-                      _buildStatColumn(theme, Icons.star_rounded, theme.colorScheme.primary, 'Lv. $level', 'Current Level'),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // ==========================================
-                // 5. BIO SECTION
-                // ==========================================
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('About', style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    bio,
-                    style: GoogleFonts.inter(fontSize: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.7), height: 1.4),
-                  ),
-                ),
-              ],
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatBlock(ThemeData theme, String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.orbitron(fontSize: 20, fontWeight: FontWeight.w900, color: color),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: GoogleFonts.montserrat(
+            fontSize: 10, 
+            fontWeight: FontWeight.bold, 
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
           ),
-          SizedBox(height: MediaQuery.paddingOf(context).bottom + 90),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildTag(ThemeData theme, String text, Color color, {bool isGamified = false}) {
+  Widget _buildBadgePlaceholder(ThemeData theme, Color accent, int index) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      width: 56,
+      height: 56,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        shape: BoxShape.circle,
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+        border: Border.all(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.15), 
+          width: 2
+        ),
       ),
-      child: Text(
-        text,
-        style: isGamified 
-          ? GoogleFonts.orbitron(color: color, fontWeight: FontWeight.w700, fontSize: 12)
-          : GoogleFonts.montserrat(color: color, fontWeight: FontWeight.w700, fontSize: 12),
+      child: Center(
+        child: Icon(
+          Icons.lock_outline_rounded, 
+          size: 20, 
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.3) 
+        ),
       ),
+    )
+    .animate(onPlay: (c) => c.repeat(reverse: true))
+    .boxShadow(
+      begin: BoxShadow(color: accent.withValues(alpha: 0.0), blurRadius: 0),
+      end: BoxShadow(color: accent.withValues(alpha: 0.3), blurRadius: 15, spreadRadius: 1),
+      duration: 1.5.seconds,
+      delay: (index * 300).ms, 
     );
-  }
-
-  Widget _buildStatColumn(ThemeData theme, IconData icon, Color iconColor, String value, String label) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: iconColor, size: 28),
-          const SizedBox(height: 4),
-          Text(value, style: GoogleFonts.orbitron(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 2),
-          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)), textAlign: TextAlign.center),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDivider(ThemeData theme) {
-    return Container(height: 40, width: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1));
   }
 }
