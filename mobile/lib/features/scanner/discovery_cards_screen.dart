@@ -8,6 +8,7 @@ import 'package:tuklascope_mobile/features/home/providers/home_provider.dart';
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
 import '../../core/services/discovery_service.dart';
 import 'tuklas_tutor_sheet.dart';
+import 'package:tuklascope_mobile/features/profile/providers/profile_provider.dart';
 
 class DiscoveryCardsScreen extends ConsumerStatefulWidget {
   final String objectName;
@@ -505,8 +506,8 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                             onTap: isEvaluating
                                 ? null
                                 : () => setModalState(
-                                      () => selectedOption = option,
-                                    ),
+                                    () => selectedOption = option,
+                                  ),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
                               padding: const EdgeInsets.all(20),
@@ -678,15 +679,41 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
   }
 
   Future<void> _saveProgressToBackend() async {
+    // 1. Fetch current profile stats to determine alignment dynamically
+    final profileStats = await ref.read(profileStatsProvider.future);
+
+    // 2. Map their current XP to find their dominant RPG strand
+    final xpMap = {
+      'STEM': profileStats.stemXp,
+      'ABM': profileStats.abmXp,
+      'HUMSS': profileStats.humssXp,
+      'TVL': profileStats.tvlXp,
+    };
+
+    String topStrand = 'STEM';
+    int maxXp = -1;
+    xpMap.forEach((strand, xp) {
+      if (xp > maxXp) {
+        maxXp = xp;
+        topStrand = strand;
+      }
+    });
+
+    // 3. Check if the lens they chose matches their dominant strand
+    final isAligned = widget.selectedLens.toUpperCase() == topStrand;
+
+    // 4. Save securely (No XP passed from client!)
     final success = await DiscoveryService.saveDiscovery(
       objectName: widget.objectName,
       chosenLens: widget.selectedLens,
       imagePath: widget.imagePath,
       learningDeck: _deckData!,
-      xpAwarded: baseRewardXp,
+      isAlignedWithCompass: isAligned,
     );
+
     if (success && mounted) {
       ref.invalidate(homeStatsProvider);
+      ref.invalidate(profileStatsProvider); // Refresh the profile XP visually
     }
   }
 }

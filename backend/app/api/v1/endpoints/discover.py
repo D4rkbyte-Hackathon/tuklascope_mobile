@@ -74,29 +74,28 @@ async def save_discovery_choice(
         extracted_domain = concept_card.get("domain", "General Knowledge")
         extracted_skill = concept_card.get("skill", "General Skill")
 
-        # Supabase Save (This calculates and sets the final request.xp_awarded internally)
-        scan_id = save_user_discovery(db_client, user_id, request)
+        # 🚀 FIX: Supabase Save (Unpacks the tuple securely)
+        scan_id, final_xp = save_user_discovery(db_client, user_id, request)
 
         # Neo4j Save (The True RPG Skill Tree)
         graph_success = await save_skill_to_graph(
             user_id=user_id,
             strand_name=request.chosen_lens,
-            domain_name=extracted_domain,  # 🚀 NEW PARAMETER
-            skill_name=extracted_skill,  # Passes specific skill
-            xp_awarded=request.xp_awarded,
+            domain_name=extracted_domain,
+            skill_name=extracted_skill,
+            xp_awarded=final_xp,  # 🚀 FIX: Uses secure server XP
         )
 
         if not graph_success:
             logger.warning(
                 f"Failed to update Neo4j for user {user_id}. Supabase scan {scan_id} was saved."
             )
-            # Note: We don't fail the request here, but we log it. The user still gets their points in Postgres.
 
         return SaveScanResponse(
             status="success",
-            message=f"Action completed! {request.xp_awarded} XP added.",
+            message=f"Action completed! {final_xp} XP added.",
             scan_id=str(scan_id),
-            xp_awarded=request.xp_awarded,
+            xp_awarded=final_xp,  # 🚀 FIX: Returns secure XP to the client
         )
     except Exception as e:
         logger.error(f"Save Discovery Error for user {user_id}: {e}")

@@ -74,7 +74,7 @@ class DiscoveryService {
     required String chosenLens,
     required String imagePath,
     required Map<String, dynamic> learningDeck,
-    required int xpAwarded, // 🚀 FIX: Now demands the XP parameter
+    required bool isAlignedWithCompass, // 🚀 FIX: Must be calculated by the UI
   }) async {
     try {
       final session = Supabase.instance.client.auth.currentSession;
@@ -113,8 +113,8 @@ class DiscoveryService {
         'chosen_lens': chosenLens,
         'image_url': publicUrl,
         'learning_deck': learningDeck,
-        'xp_awarded': xpAwarded, // 🚀 FIX: Uses the passed parameter
-        'is_aligned_with_compass': false,
+        'is_aligned_with_compass':
+            isAlignedWithCompass, // 🚀 FIX: Dynamic alignment
       };
 
       final response = await ApiClient.post(
