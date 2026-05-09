@@ -13,12 +13,15 @@ class SaveScanRequest(BaseModel):
     learning_deck: dict[str, Any] = Field(
         ..., description="The completed deck JSON payload"
     )
-
     is_aligned_with_compass: bool = Field(
         default=False,
         description="Whether this strand matches their top compass affinity",
     )
-    # 🚀 FIX: xp_awarded has been completely eliminated from the Request.
+    # The tamper-proof token
+    gamification_token: str | None = Field(
+        default=None,
+        description="Signed token containing AI-verified pathway quest IDs",
+    )
 
 
 class SaveScanResponse(BaseModel):

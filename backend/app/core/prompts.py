@@ -13,6 +13,8 @@ UI RULES:
 2. `teaser_text` MUST be under 90 characters. Make it a cliffhanger or an exciting question to make them want to click.
 3. Make them culturally relevant to the Philippines.
 4. `scanned_object` must be the simple, direct name of the object.
+
+{active_quests_context}
 """
 
 # ==========================================
