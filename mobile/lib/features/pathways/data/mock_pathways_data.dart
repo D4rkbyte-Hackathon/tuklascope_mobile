@@ -15,6 +15,8 @@ final List<ProjectData> myProjects = [
 
     image: "https://picsum.photos/id/102/400/200",
 
+    badge: "assets/images/badges/badge_chemist.png",
+
     difficulty: "Beginner",
 
     points: 200,
@@ -44,6 +46,8 @@ final List<ProjectData> myProjects = [
     description: "Explore the living ecosystem right outside your door.",
 
     image: "https://picsum.photos/id/145/400/200",
+
+    badge: "assets/images/badges/badge_ecologist.png",
 
     difficulty: "Beginner",
 
@@ -75,6 +79,8 @@ final List<ProjectData> myProjects = [
 
     image: "https://picsum.photos/id/180/400/200",
 
+    badge: "assets/images/badges/badge_code.png",
+
     difficulty: "Intermediate",
 
     points: 350,
@@ -104,6 +110,8 @@ final List<ProjectData> myProjects = [
     description: "Find mathematical patterns hidden in the natural world around you.",
 
     image: "https://picsum.photos/id/119/400/200",
+
+    badge: "assets/images/badges/badge_math.png",
 
     difficulty: "Beginner",
 
@@ -135,6 +143,8 @@ final List<ProjectData> myProjects = [
 
     image: "https://picsum.photos/id/160/400/200",
 
+    badge: "assets/images/badges/badge_physics.png",
+
     difficulty: "Intermediate",
 
     points: 300,
@@ -164,6 +174,8 @@ final List<ProjectData> myProjects = [
     description: "Analyze the structures and machines built to solve real-world problems.",
 
     image: "https://picsum.photos/id/133/400/200",
+
+    badge: "assets/images/badges/badge_engineering.png",
 
     difficulty: "Advanced",
 
@@ -195,6 +207,8 @@ final List<ProjectData> myProjects = [
 
     image: "https://picsum.photos/id/152/400/200",
 
+    badge: "assets/images/badges/badge_market.png",
+
     difficulty: "Intermediate",
 
     points: 280,
@@ -225,6 +239,8 @@ final List<ProjectData> myProjects = [
 
     image: "https://picsum.photos/id/111/400/200",
 
+    badge: "assets/images/badges/badge_chronicler.png",
+
     difficulty: "Beginner",
 
     points: 200,
@@ -254,6 +270,8 @@ final List<ProjectData> myProjects = [
     description: "Master the science and culture behind food preparation and culinary arts.",
 
     image: "https://picsum.photos/id/169/400/200",
+    
+    badge: "assets/images/badges/badge_gourmet.png",
 
     difficulty: "Intermediate",
 
@@ -284,6 +302,8 @@ final List<ProjectData> myProjects = [
     description: "Build narratives and explore the art of storytelling through what you observe.",
 
     image: "https://picsum.photos/id/106/400/200",
+
+    badge: "assets/images/badges/badge_architect.png",
 
     difficulty: "Beginner",
 

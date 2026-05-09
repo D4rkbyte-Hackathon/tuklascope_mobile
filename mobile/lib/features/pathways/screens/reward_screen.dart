@@ -37,15 +37,17 @@ class RewardScreen extends StatelessWidget {
               children: [
                 const SizedBox(height: 100),
                 Center(
-                  child: Container(
+                  child: Container( //BADGE HERE BRUH IDK 
                     width: 130,
                     height: 130,
                     decoration: BoxDecoration(
-                      color: isCompleted ? Colors.green : theme.colorScheme.surface,
+                       image: DecorationImage(
+                        image: AssetImage(data.badge),
+                        fit: BoxFit.contain,
+                      ),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 6),
+                      border: Border.all(width: 6, color: isCompleted ? Colors.green : Colors.grey,),
                     ),
-                    child: Icon(Icons.star_rounded, size: 70, color: isCompleted ? Colors.yellow : theme.colorScheme.onSurface.withValues(alpha: 0.3)),
                   ),
                 ),
                 const SizedBox(height: 15),
