@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 import '../models/project_data.dart';
 import '../widgets/stats_block.dart';
+import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
 
 class RewardScreen extends StatelessWidget {
   final ProjectData data;
@@ -10,6 +11,9 @@ class RewardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final navScope = MainNavScope.maybeOf(context);
+    final isNavBarVisible = navScope?.isNavBarVisible ?? true;
+
     final bool isCompleted = data.progress == 100;
     final theme = Theme.of(context);
 
@@ -91,6 +95,12 @@ class RewardScreen extends StatelessWidget {
                         final isDone = entry.key < (data.progress / 100 * data.tasks.length).floor();
                         return _buildMilestone(entry.value, isDone, theme);
                       }),
+
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOutQuint,
+                        height: (isNavBarVisible ? 100.0 : 20.0) + MediaQuery.paddingOf(context).bottom,
+                      ),
                     ],
                   ),
                 ),
