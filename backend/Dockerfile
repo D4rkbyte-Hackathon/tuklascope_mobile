@@ -1,22 +1,30 @@
+# backend/Dockerfile
 FROM python:3.11-slim
-WORKDIR /app
 
-# Prevent Python from writing pyc files to disc & buffering stdout
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Install system dependencies (required for some C-extensions)
+# Install system dependencies (useful for OpenCV/vision libraries if needed later)
 RUN apt-get update && apt-get install -y \
-    gcc \
+    build-essential \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
-COPY requirements.txt .
+# Hugging Face requires a non-root user for security
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
+
+WORKDIR $HOME/app
+
+# Copy requirements and install
+COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
-COPY . .
+# Copy the rest of the application
+COPY --chown=user . .
 
-# Run Uvicorn via shell to evaluate the $PORT variable provided by Render
-# Defaulting to 8000 if $PORT is not set (e.g., local docker testing)
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Hugging Face routes traffic to port 7860
+EXPOSE 7860
+
+# Run the FastAPI server
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
