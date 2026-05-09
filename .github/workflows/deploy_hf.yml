@@ -3,9 +3,9 @@ name: Deploy Backend to Hugging Face Spaces
 on:
     push:
         branches:
-            - main # Or whichever branch you want to trigger the deployment
+            - main
         paths:
-            - "backend/**" # Only deploy when changes are made to the backend folder
+            - "backend/**"
             - ".github/workflows/deploy_hf.yml"
 
 jobs:
@@ -18,27 +18,28 @@ jobs:
             - name: Clone Hugging Face Space and Push Updates
               env:
                   HF_TOKEN: ${{ secrets.HF_TOKEN }}
-                  HF_USERNAME: "D4rkbyte" # e.g., d4rkbyte
-                  HF_SPACE_NAME: "tuklascope-api" # e.g., tuklascope-api
+                  HF_USERNAME: "D4rkbyte"
+                  HF_SPACE_NAME: "tuklascope-api"
               run: |
                   # 1. Configure Git for the bot
                   git config --global user.email "github-actions[bot]@users.noreply.github.com"
                   git config --global user.name "github-actions[bot]"
 
-                  # 2. Clone the Hugging Face Space into a temporary directory
+                  # 2. Clone the Hugging Face Space
                   git clone https://$HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$HF_SPACE_NAME hf_space
 
-                  # 3. Clean the old files in the HF space (excluding the .git folder and README.md)
-                  find hf_space -mindepth 1 -not -name '.git' -not -name 'README.md' -delete
-
-                  # 4. Copy the entire contents of the backend folder into the HF space root
-                  cp -r backend/* hf_space/
-
-                  # 5. Commit and push the changes to Hugging Face
+                  # 3. Enter the directory FIRST
                   cd hf_space
+
+                  # 4. Safely delete old files EXCEPT .git and README.md
+                  find . -maxdepth 1 ! -name '.' ! -name '.git' ! -name 'README.md' -exec rm -rf {} +
+
+                  # 5. Copy the backend files from the parent directory
+                  cp -r ../backend/* ./
+
+                  # 6. Commit and push directly to Hugging Face
                   git add .
 
-                  # Only commit and push if there are actual changes
                   if git diff --staged --quiet; then
                     echo "No changes to deploy."
                   else
