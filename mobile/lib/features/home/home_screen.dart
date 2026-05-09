@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
 import 'package:supabase_flutter/supabase_flutter.dart'; // 🚀 ADDED SUPABASE IMPORT
-
+import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 
 import 'providers/home_provider.dart';
@@ -18,6 +18,9 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final statsAsync = ref.watch(homeStatsProvider);
+
+    final navScope = MainNavScope.maybeOf(context);
+    final isNavBarVisible = navScope?.isNavBarVisible ?? true;
 
     final userName = statsAsync.value?.userName ?? '...';
     // 🚀 Removed heroTitle here
@@ -44,12 +47,7 @@ class HomeScreen extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  16.0,
-                  20.0,
-                  16.0,
-                  MediaQuery.paddingOf(context).bottom + 20,
-                ),
+                padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 0.0),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
 
@@ -88,6 +86,12 @@ class HomeScreen extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 32),
+
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOutQuint, // Matches your navbar animation curve
+                      height: (isNavBarVisible ? 100.0 : 20.0) + MediaQuery.paddingOf(context).bottom,
+                    ),
 
                     // 🚀 The Static Tutor Banner was intentionally removed from here.
                   ]),
