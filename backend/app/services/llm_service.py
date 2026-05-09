@@ -10,7 +10,7 @@ from app.core.prompts import (
     LEARNING_DECK_PROMPT,
     PATHFINDER_PROMPT,
 )
-from app.schemas.discover import DiscoverResponse
+from app.schemas.discover import DiscoverLLMResponse
 from app.schemas.pathfinder import PathfinderResponse
 from app.schemas.cards import LearningDeckResponse
 
@@ -24,7 +24,7 @@ llm = ChatGoogleGenerativeAI(
     max_retries=2,  # Built-in retry logic for brief network hiccups
 )
 
-structured_discover = llm.with_structured_output(DiscoverResponse)
+structured_discover = llm.with_structured_output(DiscoverLLMResponse)
 structured_pathfinder = llm.with_structured_output(PathfinderResponse)
 structured_deck = llm.with_structured_output(LearningDeckResponse)
 
@@ -38,11 +38,14 @@ LLM_TIMEOUT = 25.0
 
 
 async def generate_discovery_from_image(
-    image_bytes: bytes, grade_level: str
-) -> DiscoverResponse:
+    image_bytes: bytes, grade_level: str, active_quests_context: str = ""
+) -> DiscoverLLMResponse:
     try:
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-        prompt_text = VISION_DISCOVERY_PROMPT.format(grade_level=grade_level)
+        # Now passing the context
+        prompt_text = VISION_DISCOVERY_PROMPT.format(
+            grade_level=grade_level, active_quests_context=active_quests_context
+        )
 
         message = HumanMessage(
             content=[

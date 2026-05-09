@@ -16,6 +16,19 @@ class TeaserDoor(BaseModel):
     )
 
 
-class DiscoverResponse(BaseModel):
+# What Gemini outputs
+class DiscoverLLMResponse(BaseModel):
     scanned_object: str
     teaser_doors: list[TeaserDoor]
+    matched_quest_ids: list[str] = Field(
+        default_factory=list,
+        description="If active quests were provided, list the IDs of the ones satisfied by the image.",
+    )
+
+
+# What the API sends to the frontend
+class DiscoverResponse(DiscoverLLMResponse):
+    gamification_token: str | None = None
+    quest_target_lenses: list[str] = Field(
+        default_factory=list, description="Lenses to highlight in UI"
+    )
