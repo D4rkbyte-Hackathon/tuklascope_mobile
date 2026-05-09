@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'discoverer_row_card.dart';
 import 'leaderboard_podium.dart'; 
 import 'discoverer_profile_sheet.dart'; 
+import 'package:tuklascope_mobile/features/profile/screens/edit_profile_screen.dart';
 import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart'; // ADDED NAVBAR LISTENER
 
 enum LocationScope { global, country, city }
@@ -489,10 +490,11 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Navigate to Edit Profile here!')),
+              onPressed: () async {
+                await Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
                 );
+                _fetchLeaderboard(); // refreshes after returning
               },
               icon: const Icon(Icons.edit_location_alt_rounded),
               label: const Text('Update Profile'),
