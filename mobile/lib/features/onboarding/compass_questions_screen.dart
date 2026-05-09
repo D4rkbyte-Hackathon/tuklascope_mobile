@@ -19,11 +19,16 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
   final String _userEducationLevel = 'Others'; 
   late final List<CompassQuestion> _activeQuestions;
   final Map<int, CompassOption> _selectedAnswers = {};
+  
+  late final List<GlobalKey> _questionKeys;
+ 
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _initializeAndShuffleQuestions();
+    _questionKeys = List.generate(_activeQuestions.length, (_) => GlobalKey());
   }
 
   void _initializeAndShuffleQuestions() {
@@ -42,6 +47,46 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
 
   bool get _isAllAnswered => _selectedAnswers.length == _activeQuestions.length;
   double get _progress => _selectedAnswers.length / _activeQuestions.length;
+
+  void _onOptionSelected(int questionIndex, CompassOption option) {
+    setState(() => _selectedAnswers[questionIndex] = option);
+ 
+    // Find the next unanswered question index
+    int? nextIndex;
+    for (int i = questionIndex + 1; i < _activeQuestions.length; i++) {
+      if (!_selectedAnswers.containsKey(i)) {
+        nextIndex = i;
+        break;
+      }
+    }
+
+    if (nextIndex == null) {
+      for (int i = 0; i < questionIndex; i++) {
+        if (!_selectedAnswers.containsKey(i)) {
+          nextIndex = i;
+          break;
+        }
+      }
+    }
+    
+    if (nextIndex == null) return; // All done — no need to scroll
+ 
+    // Wait one frame for the card's answered-state animation to start,
+    // then smoothly scroll so the next card sits near the top of the viewport.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final key = _questionKeys[nextIndex!];
+      final ctx = key.currentContext;
+      if (ctx == null) return;
+ 
+      // Use Scrollable.ensureVisible for reliable positioning with padding offset
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutCubic,
+        alignment: 0.08, // position card near the top with a little breathing room
+      );
+    });
+  }
 
   void _submitAnswers() {
     if (_isAllAnswered) {
@@ -131,22 +176,25 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
         child: Stack(
           children: [
             ListView.separated(
+              controller: _scrollController,
+              cacheExtent: 5000,
               padding: EdgeInsets.only(
-                top: 24.0, 
-                left: 24.0, 
-                right: 24.0, 
-                bottom: MediaQuery.paddingOf(context).bottom + 120.0, 
+                top: 24.0,
+                left: 24.0,
+                right: 24.0,
+                bottom: MediaQuery.paddingOf(context).bottom + 120.0,
               ),
               physics: const BouncingScrollPhysics(),
               itemCount: _activeQuestions.length,
               separatorBuilder: (context, index) => const SizedBox(height: 32),
               itemBuilder: (context, questionIndex) {
                 return CompassQuestionCard(
+                  key: _questionKeys[questionIndex],
                   questionIndex: questionIndex,
                   totalQuestions: _activeQuestions.length,
                   questionData: _activeQuestions[questionIndex],
                   selectedOption: _selectedAnswers[questionIndex],
-                  onOptionSelected: (option) => setState(() => _selectedAnswers[questionIndex] = option),
+                  onOptionSelected: (option) => _onOptionSelected(questionIndex, option),
                 ).animate().fade(duration: 600.ms, delay: (100 * questionIndex).ms)
                  .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (100 * questionIndex).ms);
               },
