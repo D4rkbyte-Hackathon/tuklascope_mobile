@@ -9,14 +9,19 @@ logger = logging.getLogger(__name__)
 BASE_XP_PER_SCAN = 50
 
 
-def save_user_discovery(db_client: Client, user_id: str, request: SaveScanRequest) -> str:
+def save_user_discovery(
+    db_client: Client, user_id: str, request: SaveScanRequest
+) -> tuple[str, int]:
     """
     Saves the finalized scan, and triggers the Postgres RPC to update Streaks, XP, and the Skill Tree.
     """
     try:
         # 1. Calculate actual XP server-side
-        final_xp = BASE_XP_PER_SCAN * \
-            2 if request.is_aligned_with_compass else BASE_XP_PER_SCAN
+        final_xp = (
+            BASE_XP_PER_SCAN * 2
+            if request.is_aligned_with_compass
+            else BASE_XP_PER_SCAN
+        )
 
         # 2. Prepare data for the 'scans' history table
         data = {
@@ -26,15 +31,14 @@ def save_user_discovery(db_client: Client, user_id: str, request: SaveScanReques
             "image_url": request.image_url,
             "learning_deck": request.learning_deck,
             "xp_awarded": final_xp,  # Use the secure server calculated XP
-            "is_aligned_with_compass": request.is_aligned_with_compass
+            "is_aligned_with_compass": request.is_aligned_with_compass,
         }
 
         # 3. Insert into the scans table
         response = db_client.table("scans").insert(data).execute()
 
         if not response.data:
-            raise ValueError(
-                "Insert succeeded but no data returned from Supabase.")
+            raise ValueError("Insert succeeded but no data returned from Supabase.")
 
         scan_id = response.data[0]["id"]
 
@@ -44,20 +48,16 @@ def save_user_discovery(db_client: Client, user_id: str, request: SaveScanReques
             {
                 "p_user_id": user_id,
                 "p_strand": request.chosen_lens,
-                # The RPC handles the x2 multiplier internally based on the boolean!
                 "p_base_xp": BASE_XP_PER_SCAN,
-                "p_is_aligned": request.is_aligned_with_compass
-            }
+                "p_is_aligned": request.is_aligned_with_compass,
+            },
         ).execute()
 
-        # Override the request object so downstream processes (like Neo4j) use the correct XP
-        request.xp_awarded = final_xp
-
-        return scan_id
+        # 🚀 FIX: Return both the ID and the calculated XP securely
+        return scan_id, final_xp
 
     except Exception as e:
-        logger.error(
-            f"Failed to save scan to Supabase for user {user_id}: {str(e)}")
+        logger.error(f"Failed to save scan to Supabase for user {user_id}: {str(e)}")
         raise HTTPException(
             status_code=500, detail="Database error while saving scan history."
         )
