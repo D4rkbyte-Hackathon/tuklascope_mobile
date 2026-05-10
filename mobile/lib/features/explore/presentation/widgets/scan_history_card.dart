@@ -1,98 +1,242 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui';
 
-class ScanHistoryCard extends StatelessWidget {
+class ScanHistoryCard extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final String tag;
+  final String? imageUrl;
+  final int? xpAwarded;
+  final Color accent;
+  final VoidCallback? onTap;
+
   const ScanHistoryCard({
     super.key,
     required this.title,
     required this.subtitle,
     required this.tag,
-    required this.imageUrl,
+    this.imageUrl,
+    this.xpAwarded,
     required this.accent,
-    this.xpAwarded, // 👈 NEW: Added XP
     this.onTap,
   });
 
-  final String title;
-  final String subtitle;
-  final String tag;
-  final String? imageUrl;
-  final Color accent;
-  final int? xpAwarded;
-  final VoidCallback? onTap;
+  @override
+  State<ScanHistoryCard> createState() => _ScanHistoryCardState();
+}
+
+class _ScanHistoryCardState extends State<ScanHistoryCard> {
+  bool _isPressed = false;
+  bool _isFavorite = false; 
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final glowColor = widget.accent;
 
     return GestureDetector(
-      onTap: onTap,
-      child: Material(
-        elevation: isDark ? 0 : 4, // Slightly higher elevation for better depth
-        shadowColor: theme.shadowColor.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(24), // Smoother, modern curves
-        color: theme.colorScheme.surface,
-        child: Container(
-          decoration: isDark
-              ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
-                )
-              : null,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 🖼️ IMAGE HEADER
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        if (widget.onTap != null) widget.onTap!();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.96 : 1.0, 
+        duration: const Duration(milliseconds: 150),
+        child: AspectRatio(
+          aspectRatio: 0.68, 
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: glowColor.withValues(alpha: 0.2),
+                  blurRadius: 25,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), 
                 child: Container(
-                  height: 180, // Slightly taller for better preview
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-                  child: Stack(
-                    fit: StackFit.expand,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        theme.colorScheme.surface.withValues(alpha: isDark ? 0.8 : 0.95),
+                        theme.colorScheme.surface.withValues(alpha: isDark ? 0.6 : 0.85),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: glowColor.withValues(alpha: 0.4),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (imageUrl != null && imageUrl!.isNotEmpty)
-                        Image.network(
-                          imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildPlaceholder(theme),
-                        )
-                      else
-                        _buildPlaceholder(theme),
-                      
-                      // Gradient overlay for better text contrast if we decide to overlay text later
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.3),
-                            ],
-                          ),
+                      // TOP HALF: Holographic Image
+                      Expanded(
+                        flex: 5,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            widget.imageUrl != null && widget.imageUrl!.isNotEmpty
+                                ? Image.network(widget.imageUrl!, fit: BoxFit.cover)
+                                : Container(
+                                    color: theme.colorScheme.surfaceContainerHighest,
+                                    child: Icon(Icons.science, color: glowColor.withValues(alpha: 0.5), size: 50),
+                                  ),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.8),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            
+                            // Favorite Star Button
+                            Positioned(
+                              top: 12,
+                              left: 12,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _isFavorite = !_isFavorite),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.4),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: _isFavorite ? Colors.amber : Colors.white.withValues(alpha: 0.2),
+                                    ),
+                                    boxShadow: _isFavorite ? [
+                                      BoxShadow(color: Colors.amber.withValues(alpha: 0.5), blurRadius: 10)
+                                    ] : [],
+                                  ),
+                                  child: Icon(
+                                    _isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
+                                    color: _isFavorite ? Colors.amber : Colors.white,
+                                    size: 20,
+                                  ).animate(target: _isFavorite ? 1 : 0)
+                                   .scaleXY(begin: 1.0, end: 1.2, duration: 200.ms, curve: Curves.easeOutBack)
+                                   .then().scaleXY(end: 1.0),
+                                ),
+                              ),
+                            ),
+
+                            // Card Tag Badge
+                            Positioned(
+                              top: 12,
+                              right: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.8),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                                ),
+                                child: Text(
+                                  widget.tag.toUpperCase(),
+                                  style: GoogleFonts.orbitron(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onPrimary,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       
-                      // 🏷️ LENS BADGE
-                      Positioned(
-                        top: 12,
-                        right: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            tag.toUpperCase(),
-                            style: GoogleFonts.montserrat(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
-                              color: accent,
-                            ),
+                      // BOTTOM HALF: Stats & Data
+                      Expanded(
+                        flex: 5, // 👈 Gave a little more flex to fit the new skill box comfortably
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.title,
+                                    style: GoogleFonts.orbitron(
+                                      fontSize: 18, 
+                                      fontWeight: FontWeight.w800,
+                                      color: theme.colorScheme.onSurface,
+                                      letterSpacing: 0.5,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.timeline, size: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "Discovered: ${widget.subtitle}",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+
+                              // XP Reward Bar
+                              if (widget.xpAwarded != null && widget.xpAwarded! > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.tertiary.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: theme.colorScheme.tertiary.withValues(alpha: 0.4)),
+                                    boxShadow: [
+                                      BoxShadow(color: theme.colorScheme.tertiary.withValues(alpha: 0.3), blurRadius: 10),
+                                    ]
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.stars, color: theme.colorScheme.tertiary, size: 16)
+                                        .animate(onPlay: (c) => c.repeat())
+                                        .shimmer(duration: 1500.ms, color: Colors.white),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        "+${widget.xpAwarded} XP",
+                                        style: GoogleFonts.orbitron(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: theme.colorScheme.tertiary,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ).animate(onPlay: (c) => c.repeat(reverse: true))
+                                 .scaleXY(begin: 1.0, end: 1.02, duration: 2.seconds, curve: Curves.easeInOut),
+                            ],
                           ),
                         ),
                       ),
@@ -100,75 +244,10 @@ class ScanHistoryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              
-              // 📝 CONTENT SECTION
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.montserrat(
-                        fontSize: 20, 
-                        fontWeight: FontWeight.bold, 
-                        color: theme.colorScheme.onSurface
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // 📅 DATE & 💎 XP ROW
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.schedule, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                            const SizedBox(width: 6),
-                            Text(
-                              subtitle,
-                              style: GoogleFonts.inter(
-                                fontSize: 13, 
-                                fontWeight: FontWeight.w500,
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6)
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (xpAwarded != null && xpAwarded! > 0)
-                          Row(
-                            children: [
-                              Icon(Icons.auto_awesome, size: 16, color: Colors.amber.shade600),
-                              const SizedBox(width: 4),
-                              Text(
-                                '+$xpAwarded XP',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.amber.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildPlaceholder(ThemeData theme) {
-    return Icon(
-      Icons.camera_alt_outlined, 
-      size: 48, 
-      color: theme.colorScheme.onSurface.withValues(alpha: 0.2)
     );
   }
 }
