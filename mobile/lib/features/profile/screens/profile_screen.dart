@@ -31,10 +31,25 @@ class ProfileScreen extends ConsumerWidget {
 
     return GradientScaffold(
       appBar: AppBar(
-        title: Text(
-          'Profile & Skill Tree',
-          style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
-        ),
+        centerTitle: true, // Centers the title horizontally
+        title: RichText(
+          text: TextSpan(
+            style: GoogleFonts.montserrat(
+              fontSize: 30, 
+              fontWeight: FontWeight.bold,
+            ),
+            children: [
+              TextSpan(
+                text: 'Profile & ',
+                style: TextStyle(color: theme.colorScheme.primary),
+              ),
+              TextSpan(
+                text: 'Skill Tree',
+                style: TextStyle(color: theme.colorScheme.secondary),
+              ),
+            ],
+          ),
+        ).animate().fadeIn(duration: 600.ms).slideY(begin: -0.2), // Smooth drop-in animation
         foregroundColor: theme.colorScheme.primary,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -127,7 +142,6 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
     super.dispose();
   }
 
-  // 👇 PLACE THE HELPER METHOD RIGHT HERE 👇
   Future<void> _launchGitHubProfile(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
@@ -178,7 +192,9 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 Tab(text: 'About'),
               ],
             ),
-          ),
+          )
+          // --- Tab bar drop-in animation ---
+          .animate().fade(duration: 400.ms).slideY(begin: -0.2), 
         ),
         Expanded(
           child: TabBarView(
@@ -226,7 +242,11 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 MaterialPageRoute(builder: (_) => const EditProfileScreen()),
               ).then((_) => ref.invalidate(appUserProvider));
             },
-          ).animate().fade(duration: 600.ms).slideY(begin: 0.1),
+          )
+          .animate()
+          .scale(duration: 500.ms, curve: Curves.easeOutBack) // Bouncy pop in!
+          .shimmer(duration: 2.seconds, delay: 600.ms, color: Colors.white.withValues(alpha: 0.2)), // Shimmer across the card
+
           Padding(
             padding: const EdgeInsets.only(top: 28, bottom: 12),
             child: RichText(
@@ -251,7 +271,8 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 ],
               ),
             ),
-          ),
+          ).animate().fade(duration: 500.ms, delay: 100.ms).slideX(begin: -0.1),
+
           Padding(
             padding: const EdgeInsets.only(bottom: 28),
             child: Text(
@@ -263,7 +284,8 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 height: 1.35,
               ),
             ),
-          ),
+          ).animate().fade(duration: 500.ms, delay: 150.ms),
+
           statsAsync.when(
             loading: () => Center(
               child: CircularProgressIndicator(
@@ -277,10 +299,11 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
               padding: const EdgeInsets.only(bottom: 20),
               child: StatsGridCard(theme: theme, stats: stats),
             )
-                .animate()
-                .fade(duration: 600.ms, delay: 100.ms)
-                .slideY(begin: 0.1),
+            .animate()
+            .scale(delay: 200.ms, duration: 600.ms, curve: Curves.easeOutBack)
+            .fadeIn(duration: 400.ms),
           ),
+
           statsAsync.when(
             loading: () => const SizedBox(height: 350),
             error: (e, s) => const SizedBox(),
@@ -298,11 +321,12 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                   userName: widget.currentName,
                 ),
               )
-                  .animate()
-                  .fade(duration: 600.ms, delay: 200.ms)
-                  .slideY(begin: 0.1);
+              .animate()
+              .fade(duration: 600.ms, delay: 300.ms)
+              .scaleXY(begin: 0.9, end: 1.0, curve: Curves.easeOutBack);
             },
           ),
+          
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: ProfilePromoCard(
@@ -325,9 +349,9 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 );
               },
             )
-                .animate()
-                .fade(duration: 600.ms, delay: 300.ms)
-                .slideY(begin: 0.1),
+            .animate()
+            .fade(duration: 600.ms, delay: 400.ms)
+            .slideY(begin: 0.1),
           ),
         ],
       ),
@@ -442,7 +466,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
               ),
             ],
           ),
-        ).animate().fade(duration: 400.ms, delay: 200.ms).slideY(begin: 0.1),
+        ).animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1),
       ],
     );
   }

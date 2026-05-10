@@ -17,7 +17,23 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
-  
+  // Local state for UI mock-up: Fixed 3 slots (null means empty)
+  final List<String?> _selectedBadges = [null, null, null];
+
+  // Mock list of badges pulled from your assets
+  final List<String> _availableBadges = [
+    'assets/images/badges/badge_architect.png',
+    'assets/images/badges/badge_chemist.png',
+    'assets/images/badges/badge_chronicler.png',
+    'assets/images/badges/badge_code.png',
+    'assets/images/badges/badge_ecologist.png',
+    'assets/images/badges/badge_engineering.png',
+    'assets/images/badges/badge_gourmet.png',
+    'assets/images/badges/badge_market.png',
+    'assets/images/badges/badge_math.png',
+    'assets/images/badges/badge_physics.png',
+  ];
+
   Future<void> _showEditDialog(
     String title,
     String initialValue,
@@ -30,9 +46,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: theme.colorScheme.surface,
         title: Text(
-          title, 
+          title,
           style: GoogleFonts.montserrat(
-            color: theme.colorScheme.primary, 
+            color: theme.colorScheme.primary,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -145,6 +161,164 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ),
       );
     }
+  }
+
+  // Passing the slotIndex so we know exactly which position to fill
+  void _showBadgeSelectionSheet(ThemeData theme, int slotIndex) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Select a Badge for Slot ${slotIndex + 1}',
+                style: GoogleFonts.montserrat(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: _availableBadges.length,
+                  itemBuilder: (context, index) {
+                    final badge = _availableBadges[index];
+                    // Check if this specific badge is already in ANY of the slots
+                    final isSelected = _selectedBadges.contains(badge);
+
+                    return GestureDetector(
+                      onTap: () {
+                        if (!isSelected) {
+                          setState(() {
+                            // Assign the badge directly to the correct index
+                            _selectedBadges[slotIndex] = badge;
+                          });
+                          Navigator.pop(context);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Badge already equipped!', style: GoogleFonts.inter()),
+                              backgroundColor: theme.colorScheme.error,
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        }
+                      },
+                      child: Opacity(
+                        opacity: isSelected ? 0.3 : 1.0,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
+                                  : theme.colorScheme.secondary.withValues(alpha: 0.5),
+                              width: 2,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Image.asset(badge, fit: BoxFit.contain),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSelectedBadgeSlot(String badgePath, ThemeData theme, int slotIndex) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        GestureDetector(
+          onTap: () => _showBadgeSelectionSheet(theme, slotIndex),
+          child: Container(
+            width: 75,
+            height: 75,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              shape: BoxShape.circle,
+              border: Border.all(color: theme.colorScheme.secondary, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Image.asset(badgePath, fit: BoxFit.contain),
+            ),
+          ),
+        ),
+        Positioned(
+          top: -5,
+          right: -5,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                // Clear out this exact slot
+                _selectedBadges[slotIndex] = null;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.error,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 14, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyBadgeSlot(ThemeData theme, int slotIndex) {
+    return GestureDetector(
+      onTap: () => _showBadgeSelectionSheet(theme, slotIndex),
+      child: Container(
+        width: 75,
+        height: 75,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface.withValues(alpha: 0.5),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+            width: 2,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Icon(
+          Icons.add,
+          size: 32,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
+      ),
+    );
   }
 
   Widget _buildProfileTab(ThemeData theme) {
@@ -271,6 +445,43 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   ),
                 ],
               ),
+            ).animate().fade().slideY(begin: 0.1),
+            
+            const SizedBox(height: 32),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                'Display Badges',
+                style: GoogleFonts.montserrat(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                'Choose up to 3 badges to show on your profile card.',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(3, (index) {
+                final currentBadge = _selectedBadges[index];
+                if (currentBadge != null) {
+                  return _buildSelectedBadgeSlot(currentBadge, theme, index);
+                } else {
+                  return _buildEmptyBadgeSlot(theme, index);
+                }
+              }),
             ).animate().fade().slideY(begin: 0.1),
           ],
         );

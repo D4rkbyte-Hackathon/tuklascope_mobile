@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class ProfileHeaderCard extends StatelessWidget {
   final ThemeData theme;
@@ -21,6 +22,25 @@ class ProfileHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // --- Dynamic Streak Logic ---
+    Color streakColor;
+    IconData streakIcon;
+    String streakLabel;
+
+    if (streak >= 7) {
+      streakColor = const Color(0xFFFF512F); // Intense Fire Orange
+      streakIcon = Icons.local_fire_department_rounded;
+      streakLabel = '$streak Day Streak!';
+    } else if (streak >= 3) {
+      streakColor = const Color(0xFFF09819); // Warm Amber
+      streakIcon = Icons.whatshot_rounded;
+      streakLabel = '$streak Days';
+    } else {
+      streakColor = theme.colorScheme.onSurface.withValues(alpha: 0.5); // Greyish
+      streakIcon = Icons.local_fire_department_outlined;
+      streakLabel = '$streak Days';
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -36,14 +56,22 @@ class ProfileHeaderCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Avatar with a subtle glow effect
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: theme.colorScheme.primary,
-                    width: 4,
+                    width: 3,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                    ),
+                  ],
                 ),
                 child: CircleAvatar(
                   radius: 36,
@@ -83,32 +111,44 @@ class ProfileHeaderCard extends StatelessWidget {
                           ? '$educationLevel • $location'
                           : educationLevel,
                       style: GoogleFonts.inter(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.secondary,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Text.rich(
-                      TextSpan(
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.6,
-                          ),
+                    const SizedBox(height: 12),
+                    
+                    // --- Upgraded Dynamic Streak Pill ---
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: streakColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: streakColor.withValues(alpha: 0.5),
                         ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const TextSpan(text: 'Daily Streak '),
-                          TextSpan(
-                            text: '$streak',
-                            style: GoogleFonts.orbitron(
-                              fontSize: 22,
+                          Icon(streakIcon, size: 16, color: streakColor),
+                          const SizedBox(width: 6),
+                          Text(
+                            streakLabel,
+                            style: GoogleFonts.inter(
                               fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.secondary,
+                              fontSize: 13,
+                              color: streakColor,
                             ),
                           ),
                         ],
                       ),
+                    )
+                    // Continuous Shimmer Animation for the pop!
+                    .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                    .shimmer(
+                      duration: 2.seconds, 
+                      color: Colors.white.withValues(alpha: 0.5),
                     ),
                   ],
                 ),
