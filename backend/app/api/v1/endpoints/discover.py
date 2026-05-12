@@ -131,25 +131,67 @@ async def save_discovery_choice(
         if not graph_success:
             logger.warning(f"Failed to update Neo4j for user {user_id}.")
 
-        # --- NEW: Pathway Quest Commit ---
+        # --- NEW: Pathway Quest Commit & Completion Check ---
+        completed_quests = []
         if request.gamification_token:
             matches = verify_and_extract_matches(request.gamification_token)
             for match in matches:
                 # ONLY grant completion if they picked the highlighted door!
                 if match["lens"] == request.chosen_lens:
-                    # Update database, proving it with the scan_id
-                    db_client.table("user_pathway_tasks").update(
+                    task_id = match["id"]
+                    
+                    # 1. Update the specific task
+                    task_res = db_client.table("user_pathway_tasks").update(
                         {
                             "is_completed": True,
                             "scan_id": str(scan_id),
                             "completed_at": "now()",
                         }
-                    ).eq("user_id", user_id).eq("task_id", match["id"]).execute()
-                    # TODO: In Phase 2, we will add logic here to check if the whole pathway is complete
+                    ).eq("user_id", user_id).eq("task_id", task_id).execute()
+                    
+                    if task_res.data:
+                        user_pathway_id = task_res.data[0]["user_pathway_id"]
+                        
+                        # 2. Check if all tasks for this pathway are now complete
+                        remaining_tasks = db_client.table("user_pathway_tasks").select("id").eq("user_pathway_id", user_pathway_id).eq("is_completed", False).execute()
+                        
+                        if not remaining_tasks.data:
+                            # 3. THEY FINISHED THE QUEST! Update status and get pathway details
+                            pw_res = db_client.table("user_pathways").update(
+                                {"status": "completed", "completed_at": "now()"}
+                            ).eq("id", user_pathway_id).execute()
+                            
+                            if pw_res.data:
+                                pathway_id = pw_res.data[0]["pathway_id"]
+                                # Fetch the total points for the pathway
+                                pathway_data = db_client.table("pathways").select("total_points").eq("id", pathway_id).execute()
+                                
+                                if pathway_data.data:
+                                    bonus_points = pathway_data.data[0]["total_points"]
+                                    
+                                    # 4. Award the massive completion bonus to the user's profile
+                                    # (We use the same mechanism as the regular XP, just adding it to the total)
+                                    db_client.rpc(
+                                        "award_xp_and_update_streak",
+                                        {
+                                            "p_user_id": user_id,
+                                            "p_strand": request.chosen_lens,
+                                            "p_base_xp": bonus_points,
+                                            "p_is_aligned": False # Pathway bonuses don't get compass multipliers
+                                        },
+                                    ).execute()
+                                    
+                                    completed_quests.append(pathway_id)
+                                    final_xp += bonus_points # Update the return value for the UI
+
+        # Create a dynamic success message
+        msg = f"Action completed! {final_xp} XP added."
+        if completed_quests:
+            msg = f"QUEST COMPLETE! Massive bonus awarded! {final_xp} XP added."
 
         return SaveScanResponse(
             status="success",
-            message=f"Action completed! {final_xp} XP added.",
+            message=msg,
             scan_id=str(scan_id),
             xp_awarded=final_xp,
         )
