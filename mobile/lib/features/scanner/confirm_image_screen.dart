@@ -21,21 +21,24 @@ class ConfirmImageScreen extends ConsumerStatefulWidget {
 
 class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with SingleTickerProviderStateMixin {
   bool _isIsolating = true;
+  bool _segmentationFailed = false; // Tracks if ML Kit failed
   File? _segmentedImage;
   late AnimationController _glitchController;
-  late Animation<Color?> _glowAnimation; // Added for the breathing outline
+  late Animation<Color?> _glowAnimation; 
 
   @override
   void initState() {
     super.initState();
-    _glitchController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
+    _glitchController = AnimationController(
+      vsync: this, 
+      duration: const Duration(milliseconds: 1200)
+    )..repeat(reverse: true);
     _isolateSubject();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Initialize color tween here because it needs Theme.of(context)
     final theme = Theme.of(context);
     _glowAnimation = ColorTween(
       begin: theme.colorScheme.secondary, 
@@ -44,12 +47,23 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
   }
 
   Future<void> _isolateSubject() async {
+    // Reset state for retries
+    if (mounted) {
+      setState(() {
+        _isIsolating = true;
+        _segmentationFailed = false;
+      });
+    }
+
     try {
       final segmenter = SubjectSegmenter(
         options: SubjectSegmenterOptions(
           enableForegroundBitmap: true,
           enableForegroundConfidenceMask: false,
-          enableMultipleSubjects: SubjectResultOptions(enableConfidenceMask: false, enableSubjectBitmap: false),
+          enableMultipleSubjects: SubjectResultOptions(
+            enableConfidenceMask: false, 
+            enableSubjectBitmap: false
+          ),
         ),
       );
 
@@ -72,17 +86,27 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
       }
       segmenter.close();
     } catch (e) {
-      _handleSegmentationFailure('AI model initializing...');
+      debugPrint('🚨 ML Kit Segmentation Error: $e'); // Log the exact error!
+      _handleSegmentationFailure('AI model downloading or unavailable.');
     }
   }
 
   void _handleSegmentationFailure(String message) {
     if (mounted) {
-      setState(() => _isIsolating = false);
+      setState(() {
+        _isIsolating = false;
+        _segmentationFailed = true;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('$message Using original image.', style: GoogleFonts.orbitron()),
           backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'RETRY',
+            textColor: Colors.white,
+            onPressed: _isolateSubject, // Allow quick retry from snackbar
+          ),
         ),
       );
     }
@@ -120,7 +144,7 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
     }
   }
 
-  // Smooth alternating outline renderer
+  // Smooth alternating outline renderer for isolated subjects
   Widget _buildStickerOutline(File image) {
     const double stroke = 6.0; 
     return AnimatedBuilder(
@@ -136,7 +160,7 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                     offset: Offset(dx, dy),
                     child: ColorFiltered(
                       colorFilter: ColorFilter.mode(
-                        _glowAnimation.value ?? Colors.white, // Alternates colors smoothly
+                        _glowAnimation.value ?? Colors.white, 
                         BlendMode.srcIn,
                       ),
                       child: Image.file(image, fit: BoxFit.contain),
@@ -144,6 +168,31 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                   ),
             Image.file(image, fit: BoxFit.contain),
           ],
+        );
+      }
+    );
+  }
+
+  // Fallback box glow for the original image if segmentation fails
+  Widget _buildFallbackOutline(File image) {
+    return AnimatedBuilder(
+      animation: _glowAnimation,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: (_glowAnimation.value ?? Colors.white).withValues(alpha: 0.5),
+                blurRadius: 15,
+                spreadRadius: 2,
+              )
+            ]
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.file(image, fit: BoxFit.cover),
+          ),
         );
       }
     );
@@ -169,22 +218,35 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
                 border: Border(
-                  left: BorderSide(color: _isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary, width: 4),
+                  left: BorderSide(
+                    color: _segmentationFailed 
+                        ? theme.colorScheme.error 
+                        : (_isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary), 
+                    width: 4
+                  ),
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(_isIsolating ? Icons.hourglass_empty : Icons.check_circle_outline, 
-                       color: _isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary),
+                  Icon(
+                    _segmentationFailed ? Icons.warning_amber_rounded 
+                    : (_isIsolating ? Icons.hourglass_empty : Icons.check_circle_outline), 
+                    color: _segmentationFailed ? theme.colorScheme.error 
+                         : (_isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary)
+                  ),
                   const SizedBox(width: 10),
                   AnimatedBuilder(
                     animation: _glitchController,
                     builder: (context, child) {
+                      String statusText = 'SUBJECT ISOLATED';
+                      if (_isIsolating) statusText = 'PROCESSING IMAGE';
+                      if (_segmentationFailed) statusText = 'RAW SCAN MODE';
+
                       return Text(
-                        _isIsolating ? 'PROCESSING IMAGE' : 'SUBJECT ISOLATED',
+                        statusText,
                         style: GoogleFonts.orbitron(
                           color: Colors.white,
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 2,
                           shadows: [
@@ -212,12 +274,13 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                   color: const Color(0xFF0D1117), 
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: _isIsolating ? theme.colorScheme.primary.withValues(alpha: 0.5) : theme.colorScheme.secondary,
+                    color: _segmentationFailed ? theme.colorScheme.error.withValues(alpha: 0.5) 
+                         : (_isIsolating ? theme.colorScheme.primary.withValues(alpha: 0.5) : theme.colorScheme.secondary),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: (_isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary).withValues(alpha: 0.2),
+                      color: (_segmentationFailed ? theme.colorScheme.error : (_isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary)).withValues(alpha: 0.2),
                       blurRadius: 30,
                       spreadRadius: 5,
                     ),
@@ -234,12 +297,14 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                     // The image or breathing segmented sticker
                     Padding(
                       padding: const EdgeInsets.all(12.0),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: _segmentedImage != null && !_isIsolating
-                            ? _buildStickerOutline(_segmentedImage!) 
-                            : Image.file(widget.originalImage, fit: BoxFit.cover),
-                      ),
+                      child: _segmentedImage != null && !_isIsolating
+                          ? _buildStickerOutline(_segmentedImage!) 
+                          : (_segmentationFailed 
+                              ? _buildFallbackOutline(widget.originalImage) 
+                              : ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(widget.originalImage, fit: BoxFit.cover),
+                                )),
                     ),
 
                     // Scanning Loader Overlay
@@ -258,6 +323,20 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
               ),
             ),
             
+            // Optional Retry Button right below the chamber
+            if (_segmentationFailed)
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: TextButton.icon(
+                  onPressed: _isolateSubject,
+                  icon: Icon(Icons.refresh, color: theme.colorScheme.primary),
+                  label: Text(
+                    'RETRY ISOLATION', 
+                    style: GoogleFonts.orbitron(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)
+                  ),
+                ),
+              ),
+
             const Spacer(),
 
             // ACTIONS
