@@ -2,15 +2,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import '../config/api_config.dart';
 
 class HealthService {
-  // Note: We use the base domain here, not the /api/v1 prefix,
-  // because our FastAPI /health route is at the root level.
-  static const String _backendUrl = 'https://tuklascope-api.onrender.com';
+  // Dynamically get the root URL by stripping '/api/v1' from the baseUrl
+  static String get _backendUrl {
+    return ApiConfig.baseUrl.replaceAll('/api/v1', '');
+  }
 
   static Future<bool> pingBackend() async {
     try {
-      debugPrint('📡 Pinging Tuklascope Backend...');
+      debugPrint('📡 Pinging Tuklascope Backend at $_backendUrl...');
 
       final response = await http.get(Uri.parse('$_backendUrl/health'));
 

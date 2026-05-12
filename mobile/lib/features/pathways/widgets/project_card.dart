@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
-import '../models/project_data.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../models/pathway_models.dart';
 import '../utils/pathway_utils.dart';
 import '../screens/reward_screen.dart';
 
 class ProjectCard extends StatelessWidget {
-  final ProjectData data;
+  final Pathway pathway;
 
-  const ProjectCard({super.key, required this.data});
-  
+  const ProjectCard({super.key, required this.pathway});
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -18,7 +18,10 @@ class ProjectCard extends StatelessWidget {
       color: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-        side: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.05), width: 1),
+        side: BorderSide(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+          width: 1,
+        ),
       ),
       elevation: theme.brightness == Brightness.dark ? 0 : 2,
       clipBehavior: Clip.antiAlias,
@@ -27,7 +30,7 @@ class ProjectCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => RewardScreen(data: data),
+              builder: (context) => RewardScreen(pathway: pathway),
             ),
           );
         },
@@ -35,14 +38,17 @@ class ProjectCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Image.network(
-              data.image,
+              pathway.imageUrl,
               height: 140,
               width: double.infinity,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(
                 height: 140,
                 color: theme.colorScheme.surface.withValues(alpha: 0.5),
-                child: Icon(Icons.image_not_supported, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+                child: Icon(
+                  Icons.image_not_supported,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
               ),
             ),
             Padding(
@@ -54,15 +60,15 @@ class ProjectCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        data.difficulty,
-                        style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
+                        pathway.difficulty,
+                        style: GoogleFonts.montserrat(
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,
                         ),
                       ),
                       Text(
-                        "${data.points} Points",
-                        style: GoogleFonts.orbitron( // 🚀 SWAPPED TO ORBITRON FOR GAMIFIED POINTS
+                        "${pathway.totalPoints} Points",
+                        style: GoogleFonts.orbitron(
                           color: theme.colorScheme.secondary,
                           fontWeight: FontWeight.bold,
                         ),
@@ -71,8 +77,8 @@ class ProjectCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    data.title,
-                    style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
+                    pathway.title,
+                    style: GoogleFonts.montserrat(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurface,
@@ -80,34 +86,38 @@ class ProjectCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    data.description,
-                    style: GoogleFonts.inter( // 🚀 SWAPPED TO INTER
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6), 
-                      fontSize: 13
+                    pathway.description,
+                    style: GoogleFonts.inter(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 13,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Text(
-                        "Progress:", 
-                        style: GoogleFonts.inter(color: theme.colorScheme.onSurface) // 🚀 SWAPPED TO INTER
+                        "Progress:",
+                        style: GoogleFonts.inter(
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       SizedBox(
                         width: 30,
                         child: Text(
-                          "${data.progress}",
+                          "${pathway.progressPercentage}",
                           textAlign: TextAlign.end,
-                          style: GoogleFonts.orbitron( // 🚀 SWAPPED TO ORBITRON FOR PERCENTAGE
-                            fontWeight: FontWeight.bold, 
-                            color: getProgressColor(data.progress)
+                          style: GoogleFonts.orbitron(
+                            fontWeight: FontWeight.bold,
+                            color: getProgressColor(pathway.progressPercentage),
                           ),
                         ),
                       ),
                       Text(
-                        "% Completed", 
-                        style: GoogleFonts.inter(color: getProgressColor(data.progress)) // 🚀 SWAPPED TO INTER
+                        "% Completed",
+                        style: GoogleFonts.inter(
+                          color: getProgressColor(pathway.progressPercentage),
+                        ),
                       ),
                     ],
                   ),
