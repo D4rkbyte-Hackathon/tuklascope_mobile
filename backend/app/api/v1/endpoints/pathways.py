@@ -6,6 +6,7 @@ from app.schemas.pathways import (
     PathwayCatalogResponse,
     PathwaySchema,
     PathwayTaskSchema,
+    PathwayStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,9 @@ async def get_pathway_catalog(
 
         for p in catalog_res.data:
             p_id = p["id"]
-            u_state = user_enrollments.get(p_id, {"status": "available", "tasks": {}})
+            u_state = user_enrollments.get(
+                p_id, {"status": PathwayStatus.AVAILABLE.value, "tasks": {}}
+            )
 
             status_val = u_state["status"]
 
@@ -82,10 +85,10 @@ async def get_pathway_catalog(
                 int((completed_tasks / task_count * 100)) if task_count > 0 else 0
             )
 
-            if status_val == "active":
+            if status_val == PathwayStatus.ACTIVE.value:
                 active_count += 1
                 total_progress_sum += progress_pct
-            elif status_val == "completed":
+            elif status_val == PathwayStatus.COMPLETED.value:
                 total_points_earned += p.get("total_points", 0)
 
             pathways_list.append(
@@ -125,49 +128,34 @@ async def enroll_in_pathway(
 ):
     db_client, user_id = db_data
     try:
-        # 1. Ensure pathway exists and user isn't already enrolled
-        existing = (
-            db_client.table("user_pathways")
-            .select("id")
-            .eq("user_id", user_id)
-            .eq("pathway_id", pathway_id)
-            .execute()
+        # Atomic Transaction execution via our Supabase RPC
+        # This replaces 4 brittle REST calls with 1 perfectly safe transaction.
+        res = db_client.rpc(
+            "enroll_user_in_pathway", {"p_user_id": user_id, "p_pathway_id": pathway_id}
+        ).execute()
+
+        return res.data
+
+    except Exception as e:
+        error_message = str(e)
+        logger.error(
+            f"Failed to enroll in pathway {pathway_id}: {error_message}", exc_info=True
         )
-        if existing.data:
+
+        # Handle the specific exceptions raised from our PL/pgSQL function
+        if (
+            "already actively enrolled" in error_message
+            or "already completed" in error_message
+            or "attempted or abandoned" in error_message
+        ):
             raise HTTPException(
-                status_code=400,
-                detail="User is already enrolled or has abandoned this pathway.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_message.split("P0001: ")[
+                    -1
+                ],  # Extract just the message if wrapped by Postgres
             )
 
-        # 2. Create Enrollment
-        enroll_res = (
-            db_client.table("user_pathways")
-            .insert({"user_id": user_id, "pathway_id": pathway_id, "status": "active"})
-            .execute()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Enrollment failed due to server error.",
         )
-
-        user_pathway_id = enroll_res.data[0]["id"]
-
-        # 3. Fetch all tasks for this pathway
-        tasks_res = (
-            db_client.table("pathway_tasks")
-            .select("id")
-            .eq("pathway_id", pathway_id)
-            .execute()
-        )
-
-        # 4. Create empty progress rows for each task so the tracker works immediately
-        task_inserts = [
-            {"user_id": user_id, "task_id": t["id"], "user_pathway_id": user_pathway_id}
-            for t in tasks_res.data
-        ]
-
-        if task_inserts:
-            db_client.table("user_pathway_tasks").insert(task_inserts).execute()
-
-        return {"status": "success", "message": "Successfully enrolled in Pathway!"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to enroll in pathway {pathway_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Enrollment failed.")
