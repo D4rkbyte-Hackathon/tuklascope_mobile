@@ -1,4 +1,26 @@
+from enum import Enum
 from pydantic import BaseModel, Field
+
+
+class PathwayStatus(str, Enum):
+    AVAILABLE = "available"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    ABANDONED = "abandoned"
+
+
+class PathwayDifficulty(str, Enum):
+    BEGINNER = "Beginner"
+    INTERMEDIATE = "Intermediate"
+    ADVANCED = "Advanced"
+
+
+class PathwayStrand(str, Enum):
+    STEM = "STEM"
+    HUMSS = "HUMSS"
+    ABM = "ABM"
+    TVL = "TVL"
+    GENERAL = "GENERAL"
 
 
 class PathwayTaskSchema(BaseModel):
@@ -12,10 +34,10 @@ class PathwaySchema(BaseModel):
     title: str
     description: str
     image_url: str
-    difficulty: str
+    difficulty: PathwayDifficulty
     total_points: int
-    target_strand: str
-    status: str = Field(description="'available', 'active', or 'completed'")
+    target_strand: PathwayStrand
+    status: PathwayStatus = Field(description="User's current status for this pathway")
     progress_percentage: int = Field(default=0)
     tasks: list[PathwayTaskSchema] = []
 
