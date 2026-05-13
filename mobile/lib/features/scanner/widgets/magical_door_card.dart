@@ -8,6 +8,7 @@ class MagicalDoorCard extends StatefulWidget {
   final Map<String, dynamic> doorData;
   final bool isSecured;
   final bool isFocused;
+  final bool isQuestMatch; // 🚀 NEW PROPERTY
   final VoidCallback onEnterPortal;
 
   const MagicalDoorCard({
@@ -15,6 +16,7 @@ class MagicalDoorCard extends StatefulWidget {
     required this.doorData,
     required this.isSecured,
     required this.isFocused,
+    this.isQuestMatch = false, // 🚀 DEFAULT TO FALSE
     required this.onEnterPortal,
   });
 
@@ -33,8 +35,7 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
       vsync: this,
       duration: const Duration(seconds: 2),
     );
-    
-    // 🚀 OPTIMIZATION: Only start float animation if initially focused
+
     if (widget.isFocused) {
       _idleController.repeat(reverse: true);
     }
@@ -43,13 +44,12 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
   @override
   void didUpdateWidget(MagicalDoorCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
-    // 🚀 OPTIMIZATION: Start/Stop the float animation as the user swipes
+
     if (widget.isFocused && !oldWidget.isFocused) {
       _idleController.repeat(reverse: true);
     } else if (!widget.isFocused && oldWidget.isFocused) {
       _idleController.stop();
-      _idleController.value = 0.0; // Reset to ground state
+      _idleController.value = 0.0;
     }
   }
 
@@ -97,169 +97,231 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
     final teaser = widget.doorData['teaser_text'] ?? '';
     const int xp = 50;
 
-    final Color strandColor =
-        widget.isSecured ? Colors.greenAccent : _getColorForStrand(lens);
-    final IconData icon =
-        widget.isSecured ? Icons.verified : _getIconForStrand(lens);
+    final Color strandColor = widget.isSecured
+        ? Colors.greenAccent
+        : _getColorForStrand(lens);
+    final IconData icon = widget.isSecured
+        ? Icons.verified
+        : _getIconForStrand(lens);
 
     return AnimatedBuilder(
-        animation: _idleController,
-        builder: (context, child) {
-          // Only calculate float if focused
-          final double floatOffset = widget.isFocused
-              ? math.sin(_idleController.value * math.pi) * 8
-              : 0;
+      animation: _idleController,
+      builder: (context, child) {
+        final double floatOffset = widget.isFocused
+            ? math.sin(_idleController.value * math.pi) * 8
+            : 0;
 
-          return Transform.translate(
-            offset: Offset(0, floatOffset),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-              decoration: BoxDecoration(
-                // 🚀 OPTIMIZATION: Replaced BackdropFilter with a darker semi-transparent gradient
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.colorScheme.surface.withValues(alpha: 0.80),
-                    theme.colorScheme.surface.withValues(alpha: 0.65),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(
-                  color: strandColor.withValues(
-                      alpha: widget.isSecured ? 1.0 : 0.6),
-                  width: widget.isSecured ? 3 : 1.5,
-                ),
-                boxShadow: [
-                  // 🚀 OPTIMIZATION: Static shadow spread, cheaper to render
-                  BoxShadow(
-                    color: strandColor.withValues(
-                        alpha: widget.isFocused ? 0.25 : 0.05),
-                    blurRadius: 25,
-                    spreadRadius: widget.isFocused ? 8 : 2,
-                    offset: const Offset(0, 10),
-                  ),
+        return Transform.translate(
+          offset: Offset(0, floatOffset),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  theme.colorScheme.surface.withValues(alpha: 0.80),
+                  theme.colorScheme.surface.withValues(alpha: 0.65),
                 ],
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(32),
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                                color: strandColor.withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: strandColor.withValues(alpha: 0.3),
-                                )),
-                            child: Icon(icon, color: strandColor, size: 36),
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                // 🚀 MAKE THE BORDER GLOW GOLD IF IT'S A QUEST MATCH
+                color: widget.isQuestMatch && !widget.isSecured
+                    ? Colors.amberAccent
+                    : strandColor.withValues(
+                        alpha: widget.isSecured ? 1.0 : 0.6,
+                      ),
+                width: (widget.isSecured || widget.isQuestMatch) ? 3 : 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  // 🚀 MATCH THE GLOW
+                  color: widget.isQuestMatch && !widget.isSecured
+                      ? Colors.amberAccent.withValues(
+                          alpha: widget.isFocused ? 0.3 : 0.1,
+                        )
+                      : strandColor.withValues(
+                          alpha: widget.isFocused ? 0.25 : 0.05,
+                        ),
+                  blurRadius: 25,
+                  spreadRadius: widget.isFocused ? 8 : 2,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: strandColor.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: strandColor.withValues(alpha: 0.3),
+                            ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
+                          child: Icon(icon, color: strandColor, size: 36),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: widget.isSecured
+                                ? Colors.greenAccent.withValues(alpha: 0.15)
+                                : theme.colorScheme.primary.withValues(
+                                    alpha: 0.15,
+                                  ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
                               color: widget.isSecured
-                                  ? Colors.greenAccent.withValues(alpha: 0.15)
-                                  : theme.colorScheme.primary
-                                      .withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
+                                  ? Colors.greenAccent
+                                  : theme.colorScheme.primary.withValues(
+                                      alpha: 0.3,
+                                    ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                widget.isSecured
+                                    ? Icons.lock_open
+                                    : Icons.auto_awesome,
                                 color: widget.isSecured
                                     ? Colors.greenAccent
-                                    : theme.colorScheme.primary
-                                        .withValues(alpha: 0.3),
+                                    : const Color(0xFFFFC107),
+                                size: 16,
                               ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  widget.isSecured
-                                      ? Icons.lock_open
-                                      : Icons.auto_awesome,
+                              const SizedBox(width: 4),
+                              Text(
+                                widget.isSecured ? 'EXTRACTED' : '+$xp XP',
+                                style: GoogleFonts.orbitron(
                                   color: widget.isSecured
                                       ? Colors.greenAccent
-                                      : const Color(0xFFFFC107),
-                                  size: 16,
+                                      : theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  widget.isSecured ? 'EXTRACTED' : '+$xp XP',
-                                  style: GoogleFonts.orbitron(
-                                    color: widget.isSecured
-                                        ? Colors.greenAccent
-                                        : theme.colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const Spacer(),
+
+                    // 🚀 THE MAGICAL QUEST DETECTED BADGE
+                    if (widget.isQuestMatch && !widget.isSecured)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.amberAccent.withValues(alpha: 0.2),
+                          border: Border.all(color: Colors.amberAccent),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.amberAccent.withValues(alpha: 0.4),
+                              blurRadius: 12,
                             ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.star,
+                              color: Colors.amberAccent,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              "QUEST MATCH",
+                              style: GoogleFonts.orbitron(
+                                color: Colors.amberAccent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    Text(
+                      lens.toUpperCase(),
+                      style: GoogleFonts.orbitron(
+                        color: strandColor,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 3,
+                        fontSize: 16,
+                        shadows: [
+                          Shadow(
+                            color: strandColor.withValues(alpha: 0.5),
+                            blurRadius: 10,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 30),
-                      Text(
-                        lens.toUpperCase(),
-                        style: GoogleFonts.orbitron(
-                            color: strandColor,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 3,
-                            fontSize: 16,
-                            shadows: [
-                              Shadow(
-                                color: strandColor.withValues(alpha: 0.5),
-                                blurRadius: 10,
-                              )
-                            ]),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.isSecured ? "Data Fully Assimilated" : title,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                        height: 1.2,
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        widget.isSecured ? "Data Fully Assimilated" : title,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.montserrat(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
-                          height: 1.2,
+                    ),
+                    const Spacer(),
+                    Text(
+                      widget.isSecured
+                          ? "You have successfully absorbed the knowledge from this pathway. Choose another lens to continue extracting."
+                          : teaser,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.8,
                         ),
+                        height: 1.5,
                       ),
-                      const Spacer(),
-                      Text(
-                        widget.isSecured
-                            ? "You have successfully absorbed the knowledge from this pathway. Choose another lens to continue extracting."
-                            : teaser,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.8),
-                          height: 1.5,
-                        ),
+                    ),
+                    const Spacer(),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 60,
+                      child: AnimatedShimmerButton(
+                        isSecured: widget.isSecured,
+                        isFocused: widget.isFocused,
+                        strandColor: widget.isQuestMatch && !widget.isSecured
+                            ? Colors.amber
+                            : strandColor,
+                        onPressed: widget.isSecured
+                            ? null
+                            : widget.onEnterPortal,
                       ),
-                      const Spacer(),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 60,
-                        child: AnimatedShimmerButton(
-                          isSecured: widget.isSecured,
-                          isFocused: widget.isFocused, // Pass focus state down!
-                          strandColor: strandColor,
-                          onPressed: widget.isSecured
-                              ? null
-                              : widget.onEnterPortal,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          );
-        });
+          ),
+        );
+      },
+    );
   }
 }

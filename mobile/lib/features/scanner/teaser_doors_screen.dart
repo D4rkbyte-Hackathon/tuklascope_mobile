@@ -3,11 +3,7 @@ import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-// Your existing imports
 import 'discovery_cards_screen.dart';
-
-// The new separated widget imports
 import 'widgets/nexus_uplink_node.dart';
 import 'widgets/lens_mastery_tracker.dart';
 import 'widgets/magical_door_card.dart';
@@ -56,11 +52,12 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
   List<dynamic> get _teaserDoors => widget.aiData['teaser_doors'] ?? [];
   String get _objectName => widget.aiData['scanned_object'] ?? 'Unknown Object';
 
+  // 🚀 EXTRACT THE TARGET LENSES FROM THE API
+  List<String> get _questLenses =>
+      List<String>.from(widget.aiData['quest_target_lenses'] ?? []);
+
   Future<void> _enterPortal(String lens, String teaser) async {
-    final result = await Navigator.of(
-      context,
-      rootNavigator: true,
-    ).push(
+    final result = await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) => DiscoveryCardsScreen(
           objectName: _objectName,
@@ -85,7 +82,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
       return Scaffold(
         appBar: AppBar(title: Text('Error', style: GoogleFonts.montserrat())),
         body: Center(
-            child: Text('No pathways found.', style: GoogleFonts.inter())),
+          child: Text('No pathways found.', style: GoogleFonts.inter()),
+        ),
       );
     }
 
@@ -101,18 +99,17 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
             fontWeight: FontWeight.w800,
             fontSize: 18,
             letterSpacing: 2.5,
-            shadows: [
-              const Shadow(color: Colors.white54, blurRadius: 15),
-            ],
+            shadows: [const Shadow(color: Colors.white54, blurRadius: 15)],
           ),
         ),
         centerTitle: true,
-        // 🚀 UI UPGRADE: Gamified Disengage Node
-        leadingWidth: 80, // Give it space to spin
+        leadingWidth: 80,
         leading: Padding(
           padding: const EdgeInsets.only(left: 16.0),
           child: Center(
-            child: NexusUplinkNode(onPressed: () => Navigator.of(context).pop()),
+            child: NexusUplinkNode(
+              onPressed: () => Navigator.of(context).pop(),
+            ),
           ),
         ),
       ),
@@ -144,7 +141,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
                         Color(0x22E91E63),
                       ],
                       transform: GradientRotation(
-                          _bgAnimController.value * math.pi * 2),
+                        _bgAnimController.value * math.pi * 2,
+                      ),
                     ),
                   ),
                 );
@@ -206,20 +204,27 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
                         builder: (context, child) {
                           final double page =
                               _pageController.position.haveDimensions
-                                  ? _pageController.page!
-                                  : 1000.0;
+                              ? _pageController.page!
+                              : 1000.0;
                           final double difference = (page - index).abs();
 
-                          final double scale =
-                              (1 - (difference * 0.1)).clamp(0.85, 1.0);
-                          final double opacity =
-                              (1 - (difference * 0.5)).clamp(0.3, 1.0);
+                          final double scale = (1 - (difference * 0.1)).clamp(
+                            0.85,
+                            1.0,
+                          );
+                          final double opacity = (1 - (difference * 0.5)).clamp(
+                            0.3,
+                            1.0,
+                          );
 
                           final int actualIndex = index % _teaserDoors.length;
                           final door = _teaserDoors[actualIndex];
                           final lens = door['lens'] ?? 'Unknown';
+
                           final isSecured = _securedPortals.contains(lens);
                           final bool isFocused = difference < 0.2;
+                          // 🚀 CHECK IF THIS DOOR MATCHES A QUEST
+                          final bool isQuestMatch = _questLenses.contains(lens);
 
                           return Transform.scale(
                             scale: scale,
@@ -229,8 +234,11 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
                                 doorData: door,
                                 isSecured: isSecured,
                                 isFocused: isFocused,
+                                isQuestMatch: isQuestMatch, // PASS IT DOWN
                                 onEnterPortal: () => _enterPortal(
-                                    lens, door['teaser_text'] ?? ''),
+                                  lens,
+                                  door['teaser_text'] ?? '',
+                                ),
                               ),
                             ),
                           );
