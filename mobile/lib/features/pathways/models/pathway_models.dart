@@ -65,13 +65,14 @@ class Pathway {
   });
 
   factory Pathway.fromJson(Map<String, dynamic> json) {
+    final titleString = json['title'] as String? ?? 'Unknown';
     return Pathway(
       id: json['id'] as String,
       title: json['title'] as String,
       description: json['description'] as String,
       imageUrl: json['image_url'] as String,
       badgeUrl:
-          json['badge_url'] as String? ?? 'assets/images/badges/badge_code.png',
+          _getBadgePath(titleString, json['badge_url'] as String?),
       difficulty: json['difficulty'] as String,
       totalPoints: json['total_points'] as int? ?? 0,
       targetStrand: json['target_strand'] as String? ?? 'GENERAL',
@@ -83,6 +84,24 @@ class Pathway {
               .toList() ??
           [],
     );
+  }
+
+  static String _getBadgePath(String title, String? databaseUrl) {
+    if (databaseUrl != null && databaseUrl.isNotEmpty) return databaseUrl;
+
+    switch (title) {
+      case 'Kitchen Chemist': return 'assets/images/badges/badge_chemist.png';
+      case 'Backyard Ecologist': return 'assets/images/badges/badge_ecologist.png';
+      case 'Code Creator': return 'assets/images/badges/badge_code.png';
+      case 'Math in Nature': return 'assets/images/badges/badge_math.png';
+      case 'Physics Explorer': return 'assets/images/badges/badge_physics.png';
+      case 'Engineering Innovator': return 'assets/images/badges/badge_engineering.png';
+      case 'Market Maestro': return 'assets/images/badges/badge_market.png';
+      case 'Community Chronicler': return 'assets/images/badges/badge_chronicler.png';
+      case 'Gourmet Artisan': return 'assets/images/badges/badge_gourmet.png';
+      case 'Story Architect': return 'assets/images/badges/badge_architect.png';
+      default: return 'assets/images/badges/badge_code.png';
+    }
   }
 }
 
