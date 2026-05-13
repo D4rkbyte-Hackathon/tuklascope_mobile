@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
-import 'package:supabase_flutter/supabase_flutter.dart'; // 🚀 ADDED SUPABASE IMPORT
 import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 
 import 'providers/home_provider.dart';
+import '../pathways/providers/pathways_provider.dart';
 import 'widgets/home_header.dart';
 import 'widgets/daily_motivation.dart';
 import 'widgets/hero_scan_button.dart';
@@ -42,7 +41,12 @@ class HomeScreen extends ConsumerWidget {
         child: RefreshIndicator(
           color: theme.colorScheme.primary,
           backgroundColor: theme.colorScheme.surface,
-          onRefresh: () async => ref.refresh(homeStatsProvider.future),
+          onRefresh: () async {
+            await Future.wait([
+              ref.refresh(homeStatsProvider.future),
+              ref.read(pathwaysCatalogProvider.notifier).refresh(),
+            ]);
+          },
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [

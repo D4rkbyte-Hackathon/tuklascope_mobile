@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/navigation/main_nav_scope.dart';
 import '../../explore/presentation/screens/scan_detail_screen.dart';
+import '../../pathways/models/pathway_models.dart';
+import '../../pathways/providers/pathways_provider.dart';
 
 // =========================================================================
 // 1. QUICK RECOMMENDATION CARD (DYNAMIC)
@@ -212,42 +215,146 @@ class MiniSkillTreeCard extends StatelessWidget {
 // =========================================================================
 // 3. QUEST BOARD PREVIEW
 // =========================================================================
-class QuestBoardPreview extends StatelessWidget {
+class QuestBoardPreview extends ConsumerWidget {
   const QuestBoardPreview({super.key});
 
+  Pathway? _activePathway(PathwayCatalogResponse? catalog) {
+    if (catalog == null) return null;
+    for (final p in catalog.pathways) {
+      if (p.status == PathwayStatus.active) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  String? _nextTaskHint(Pathway pathway) {
+    for (final t in pathway.tasks) {
+      if (!t.isCompleted) {
+        return t.description;
+      }
+    }
+    return null;
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final catalogAsync = ref.watch(pathwaysCatalogProvider);
+
+    return catalogAsync.when(
+      loading: () => _questCardShell(
+        theme,
+        title: '…',
+        subtitle: 'Loading quest…',
+        progress: null,
+        onTap: () => MainNavScope.maybeOf(context)?.goToTab(2),
+      ),
+      error: (error, stackTrace) => _questCardShell(
+        theme,
+        title: 'Pathways',
+        subtitle: 'Pull to refresh',
+        progress: 0,
+        onTap: () => MainNavScope.maybeOf(context)?.goToTab(2),
+      ),
+      data: (catalog) {
+        final active = _activePathway(catalog);
+        if (active == null) {
+          return _questCardShell(
+            theme,
+            title: 'No active quest',
+            subtitle: 'Enroll in Pathways',
+            progress: 0,
+            onTap: () => MainNavScope.maybeOf(context)?.goToTab(2),
+          );
+        }
+        final hint = _nextTaskHint(active);
+        final pct = (active.progressPercentage.clamp(0, 100)) / 100.0;
+        return _questCardShell(
+          theme,
+          title: active.title,
+          subtitle: hint ?? 'Keep going!',
+          progress: pct,
+          onTap: () => MainNavScope.maybeOf(context)?.goToTab(2),
+        );
+      },
+    ).animate().fade(delay: 400.ms).slideY(begin: 0.1);
+  }
+
+  Widget _questCardShell(
+    ThemeData theme, {
+    required String title,
+    required String subtitle,
+    required double? progress,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
-      onTap: () => MainNavScope.maybeOf(context)?.goToTab(2), 
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
+          border: Border.all(
+            color: theme.colorScheme.primary.withOpacity(0.3),
+          ),
           boxShadow: [
-            BoxShadow(color: theme.colorScheme.primary.withOpacity(0.1), blurRadius: 10)
-          ]
+            BoxShadow(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+              blurRadius: 10,
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(Icons.map_rounded, color: theme.colorScheme.primary),
             const SizedBox(height: 12),
-            Text("ACTIVE QUEST", style: GoogleFonts.orbitron(fontSize: 9, color: theme.colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.bold, letterSpacing: 1)),
+            Text(
+              'ACTIVE QUEST',
+              style: GoogleFonts.orbitron(
+                fontSize: 9,
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text("Batang Siyentista", style: GoogleFonts.montserrat(fontWeight: FontWeight.w800, color: theme.colorScheme.primary, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis,), 
-            const SizedBox(height: 12),
-            // Glowing Progress Bar
+            Text(
+              title,
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.primary,
+                fontSize: 13,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                height: 1.25,
+                color: theme.colorScheme.onSurface.withOpacity(0.65),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 10),
             Container(
               height: 6,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                boxShadow: [BoxShadow(color: theme.colorScheme.primary.withOpacity(0.4), blurRadius: 6)]
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withOpacity(0.4),
+                    blurRadius: 6,
+                  ),
+                ],
               ),
               child: LinearProgressIndicator(
-                value: 0.3,
+                value: progress,
                 backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
                 color: theme.colorScheme.primary,
                 borderRadius: BorderRadius.circular(10),
@@ -256,7 +363,7 @@ class QuestBoardPreview extends StatelessWidget {
           ],
         ),
       ),
-    ).animate().fade(delay: 400.ms).slideY(begin: 0.1);
+    );
   }
 }
 
