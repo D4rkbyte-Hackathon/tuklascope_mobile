@@ -17,13 +17,18 @@ class MainNavigation extends StatefulWidget {
   State<MainNavigation> createState() => MainNavigationState();
 }
 
-class MainNavigationState extends State<MainNavigation> {
+class MainNavigationState extends State<MainNavigation> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   late PageController _pageController;
+  late AnimationController _shineController;
 
   Timer? _inactivityTimer;
   bool _isNavBarVisible = true;
   bool _isProgrammaticScroll = false; 
+
+  // Gesture Tracking Variables
+  Offset? _dragStartPosition;
+  DateTime? _lastTapTime;
 
   final List<Widget> _screens = const [
     TabWrapper(rootScreen: HomeScreen()),
@@ -37,16 +42,24 @@ class MainNavigationState extends State<MainNavigation> {
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _currentIndex);
+    
+    _shineController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4000), 
+    )..repeat();
+
     _startInactivityTimer();
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _shineController.dispose();
     _inactivityTimer?.cancel();
     super.dispose();
   }
 
+  // Helper to show nav and start the auto-hide timer
   void _startInactivityTimer() {
     if (!_isNavBarVisible) {
       setState(() => _isNavBarVisible = true);
@@ -61,12 +74,22 @@ class MainNavigationState extends State<MainNavigation> {
     });
   }
 
+  // Helper to forcefully hide nav immediately (e.g., when scrolling down)
+  void _hideNavBar() {
+    if (_isNavBarVisible) {
+      setState(() => _isNavBarVisible = false);
+    }
+    _inactivityTimer?.cancel();
+  }
+
   void _setNavBarVisibility(bool visible) {
     if (mounted) {
       setState(() => _isNavBarVisible = visible);
     }
     if (visible) {
       _startInactivityTimer(); 
+    } else {
+      _inactivityTimer?.cancel();
     }
   }
 
@@ -93,11 +116,15 @@ class MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    // 🚀 FIX: Grab ALL padding sides, not just the bottom
     final padding = MediaQuery.paddingOf(context);
     final bottomPadding = padding.bottom;
     final leftPadding = padding.left;
     final rightPadding = padding.right;
+    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
+    final baseBorderColor = theme.colorScheme.onSurface.withValues(alpha: 0.15);
 
     return MainNavScope(
       goToTab: goToTab,
@@ -107,10 +134,47 @@ class MainNavigationState extends State<MainNavigation> {
         extendBody: true,
         backgroundColor: Colors.transparent,
         
+        // Passive Raw Gesture Listener
         body: Listener(
-          onPointerDown: (_) => _startInactivityTimer(),
-          onPointerMove: (_) => _startInactivityTimer(),
-          onPointerUp: (_) => _startInactivityTimer(),
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (event) {
+            final now = DateTime.now();
+            
+            // 1. Detect Double Tap (Threshold: 300ms)
+            if (_lastTapTime != null && now.difference(_lastTapTime!).inMilliseconds < 300) {
+              _startInactivityTimer(); // Instantly show navbar
+              _lastTapTime = null; // Reset to prevent triple-tap bugs
+            } else {
+              _lastTapTime = now;
+            }
+            
+            // Record start position for scroll tracking
+            _dragStartPosition = event.position;
+          },
+          onPointerMove: (event) {
+            if (_dragStartPosition == null) return;
+            
+            // Calculate vertical distance moved
+            final dy = event.position.dy - _dragStartPosition!.dy;
+            
+            // Wait for a 20 pixel threshold so micro-jitters don't trigger it
+            if (dy.abs() > 20) {
+              if (dy < 0) {
+                // FINGER SWIPED UP (Scrolling top to bottom) -> Hide Navbar
+                _hideNavBar();
+              } else {
+                // FINGER SWIPED DOWN (Scrolling bottom to top) -> Show Navbar
+                _startInactivityTimer();
+              }
+              
+              // Reset drag start to the current position so the check repeats smoothly
+              // during a single long continuous scroll
+              _dragStartPosition = event.position;
+            }
+          },
+          onPointerUp: (_) => _dragStartPosition = null,
+          onPointerCancel: (_) => _dragStartPosition = null,
+          
           child: Stack(
             children: [
               PageView(
@@ -125,10 +189,9 @@ class MainNavigationState extends State<MainNavigation> {
               ),
               
               AnimatedPositioned(
-                duration: const Duration(milliseconds: 2000),
+                duration: const Duration(milliseconds: 2000), 
                 curve: Curves.easeOutQuint,
                 bottom: _isNavBarVisible ? (16 + bottomPadding) : -120,
-                // 🚀 FIX: Add left and right padding to prevent landscape clipping
                 left: 20 + leftPadding,
                 right: 20 + rightPadding,
                 child: AnimatedOpacity(
@@ -137,27 +200,64 @@ class MainNavigationState extends State<MainNavigation> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(35),
                     child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                       child: Container(
                         height: 70,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0D3B66).withValues(alpha: 0.85), 
                           borderRadius: BorderRadius.circular(35),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2), 
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
                         ),
-                        child: Row(
+                        child: Stack(
+                          alignment: Alignment.center,
                           children: [
-                            _buildNavItem(Icons.home_rounded, 'Home', 0),
-                            _buildNavItem(Icons.camera_alt_rounded, 'Scan', 1),
-                            _buildNavItem(Icons.map_rounded, 'Pathways', 2),
-                            _buildNavItem(Icons.person_rounded, 'Profile', 3),
-                            _buildNavItem(Icons.explore_rounded, 'Explore', 4),
+                            Positioned.fill(
+                              child: AnimatedBuilder(
+                                animation: _shineController,
+                                builder: (context, child) {
+                                  final slide = -3.0 + (_shineController.value * 6.0);
+                                  
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(35),
+                                      gradient: LinearGradient(
+                                        begin: Alignment(slide - 1.0, -1.0),
+                                        end: Alignment(slide + 1.0, 1.0),
+                                        colors: [
+                                          baseBorderColor, 
+                                          theme.colorScheme.primary.withValues(alpha: 0.15), 
+                                          theme.colorScheme.primary.withValues(alpha: 0.5), 
+                                          theme.colorScheme.primary.withValues(alpha: 0.15), 
+                                          baseBorderColor,
+                                        ],
+                                        stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+
+                            Positioned.fill(
+                              child: Padding(
+                                padding: const EdgeInsets.all(1.5),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(33.5),
+                                    color: isDark 
+                                        ? Colors.black.withValues(alpha: 0.45) 
+                                        : Colors.white.withValues(alpha: 0.6),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      _buildNavItem(Icons.home_rounded, 'Home', 0),
+                                      _buildNavItem(Icons.camera_alt_rounded, 'Scan', 1),
+                                      _buildNavItem(Icons.map_rounded, 'Pathways', 2),
+                                      _buildNavItem(Icons.person_rounded, 'Profile', 3),
+                                      _buildNavItem(Icons.explore_rounded, 'Explore', 4),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -174,9 +274,11 @@ class MainNavigationState extends State<MainNavigation> {
 
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isSelected = _currentIndex == index;
-    const activeColor = Color(0xFFFF9800); 
-    const activeTextColor = Color(0xFFFFFDF4); 
-    final inactiveColor = const Color(0xFFE0E0E0).withValues(alpha: 0.4); 
+    final theme = Theme.of(context);
+    
+    final activeColor = theme.colorScheme.tertiary; 
+    final activeTextColor = theme.brightness == Brightness.dark ? const Color(0xFFFFFDF4) : theme.colorScheme.primary; 
+    final inactiveColor = theme.colorScheme.onSurface.withValues(alpha: 0.4); 
 
     Widget content = Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -186,7 +288,7 @@ class MainNavigationState extends State<MainNavigation> {
           color: isSelected ? activeColor : inactiveColor, 
           size: isSelected ? 26 : 24,
           shadows: isSelected 
-              ? [BoxShadow(color: activeColor.withValues(alpha: 0.8), blurRadius: 12)] 
+              ? [BoxShadow(color: activeColor.withValues(alpha: 0.6), blurRadius: 8)] 
               : null, 
         ),
         
@@ -200,7 +302,7 @@ class MainNavigationState extends State<MainNavigation> {
                 fontSize: 10, 
                 fontWeight: FontWeight.bold,
                 shadows: [
-                  Shadow(color: activeTextColor.withValues(alpha: 0.6), blurRadius: 6) 
+                  Shadow(color: activeTextColor.withValues(alpha: 0.4), blurRadius: 4) 
                 ]
               ),
             ).animate().fade(duration: 200.ms).slideY(begin: 0.2, end: 0),
@@ -233,9 +335,9 @@ class MainNavigationState extends State<MainNavigation> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: activeColor.withValues(alpha: 0.2),
+                        color: activeColor.withValues(alpha: 0.15),
                         blurRadius: 15,
-                        spreadRadius: 5,
+                        spreadRadius: 2,
                       ),
                     ],
                   ),
