@@ -7,8 +7,6 @@ from app.schemas.pathways import (
     PathwaySchema,
     PathwayTaskSchema,
     PathwayStatus,
-    TaskCompletionRequest,
-    TaskCompletionResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -160,39 +158,4 @@ async def enroll_in_pathway(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Enrollment failed due to server error.",
-        )
-
-
-@router.post("/tasks/{task_id}/complete", response_model=TaskCompletionResponse)
-async def complete_pathway_task(
-    task_id: str,
-    request: TaskCompletionRequest,
-    db_data: tuple[Client, str] = Depends(get_user_db_client),
-):
-    db_client, user_id = db_data
-    try:
-        # Atomic Transaction via Supabase RPC
-        res = db_client.rpc(
-            "complete_pathway_task",
-            {"p_user_id": user_id, "p_task_id": task_id, "p_scan_id": request.scan_id},
-        ).execute()
-
-        return res.data
-
-    except Exception as e:
-        error_message = str(e)
-        logger.error(
-            f"Failed to complete task {task_id} for user {user_id}: {error_message}",
-            exc_info=True,
-        )
-
-        if "not found" in error_message or "already completed" in error_message:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=error_message.split("P0001: ")[-1],
-            )
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to complete pathway task due to server error.",
         )
