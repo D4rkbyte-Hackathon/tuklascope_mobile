@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
-import 'tuklas_tutor_sheet.dart';
+import 'tuklas_tutor_screen.dart'; // 🚀 UPDATED IMPORT
 import 'widgets/deck_query_modal.dart';
 import 'widgets/glass_concept_card.dart';
 import 'widgets/challenge_bottom_sheet.dart';
@@ -83,7 +83,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
       isScrollControlled: true,
       isDismissible: true, 
       enableDrag: true,    
-      useSafeArea: true, // BUG FIX: Forces the modal to respect the status bar
+      useSafeArea: true, 
       backgroundColor: Colors.transparent,
       builder: (context) => ChallengeBottomSheet(
         challengeCard: challengeCard,
@@ -147,7 +147,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                       ),
                     ),
 
-                    // 3. Native Custom Scroll View to fix scroll overlap bugs
+                    // 3. Native Custom Scroll View
                     _buildScrollableContent(theme),
                   ],
                 ),
@@ -282,7 +282,8 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                     ),
                     onPressed: () {
                       final conceptCard = _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
-                      showTuklasTutorSheet(
+                      // 🚀 UPDATED CALL: Navigator Push instead of Bottom Sheet
+                      navigateToTuklasTutor(
                         context,
                         objectName: widget.objectName,
                         strand: widget.selectedLens,
