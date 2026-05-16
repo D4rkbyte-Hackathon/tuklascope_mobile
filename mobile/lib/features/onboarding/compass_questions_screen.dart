@@ -23,7 +23,6 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
   late final List<GlobalKey> _questionKeys;
   final ScrollController _scrollController = ScrollController();
 
-  // 🚀 ADDED: Threshold Logic
   final int _minimumRequired = 5;
 
   @override
@@ -44,12 +43,20 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
     _activeQuestions.shuffle();
   }
 
-  // 🚀 UPDATED: Logic Getters
   bool get _canProceed => _selectedAnswers.length >= _minimumRequired;
   bool get _isAllAnswered => _selectedAnswers.length == _activeQuestions.length;
   double get _progress => _selectedAnswers.length / _activeQuestions.length;
 
   void _onOptionSelected(int questionIndex, CompassOption option) {
+    // 🚀 FIXED: Allow user to UNSELECT an option
+    if (_selectedAnswers[questionIndex] == option) {
+      setState(() {
+        _selectedAnswers.remove(questionIndex);
+      });
+      return; // Stop here, don't auto-scroll if they are just unselecting!
+    }
+
+    // Otherwise, set the new answer
     setState(() => _selectedAnswers[questionIndex] = option);
  
     int? nextIndex;
@@ -86,7 +93,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
   }
 
   void _submitAnswers() {
-    if (_canProceed) { // 🚀 CHANGED: Only requires the minimum 5 now
+    if (_canProceed) {
       final Map<Affinity, int> scores = {
         Affinity.stem: 0, Affinity.abm: 0, Affinity.humss: 0, Affinity.tvl: 0,
       };
@@ -95,7 +102,6 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
         scores[option.affinity] = (scores[option.affinity] ?? 0) + 1;
       }
 
-      // 🚀 CHANGED: Calculate percentage based ONLY on answered questions, not total available
       final int totalAnswered = _selectedAnswers.length;
       final Map<Affinity, double> percentages = {
         for (var key in scores.keys) key: scores[key]! / totalAnswered,
@@ -158,7 +164,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                 duration: const Duration(milliseconds: 500),
                 curve: Curves.easeOutCubic,
                 height: 4,
-                width: MediaQuery.of(context).size.width * _progress, // Shows progress towards 10
+                width: MediaQuery.of(context).size.width * _progress, 
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: [primaryBlue, neonOrange]),
                   boxShadow: [BoxShadow(color: primaryBlue.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 1)],
@@ -179,7 +185,6 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                 top: 24.0,
                 left: 24.0,
                 right: 24.0,
-                // 🚀 ADDED EXTRA PADDING at the bottom so the last card doesn't hide behind the taller submit bar
                 bottom: MediaQuery.paddingOf(context).bottom + 150.0,
               ),
               physics: const BouncingScrollPhysics(),
@@ -223,22 +228,25 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch, 
                 children: [
-                  // 🚀 ADDED: The dynamic tip text that appears after 5 questions
                   if (_canProceed && !_isAllAnswered)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(Icons.info_outline_rounded, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
                           const SizedBox(width: 8),
-                          Text(
-                            'You can proceed, or answer more for higher accuracy.',
-                            style: GoogleFonts.inter(
-                              fontSize: 12, 
-                              fontWeight: FontWeight.w500,
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.7)
+                          Expanded( 
+                            child: Text(
+                              'You can proceed now, or answer more for higher accuracy.',
+                              style: GoogleFonts.inter(
+                                fontSize: 12, 
+                                fontWeight: FontWeight.w500,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.7)
+                              ),
                             ),
                           ),
                         ],
@@ -268,11 +276,10 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                         child: Text(
-                          _isAllAnswered 
+                          _canProceed 
                               ? 'Discover Your Path' 
-                              : _canProceed 
-                                  ? 'Proceed Anyway' 
-                                  : 'Answer ${_minimumRequired - _selectedAnswers.length} more to proceed',
+                              : 'Answer ${_minimumRequired - _selectedAnswers.length} more to proceed',
+                          textAlign: TextAlign.center,
                           style: GoogleFonts.montserrat( 
                             fontSize: 18, 
                             fontWeight: FontWeight.bold, 
