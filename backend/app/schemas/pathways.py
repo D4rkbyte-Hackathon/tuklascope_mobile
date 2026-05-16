@@ -47,3 +47,14 @@ class PathwayCatalogResponse(BaseModel):
     average_progress: float
     total_points_earned: int
     pathways: list[PathwaySchema]
+
+
+class TaskCompletionRequest(BaseModel):
+    scan_id: str = Field(description="The ID of the scan that satisfies this task")
+
+
+class TaskCompletionResponse(BaseModel):
+    status: str
+    task_completed: bool
+    pathway_completed: bool
+    points_awarded: int
