@@ -139,50 +139,31 @@ async def save_discovery_choice(
                 # ONLY grant completion if they picked the highlighted door!
                 if match["lens"] == request.chosen_lens:
                     task_id = match["id"]
-                    
-                    # 1. Update the specific task
-                    task_res = db_client.table("user_pathway_tasks").update(
-                        {
-                            "is_completed": True,
-                            "scan_id": str(scan_id),
-                            "completed_at": "now()",
-                        }
-                    ).eq("user_id", user_id).eq("task_id", task_id).execute()
-                    
-                    if task_res.data:
-                        user_pathway_id = task_res.data[0]["user_pathway_id"]
-                        
-                        # 2. Check if all tasks for this pathway are now complete
-                        remaining_tasks = db_client.table("user_pathway_tasks").select("id").eq("user_pathway_id", user_pathway_id).eq("is_completed", False).execute()
-                        
-                        if not remaining_tasks.data:
-                            # 3. THEY FINISHED THE QUEST! Update status and get pathway details
-                            pw_res = db_client.table("user_pathways").update(
-                                {"status": "completed", "completed_at": "now()"}
-                            ).eq("id", user_pathway_id).execute()
-                            
-                            if pw_res.data:
-                                pathway_id = pw_res.data[0]["pathway_id"]
-                                # Fetch the total points for the pathway
-                                pathway_data = db_client.table("pathways").select("total_points").eq("id", pathway_id).execute()
-                                
-                                if pathway_data.data:
-                                    bonus_points = pathway_data.data[0]["total_points"]
-                                    
-                                    # 4. Award the massive completion bonus to the user's profile
-                                    # (We use the same mechanism as the regular XP, just adding it to the total)
-                                    db_client.rpc(
-                                        "award_xp_and_update_streak",
-                                        {
-                                            "p_user_id": user_id,
-                                            "p_strand": request.chosen_lens,
-                                            "p_base_xp": bonus_points,
-                                            "p_is_aligned": False # Pathway bonuses don't get compass multipliers
-                                        },
-                                    ).execute()
-                                    
-                                    completed_quests.append(pathway_id)
-                                    final_xp += bonus_points # Update the return value for the UI
+
+                    try:
+                        # 🚀 USE THE ATOMIC POSTGRES RPC WE BUILT!
+                        # This safely handles marking the task, checking for pathway completion,
+                        # and awarding the bonus XP in a single database transaction.
+                        rpc_res = db_client.rpc(
+                            "complete_pathway_task",
+                            {
+                                "p_user_id": user_id,
+                                "p_task_id": task_id,
+                                "p_scan_id": str(scan_id),
+                            },
+                        ).execute()
+
+                        result_data = rpc_res.data
+                        if result_data and result_data.get("pathway_completed"):
+                            completed_quests.append(task_id)
+                            # Add the securely calculated DB points to the UI response
+                            final_xp += result_data.get("points_awarded", 0)
+
+                    except Exception as rpc_err:
+                        logger.error(
+                            f"Failed to process quest completion for task {task_id}: {rpc_err}"
+                        )
+                        # We log the error but do not raise an HTTPException so the base scan still saves successfully.
 
         # Create a dynamic success message
         msg = f"Action completed! {final_xp} XP added."
