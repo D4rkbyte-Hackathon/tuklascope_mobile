@@ -4,11 +4,10 @@ import '../auth/presentation/screens/login_screen.dart';
 import '../../main_navigation.dart';
 import 'package:tuklascope_mobile/core/services/health_service.dart';
 
-// Import your custom Gradient Scaffold
 import '../../core/widgets/gradient_scaffold.dart';
+import 'compass_questions_screen.dart'; // 🚀 IMPORTED Compass Screen
 
 class SplashScreen extends StatefulWidget {
-  // 🚀 ADDED: Optional parameter to force the next destination
   final Widget? nextScreen; 
   
   const SplashScreen({super.key, this.nextScreen});
@@ -26,12 +25,12 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _checkAuthAndNavigate() async {
-    // 1. Wait 2 seconds for the splash effect
+    // 1. Wait for splash effect
     await Future.delayed(const Duration(seconds: 2));
 
     if (!mounted) return;
 
-    // 🚀 FIXED: If a specific next screen was requested, go there immediately!
+    // 2. If a specific next screen was requested (e.g. fresh sign up flow)
     if (widget.nextScreen != null) {
       Navigator.pushReplacement(
         context,
@@ -40,15 +39,48 @@ class _SplashScreenState extends State<SplashScreen> {
       return; 
     }
 
-    // 2. Default logic: Check Supabase to see if they are already logged in
+    // 3. Check Supabase to see if they are already logged in
     final session = Supabase.instance.client.auth.currentSession;
 
     if (session != null) {
+      
+      // 🚀 FIXED: Mandatory Compass Edge-case check!
+      try {
+        // Ping database to see if this user has compass results
+        final compassCheck = await Supabase.instance.client
+            .from('compass_results')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .limit(1);
+
+        if (compassCheck.isEmpty) {
+          // If empty, they quit the app before finishing! Force them back to the compass.
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const CompassQuestionsScreen()),
+          );
+          return;
+        }
+      } catch (e) {
+        debugPrint('🚨 COMPASS CHECK ERROR: $e');
+        if (mounted) {
+           // Show a warning banner so we know the DB is angry, instead of failing silently
+           ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(content: Text('Database Error: $e'), backgroundColor: Colors.red),
+           );
+        }
+      }
+
+      // If they passed the check, send them to Home!
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainNavigation()),
       );
+      
     } else {
+      // Not logged in -> Send to Login
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),

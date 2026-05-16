@@ -233,13 +233,23 @@ class CompassResultsScreen extends StatelessWidget {
                                   'user_id': userId,
                                   'stem_affinity': (affinityScores[Affinity.stem]! * 100).toInt(),
                                   'abm_affinity': (affinityScores[Affinity.abm]! * 100).toInt(),
-                                  'hum_affinity': (affinityScores[Affinity.humss]! * 100).toInt(),
+                                  'humss_affinity': (affinityScores[Affinity.humss]! * 100).toInt(), // 🚀 FIXED: Matches your DB perfectly now!
                                   'tvl_affinity': (affinityScores[Affinity.tvl]! * 100).toInt(),
-                                });
+                                }, onConflict: 'user_id'); // 🚀 ADDED: Ensures it updates if they retake the test
                               }
                             } catch (e) {
-                              debugPrint('Failed to save compass results: $e');
-                            }
+                                debugPrint('Failed to save compass results: $e');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('DB Error: $e'), 
+                                      backgroundColor: Colors.red,
+                                      duration: const Duration(seconds: 5),
+                                    )
+                                  );
+                                }
+                                return; // Stop navigation so you can read the error!
+                              }
 
                             if (context.mounted) {
                               Navigator.pushAndRemoveUntil(
