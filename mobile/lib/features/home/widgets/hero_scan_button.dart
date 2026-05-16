@@ -1,3 +1,4 @@
+import 'dart:ui'; // 🚀 Required for BackdropFilter and ImageFilter
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart'; 
@@ -6,13 +7,12 @@ import '../../../core/navigation/main_nav_scope.dart';
 class HeroScanButton extends StatelessWidget {
   const HeroScanButton({super.key});
 
-  // 🚀 New Tutorial Modal Method
+  // 🚀 Updated to a Central Dialog instead of a Bottom Sheet
   void _showTutorialModal(BuildContext context, ThemeData theme) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => _TutorialSheet(theme: theme),
+      barrierColor: Colors.black.withOpacity(0.4), // Dims the background slightly
+      builder: (context) => _TutorialDialog(theme: theme),
     );
   }
 
@@ -20,7 +20,6 @@ class HeroScanButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    // 🎨 UI FIX: Using App Theme instead of hardcoded hex values
     final colorPrimary = theme.colorScheme.primary; 
     final colorSecondary = theme.colorScheme.tertiary; 
     final deepBackground = theme.colorScheme.surface; 
@@ -127,14 +126,13 @@ class HeroScanButton extends StatelessWidget {
                 // ==========================================
                 // 2. TAPPABLE GAMIFIED POINTERS
                 // ==========================================
-                
                 Positioned(
                   top: 10, left: 10,
                   child: _FloatingPointer(
                     title: "NEW QUEST", subtitle: "Scan to begin\nyour journey",
                     icon: Icons.south_east_rounded, color: colorPrimary,
                     isTop: true, isLeft: true, delayMs: 0, durationMs: 1800,
-                    onTap: () => MainNavScope.maybeOf(context)?.goToTab(2), // 🚀 Routes to Pathways
+                    onTap: () => MainNavScope.maybeOf(context)?.goToTab(2), 
                   ),
                 ),
 
@@ -144,7 +142,7 @@ class HeroScanButton extends StatelessWidget {
                     title: "ANALYSIS", subtitle: "Identify items\ninstantly",
                     icon: Icons.south_west_rounded, color: colorSecondary,
                     isTop: true, isLeft: false, delayMs: 700, durationMs: 2200,
-                    onTap: () => MainNavScope.maybeOf(context)?.goToTab(4), // 🚀 Routes to Profile/Stats
+                    onTap: () => MainNavScope.maybeOf(context)?.goToTab(4), 
                   ),
                 ),
 
@@ -154,7 +152,7 @@ class HeroScanButton extends StatelessWidget {
                     title: "TUTORIAL", subtitle: "Learn about\nthe world",
                     icon: Icons.north_east_rounded, color: colorSecondary,
                     isTop: false, isLeft: true, delayMs: 300, durationMs: 1600,
-                    onTap: () => _showTutorialModal(context, theme), // 🚀 Opens Tutorial Sheet
+                    onTap: () => _showTutorialModal(context, theme), 
                   ),
                 ),
 
@@ -164,7 +162,7 @@ class HeroScanButton extends StatelessWidget {
                     title: "DISCOVERY", subtitle: "Unlock hidden\nartifacts",
                     icon: Icons.north_west_rounded, color: colorPrimary,
                     isTop: false, isLeft: false, delayMs: 1100, durationMs: 2000,
-                    onTap: () => MainNavScope.maybeOf(context)?.goToTab(4), // 🚀 Routes to Profile
+                    onTap: () => MainNavScope.maybeOf(context)?.goToTab(4), 
                   ),
                 ),
               ],
@@ -189,9 +187,6 @@ class HeroScanButton extends StatelessWidget {
   }
 }
 
-// ==========================================================
-// 🚀 TAPPABLE FLOATING POINTER WIDGET
-// ==========================================================
 class _FloatingPointer extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -201,7 +196,7 @@ class _FloatingPointer extends StatelessWidget {
   final bool isLeft;
   final int delayMs;
   final int durationMs;
-  final VoidCallback onTap; // 🚀 Added onTap callback
+  final VoidCallback onTap; 
 
   const _FloatingPointer({
     required this.title,
@@ -223,7 +218,6 @@ class _FloatingPointer extends StatelessWidget {
       children: [
         if (!isTop) _buildBouncingIcon(),
         
-        // 🚀 Wrapped in GestureDetector
         GestureDetector(
           onTap: onTap,
           child: Container(
@@ -294,65 +288,86 @@ class _FloatingPointer extends StatelessWidget {
 }
 
 // ==========================================================
-// 🚀 THE NEW TUTORIAL BOTTOM SHEET MODAL
+// 🚀 THE NEW CENTRAL GLASSMORPHISM TUTORIAL DIALOG
 // ==========================================================
-class _TutorialSheet extends StatelessWidget {
+class _TutorialDialog extends StatelessWidget {
   final ThemeData theme;
-  const _TutorialSheet({required this.theme});
+  const _TutorialDialog({required this.theme});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.5), width: 2),
-        boxShadow: [
-          BoxShadow(color: theme.colorScheme.primary.withOpacity(0.2), blurRadius: 20, spreadRadius: 5)
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.school_rounded, color: theme.colorScheme.primary, size: 28),
-              const SizedBox(width: 12),
-              Text(
-                "HOW TO PLAY", 
-                style: GoogleFonts.orbitron(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)
+    return Center(
+      child: Material(
+        color: Colors.transparent, // Required to let the background blur show through
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12), // 🚀 The Glass Blur
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface.withOpacity(0.75), // Semi-transparent surface
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: theme.colorScheme.primary.withOpacity(0.4), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(color: theme.colorScheme.primary.withOpacity(0.2), blurRadius: 30, spreadRadius: -5)
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // Hugs content perfectly in the center
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.school_rounded, color: theme.colorScheme.primary, size: 28),
+                        const SizedBox(width: 12),
+                        Text(
+                          "GET STARTED", 
+                          style: GoogleFonts.orbitron(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.onSurface.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.close_rounded, size: 20, color: theme.colorScheme.onSurface),
+                          ),
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildStep(Icons.camera_alt_rounded, "1. Scan the World", "Tap the big core button to open your AI scanner.", theme),
+                    _buildStep(Icons.auto_awesome, "2. Discover Artifacts", "Scan objects around you to identify them and earn XP.", theme),
+                    _buildStep(Icons.account_tree_rounded, "3. Level Up Skills", "Different objects give you STEM, HUMSS, ABM, or TVL points.", theme),
+                    _buildStep(Icons.emoji_events_rounded, "4. Climb the Ranks", "Complete pathways and compete on the global leaderboard!", theme),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary.withOpacity(0.85), // Slight transparency to match glass theme
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: Text("GOT IT, LET'S GO!", style: GoogleFonts.orbitron(fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      ),
+                    )
+                  ],
+                ),
               ),
-              const Spacer(),
-              IconButton(
-                icon: Icon(Icons.close_rounded, color: theme.colorScheme.onSurface),
-                onPressed: () => Navigator.pop(context),
-              )
-            ],
-          ),
-          const SizedBox(height: 24),
-          _buildStep(Icons.camera_alt_rounded, "1. Scan the World", "Tap the big core button to open your AI scanner.", theme),
-          _buildStep(Icons.auto_awesome, "2. Discover Artifacts", "Scan objects around you to identify them and earn XP.", theme),
-          _buildStep(Icons.account_tree_rounded, "3. Level Up Skills", "Different objects give you STEM, HUMSS, ABM, or TVL points.", theme),
-          _buildStep(Icons.emoji_events_rounded, "4. Climb the Ranks", "Complete pathways and compete on the global leaderboard!", theme),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              onPressed: () => Navigator.pop(context),
-              child: Text("GOT IT, LET'S GO!", style: GoogleFonts.orbitron(fontWeight: FontWeight.bold, letterSpacing: 1)),
             ),
-          )
-        ],
-      ),
+          ),
+        ),
+      ).animate().scaleXY(begin: 0.8, end: 1.0, curve: Curves.easeOutBack, duration: 400.ms).fadeIn(duration: 300.ms),
     );
   }
 
@@ -365,7 +380,7 @@ class _TutorialSheet extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
+              color: theme.colorScheme.primary.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: theme.colorScheme.primary, size: 20),
