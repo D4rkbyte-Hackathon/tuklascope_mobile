@@ -18,6 +18,7 @@ import '../widgets/stats_grid_card.dart';
 import '../widgets/skill_tree_visualizer.dart';
 import '../widgets/profile_promo_card.dart';
 import 'edit_profile_screen.dart';
+import '../widgets/about_tab.dart'; // Add this line!
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -472,108 +473,6 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
   }
 
   Widget _buildAboutTab(ThemeData theme) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      physics: const BouncingScrollPhysics(),
-      children: [
-        // App Info
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.school, size: 48, color: theme.colorScheme.primary),
-              const SizedBox(height: 16),
-              Text(
-                'Tuklascope is a modern learning companion that helps you discover, track, and engage with educational content. Built with love and purpose to make learning accessible for everyone.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
-
-        const SizedBox(height: 20),
-
-        // Developers
-        Text(
-          'Developed by:',
-          style: GoogleFonts.montserrat(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: theme.colorScheme.primary,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
-          ),
-          child: Column(
-            children: [
-              ListTile(
-                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
-                title: Text(
-                  'John Michael A. Nave',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
-                ),
-                trailing: Icon(Icons.open_in_new, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
-                onTap: () => _launchGitHubProfile('https://github.com/Goldenavs'),
-              ),
-              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
-              ListTile(
-                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
-                title: Text(
-                  'James Andrew S. Ologuin',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
-                ),
-                trailing: Icon(Icons.open_in_new, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
-                onTap: () => _launchGitHubProfile('https://github.com/OJamesAndrew'),
-              ),
-              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
-              ListTile(
-                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
-                title: Text(
-                  'John Peter D. Pestaño',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
-                ),
-                trailing: Icon(Icons.open_in_new, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
-                onTap: () => _launchGitHubProfile('https://github.com/FloatingDust36'),
-              ),
-              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
-              ListTile(
-                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
-                title: Text(
-                  'Jordan A. Cabandon',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
-                ),
-                trailing: Icon(Icons.open_in_new, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
-                onTap: () => _launchGitHubProfile('https://github.com/cabandonjordan'),
-              ),
-              Divider(height: 1, color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
-              ListTile(
-                leading: Icon(Icons.code, color: theme.colorScheme.secondary),
-                title: Text(
-                  'John Zachary N. Gillana',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
-                ),
-                trailing: Icon(Icons.open_in_new, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
-                onTap: () => _launchGitHubProfile('https://github.com/jzekken'),
-              ),
-            ],
-          ),
-        ).animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1),
-      ],
-    );
+    return AboutTab(theme: theme);
   }
 }
