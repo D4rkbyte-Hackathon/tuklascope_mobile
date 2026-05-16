@@ -3,7 +3,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart'; // 🚀 NEW: Added Google Fonts
+import 'package:google_fonts/google_fonts.dart'; 
 import 'package:tuklascope_mobile/features/home/providers/home_provider.dart';
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
 import '../../core/services/discovery_service.dart';
@@ -380,7 +380,6 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
           children: [
             const Icon(Icons.sports_esports, size: 24),
             const SizedBox(width: 12),
-            // 🚀 FIX: Wrapped in Flexible and FittedBox
             Flexible(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -765,28 +764,37 @@ class _DeckQueryModalState extends State<_DeckQueryModal>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final size = MediaQuery.of(context).size;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Container(
-            height: 280,
+            // Dynamic fixed sizing based on device screen
+            width: size.width,
+            height: size.height * 0.35,
             decoration: BoxDecoration(
-              color: const Color(
-                0xFF0A0E17,
-              ).withValues(alpha: 0.8), // Deep transparent blue
-              borderRadius: BorderRadius.circular(32),
+              color: isDark 
+                  ? Colors.black.withValues(alpha: 0.5) 
+                  : Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.5),
-                width: 2,
+                color: isDark 
+                    ? Colors.white.withValues(alpha: 0.1) 
+                    : Colors.white.withValues(alpha: 0.6),
+                width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                  blurRadius: 40,
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
@@ -805,7 +813,7 @@ class _DeckQueryModalState extends State<_DeckQueryModal>
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: theme.colorScheme.secondary.withValues(
-                              alpha: 0.1,
+                              alpha: 0.15,
                             ),
                           ),
                         ),
@@ -827,25 +835,30 @@ class _DeckQueryModalState extends State<_DeckQueryModal>
                   },
                 ),
                 const SizedBox(height: 40),
-                StreamBuilder<int>(
-                  stream: _timerStream,
-                  builder: (context, snapshot) {
-                    final index = (snapshot.data ?? 0) % _phrases.length;
-                    return AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 500),
-                      child: Text(
-                        _phrases[index].toUpperCase(),
-                        key: ValueKey<int>(index),
-                        style: GoogleFonts.orbitron(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          color: theme.colorScheme.primary,
-                          letterSpacing: 2.0,
+                
+                // Fixed height container so changing text doesn't adjust the modal size
+                SizedBox(
+                  height: 48, 
+                  child: StreamBuilder<int>(
+                    stream: _timerStream,
+                    builder: (context, snapshot) {
+                      final index = (snapshot.data ?? 0) % _phrases.length;
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 500),
+                        child: Text(
+                          _phrases[index].toUpperCase(),
+                          key: ValueKey<int>(index),
+                          style: GoogleFonts.orbitron(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: isDark ? Colors.white : theme.colorScheme.primary,
+                            letterSpacing: 2.0,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
