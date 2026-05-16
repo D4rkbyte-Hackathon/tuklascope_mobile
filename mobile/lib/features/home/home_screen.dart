@@ -94,7 +94,7 @@ class HomeScreen extends ConsumerWidget {
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 400),
                       curve: Curves.easeOutQuint, // Matches your navbar animation curve
-                      height: (isNavBarVisible ? 60.0 : 00.0) + MediaQuery.paddingOf(context).bottom,
+                      height: (isNavBarVisible ? 00.0 : 00.0) + MediaQuery.paddingOf(context).bottom,
                     ),
 
                     // 🚀 The Static Tutor Banner was intentionally removed from here.
