@@ -227,7 +227,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
           20,
           8,
           20,
-          MediaQuery.paddingOf(context).bottom + 88,
+          MediaQuery.paddingOf(context).bottom + 20,
         ),
         children: [
           ProfileHeaderCard(
