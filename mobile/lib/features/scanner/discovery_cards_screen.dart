@@ -1,14 +1,13 @@
 import 'dart:io';
-import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart'; 
-import 'package:tuklascope_mobile/features/home/providers/home_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
-import '../../core/services/discovery_service.dart';
 import 'tuklas_tutor_sheet.dart';
-import 'package:tuklascope_mobile/features/profile/providers/profile_provider.dart';
+import 'widgets/deck_query_modal.dart';
+import 'widgets/glass_concept_card.dart';
+import 'widgets/challenge_bottom_sheet.dart';
 
 class DiscoveryCardsScreen extends ConsumerStatefulWidget {
   final String objectName;
@@ -27,17 +26,14 @@ class DiscoveryCardsScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<DiscoveryCardsScreen> createState() =>
-      _DiscoveryCardsScreenState();
+  ConsumerState<DiscoveryCardsScreen> createState() => _DiscoveryCardsScreenState();
 }
 
-class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
-    with TickerProviderStateMixin {
+class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   int _selectedIndex = 0;
   bool _isLoading = true;
   String? _error;
   Map<String, dynamic>? _deckData;
-  final int baseRewardXp = 50;
 
   @override
   void initState() {
@@ -50,9 +46,9 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
   Future<void> _fetchLearningDeck() async {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.8), // Darker backdrop
+      barrierColor: Colors.black.withValues(alpha: 0.8),
       barrierDismissible: false,
-      builder: (context) => _DeckQueryModal(lens: widget.selectedLens),
+      builder: (context) => DeckQueryModal(lens: widget.selectedLens),
     );
 
     final data = await LearnService.generateDeck(
@@ -63,8 +59,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
     );
 
     if (!mounted) return;
-
-    Navigator.pop(context);
+    Navigator.pop(context); // Dismiss loading modal
 
     if (data != null) {
       setState(() {
@@ -79,6 +74,25 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
     }
   }
 
+  void _showChallengeModal() {
+    final challengeCard = _deckData?['challenge_card'] as Map<String, dynamic>? ?? {};
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ChallengeBottomSheet(
+        challengeCard: challengeCard,
+        objectName: widget.objectName,
+        selectedLens: widget.selectedLens,
+        imagePath: widget.imagePath,
+        fullDeckData: _deckData!,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -91,10 +105,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.pop(
-            context,
-            false,
-          ), // Pop with false (did not complete)
+          onPressed: () => Navigator.pop(context, false), 
         ),
       ),
       floatingActionButton: _deckData != null && !_isLoading
@@ -102,13 +113,9 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
               backgroundColor: theme.colorScheme.primary,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.auto_awesome),
-              label: Text(
-                'Ask Tutor',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w900),
-              ),
+              label: Text('Ask Tutor', style: GoogleFonts.inter(fontWeight: FontWeight.w900)),
               onPressed: () {
-                final conceptCard =
-                    _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
+                final conceptCard = _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
                 showTuklasTutorSheet(
                   context,
                   objectName: widget.objectName,
@@ -118,9 +125,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
               },
             )
           : null,
-      bottomNavigationBar: _deckData != null && !_isLoading
-          ? _buildChallengeBottomBar(theme)
-          : null,
+      bottomNavigationBar: _deckData != null && !_isLoading ? _buildChallengeBottomBar(theme) : null,
       body: _isLoading
           ? Container(
               width: double.infinity,
@@ -136,13 +141,8 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
               ),
             )
           : _error != null
-          ? Center(
-              child: Text(
-                _error!,
-                style: GoogleFonts.inter(color: theme.colorScheme.error),
-              ),
-            )
-          : _buildContent(theme),
+              ? Center(child: Text(_error!, style: GoogleFonts.inter(color: theme.colorScheme.error)))
+              : _buildContent(theme),
     );
   }
 
@@ -201,7 +201,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                     ],
                   ),
                   const SizedBox(height: 24),
-                  _buildActiveCard(theme),
+                  _buildActiveCard(),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -212,12 +212,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
     );
   }
 
-  Widget _buildTabButton(
-    int index,
-    String label,
-    IconData icon,
-    ThemeData theme,
-  ) {
+  Widget _buildTabButton(int index, String label, IconData icon, ThemeData theme) {
     final isSelected = _selectedIndex == index;
     return Expanded(
       child: GestureDetector(
@@ -226,14 +221,10 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: isSelected
-                ? theme.colorScheme.secondary
-                : theme.colorScheme.surface,
+            color: isSelected ? theme.colorScheme.secondary : theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected
-                  ? theme.colorScheme.secondary
-                  : theme.colorScheme.onSurface.withValues(alpha: 0.1),
+              color: isSelected ? theme.colorScheme.secondary : theme.colorScheme.onSurface.withValues(alpha: 0.1),
               width: 2,
             ),
           ),
@@ -241,9 +232,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
             children: [
               Icon(
                 icon,
-                color: isSelected
-                    ? theme.colorScheme.onSecondary
-                    : theme.colorScheme.primary,
+                color: isSelected ? theme.colorScheme.onSecondary : theme.colorScheme.primary,
                 size: 28,
               ),
               const SizedBox(height: 8),
@@ -251,9 +240,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                 label,
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.bold,
-                  color: isSelected
-                      ? theme.colorScheme.onSecondary
-                      : theme.colorScheme.onSurface,
+                  color: isSelected ? theme.colorScheme.onSecondary : theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -263,92 +250,21 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
     );
   }
 
-  Widget _buildActiveCard(ThemeData theme) {
+  Widget _buildActiveCard() {
     final concept = _deckData?['concept_card'] ?? {};
     final realWorld = _deckData?['real_world_card'] ?? {};
 
     if (_selectedIndex == 0) {
-      return _buildGlassSection(
-        'Mind-Blowing Fact',
-        realWorld['fun_fact'] ?? '',
-        theme,
-      );
+      return GlassConceptCard(title: 'Mind-Blowing Fact', content: realWorld['fun_fact'] ?? '');
     } else if (_selectedIndex == 1) {
-      return _buildGlassSection(
-        'The Secret',
-        concept['lesson_text'] ?? '',
-        theme,
+      return GlassConceptCard(
+        title: 'The Secret', 
+        content: concept['lesson_text'] ?? '',
         badgeText: '${concept['domain']} | ${concept['skill']}',
       );
     } else {
-      return _buildGlassSection(
-        'Real World Impact',
-        realWorld['application_text'] ?? '',
-        theme,
-      );
+      return GlassConceptCard(title: 'Real World Impact', content: realWorld['application_text'] ?? '');
     }
-  }
-
-  Widget _buildGlassSection(
-    String title,
-    String content,
-    ThemeData theme, {
-    String? badgeText,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.3),
-          width: 2,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (badgeText != null) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                badgeText.toUpperCase(),
-                style: GoogleFonts.orbitron(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.primary,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          Text(
-            title.toUpperCase(),
-            style: GoogleFonts.montserrat(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: theme.colorScheme.primary,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            content,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
-              height: 1.7,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildChallengeBottomBar(ThemeData theme) {
@@ -370,9 +286,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
           backgroundColor: theme.colorScheme.secondary,
           foregroundColor: theme.colorScheme.onSecondary,
           padding: const EdgeInsets.symmetric(vertical: 20),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 5,
         ),
         child: Row(
@@ -385,484 +299,11 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen>
                 fit: BoxFit.scaleDown,
                 child: Text(
                   'TAKE CHALLENGE TO EARN XP',
-                  style: GoogleFonts.orbitron(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1,
-                  ),
+                  style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1),
                 ),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _showChallengeModal() {
-    final challengeCard =
-        _deckData?['challenge_card'] as Map<String, dynamic>? ?? {};
-    final question = challengeCard['question'] ?? "Ready?";
-    final options = List<String>.from(challengeCard['options'] ?? []);
-    final correctAnswer = challengeCard['correct_answer'] ?? "";
-    final explanation = challengeCard['explanation'] ?? "";
-
-    int attemptsLeft = 2;
-    String? selectedOption;
-    bool isEvaluating = false;
-    bool? lastResult; // null = waiting, true = correct, false = wrong
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        final theme = Theme.of(context);
-
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(32),
-                ),
-              ),
-              child: SafeArea(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Header showing Heart Attempts
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'TUKLAS CHALLENGE',
-                            style: GoogleFonts.orbitron(
-                              color: theme.colorScheme.secondary,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                          Row(
-                            children: List.generate(
-                              2,
-                              (index) => Padding(
-                                padding: const EdgeInsets.only(left: 4.0),
-                                child: Icon(
-                                  index < attemptsLeft
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  size: 24,
-                                  color: Colors.redAccent,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        question,
-                        style: GoogleFonts.montserrat(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: theme.colorScheme.onSurface,
-                          height: 1.3,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      ...options.map((option) {
-                        final bool isThisSelected = selectedOption == option;
-                        Color buttonColor = theme.scaffoldBackgroundColor;
-                        Color borderColor = theme.colorScheme.onSurface
-                            .withValues(alpha: 0.1);
-
-                        if (isEvaluating && isThisSelected) {
-                          if (lastResult == true) {
-                            buttonColor = Colors.green.withValues(alpha: 0.2);
-                            borderColor = Colors.green;
-                          } else if (lastResult == false) {
-                            buttonColor = Colors.red.withValues(alpha: 0.2);
-                            borderColor = Colors.red;
-                          }
-                        } else if (isThisSelected) {
-                          buttonColor = theme.colorScheme.primary.withValues(
-                            alpha: 0.2,
-                          );
-                          borderColor = theme.colorScheme.primary;
-                        }
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: InkWell(
-                            onTap: isEvaluating
-                                ? null
-                                : () => setModalState(
-                                    () => selectedOption = option,
-                                  ),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: buttonColor,
-                                border: Border.all(
-                                  color: borderColor,
-                                  width: 2,
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Text(
-                                option,
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-
-                      const SizedBox(height: 24),
-
-                      // THE EVALUATION LOGIC UI
-                      if (!isEvaluating)
-                        ElevatedButton(
-                          onPressed: selectedOption == null
-                              ? null
-                              : () {
-                                  setModalState(() {
-                                    isEvaluating = true;
-                                    lastResult =
-                                        (selectedOption == correctAnswer);
-                                  });
-
-                                  if (lastResult == true) {
-                                    _saveProgressToBackend();
-                                  } else {
-                                    attemptsLeft--;
-                                    if (attemptsLeft > 0) {
-                                      // Reset after a brief flash of red
-                                      Future.delayed(
-                                        const Duration(milliseconds: 1500),
-                                        () {
-                                          if (context.mounted) {
-                                            setModalState(() {
-                                              selectedOption = null;
-                                              isEvaluating = false;
-                                              lastResult = null;
-                                            });
-                                          }
-                                        },
-                                      );
-                                    } else {
-                                      // Out of tries
-                                      Future.delayed(
-                                        const Duration(milliseconds: 2500),
-                                        () {
-                                          if (context.mounted) {
-                                            Navigator.pop(
-                                              context,
-                                            ); // Close Modal
-                                            Navigator.pop(
-                                              context,
-                                              false,
-                                            ); // Return to Teaser Doors
-                                          }
-                                        },
-                                      );
-                                    }
-                                  }
-                                },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(
-                            'SUBMIT ANSWER',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        )
-                      else
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: lastResult == true
-                                ? Colors.green.withValues(alpha: 0.1)
-                                : Colors.red.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: lastResult == true
-                                  ? Colors.green
-                                  : Colors.red,
-                              width: 2,
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(
-                                lastResult == true
-                                    ? Icons.check_circle
-                                    : Icons.cancel,
-                                color: lastResult == true
-                                    ? Colors.green
-                                    : Colors.red,
-                                size: 48,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                lastResult == true
-                                    ? "Brilliant!\n$explanation"
-                                    : attemptsLeft > 0
-                                    ? "Incorrect. You have 1 attempt remaining."
-                                    : "Incorrect. The door closes...",
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
-                                  color: lastResult == true
-                                      ? Colors.green
-                                      : Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              if (lastResult == true) ...[
-                                const SizedBox(height: 24),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.pop(context); // Pop Modal
-                                    Navigator.pop(
-                                      context,
-                                      true,
-                                    ); // Return TRUE to lock the portal
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  child: Text(
-                                    'CLAIM XP',
-                                    style: GoogleFonts.orbitron(
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _saveProgressToBackend() async {
-    // 1. Fetch current profile stats to determine alignment dynamically
-    final profileStats = await ref.read(profileStatsProvider.future);
-
-    // 2. Map their current XP to find their dominant RPG strand
-    final xpMap = {
-      'STEM': profileStats.stemXp,
-      'ABM': profileStats.abmXp,
-      'HUMSS': profileStats.humssXp,
-      'TVL': profileStats.tvlXp,
-    };
-
-    String topStrand = 'STEM';
-    int maxXp = -1;
-    xpMap.forEach((strand, xp) {
-      if (xp > maxXp) {
-        maxXp = xp;
-        topStrand = strand;
-      }
-    });
-
-    // 3. Check if the lens they chose matches their dominant strand
-    final isAligned = widget.selectedLens.toUpperCase() == topStrand;
-
-    // 4. Save securely (No XP passed from client!)
-    final success = await DiscoveryService.saveDiscovery(
-      objectName: widget.objectName,
-      chosenLens: widget.selectedLens,
-      imagePath: widget.imagePath,
-      learningDeck: _deckData!,
-      isAlignedWithCompass: isAligned,
-    );
-
-    if (success && mounted) {
-      ref.invalidate(homeStatsProvider);
-      ref.invalidate(profileStatsProvider); // Refresh the profile XP visually
-    }
-  }
-}
-
-// -------------------------------------------------------------------------
-// UPGRADED SCI-FI LOADING MODAL FOR LEARNING DECK
-// -------------------------------------------------------------------------
-class _DeckQueryModal extends StatefulWidget {
-  final String lens;
-  const _DeckQueryModal({required this.lens});
-
-  @override
-  State<_DeckQueryModal> createState() => _DeckQueryModalState();
-}
-
-class _DeckQueryModalState extends State<_DeckQueryModal>
-    with SingleTickerProviderStateMixin {
-  late final Stream<int> _timerStream;
-  late final List<String> _phrases;
-  late AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _phrases = [
-      'Calibrating AI lenses...',
-      'Analyzing structural composition...',
-      'Cross-referencing historical data...',
-      'Extracting core concepts...',
-      'Synthesizing ${widget.lens} pathways...',
-    ];
-    _timerStream = Stream.periodic(
-      const Duration(milliseconds: 2000),
-      (i) => i,
-    );
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final size = MediaQuery.of(context).size;
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            // Dynamic fixed sizing based on device screen
-            width: size.width,
-            height: size.height * 0.35,
-            decoration: BoxDecoration(
-              color: isDark 
-                  ? Colors.black.withValues(alpha: 0.5) 
-                  : Colors.white.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: isDark 
-                    ? Colors.white.withValues(alpha: 0.1) 
-                    : Colors.white.withValues(alpha: 0.6),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (context, child) {
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 100 + (_pulseController.value * 20),
-                          height: 100 + (_pulseController.value * 20),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: theme.colorScheme.secondary.withValues(
-                              alpha: 0.15,
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 80,
-                          height: 80,
-                          child: CircularProgressIndicator(
-                            color: theme.colorScheme.secondary,
-                            strokeWidth: 3,
-                          ),
-                        ),
-                        Icon(
-                          Icons.hub,
-                          size: 36,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 40),
-                
-                // Fixed height container so changing text doesn't adjust the modal size
-                SizedBox(
-                  height: 48, 
-                  child: StreamBuilder<int>(
-                    stream: _timerStream,
-                    builder: (context, snapshot) {
-                      final index = (snapshot.data ?? 0) % _phrases.length;
-                      return AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 500),
-                        child: Text(
-                          _phrases[index].toUpperCase(),
-                          key: ValueKey<int>(index),
-                          style: GoogleFonts.orbitron(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            color: isDark ? Colors.white : theme.colorScheme.primary,
-                            letterSpacing: 2.0,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
