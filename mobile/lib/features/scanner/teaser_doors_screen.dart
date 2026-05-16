@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'discovery_cards_screen.dart';
-import 'widgets/nexus_uplink_node.dart';
 import 'widgets/lens_mastery_tracker.dart';
 import 'widgets/magical_door_card.dart';
 
@@ -76,6 +75,66 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
     }
   }
 
+  // Consistent Glassmorphic Card Builder
+  Widget _buildGlassCard({required Widget child, EdgeInsetsGeometry? padding}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: isDark 
+            ? Colors.black.withValues(alpha: 0.4) 
+            : Colors.white.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark 
+              ? Colors.white.withValues(alpha: 0.1) 
+              : Colors.white.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  // Profile-style Header
+  Widget _buildCustomHeader() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, left: 20, right: 20, bottom: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: _buildGlassCard(
+              padding: const EdgeInsets.all(12),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+            ),
+          ),
+          Text(
+            'CHOOSE LENS',
+            style: GoogleFonts.montserrat(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: -0.5,
+              shadows: [const Shadow(color: Colors.black54, blurRadius: 10)],
+            ),
+          ),
+          const SizedBox(width: 44), // Balances the back button width
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_teaserDoors.isEmpty) {
@@ -88,31 +147,6 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
     }
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'CHOOSE YOUR LENS',
-          style: GoogleFonts.orbitron(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
-            letterSpacing: 2.5,
-            shadows: [const Shadow(color: Colors.white54, blurRadius: 15)],
-          ),
-        ),
-        centerTitle: true,
-        leadingWidth: 80,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16.0),
-          child: Center(
-            child: NexusUplinkNode(
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ),
-        ),
-      ),
       body: Stack(
         children: [
           Positioned.fill(
@@ -152,6 +186,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
           SafeArea(
             child: Column(
               children: [
+                _buildCustomHeader(), // REPLACED APPBAR WITH CONSISTENT CUSTOM HEADER
                 const SizedBox(height: 20),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
