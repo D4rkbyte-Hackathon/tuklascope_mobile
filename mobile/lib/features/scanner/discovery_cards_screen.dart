@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import 'package:tuklascope_mobile/core/services/learn_service.dart';
 import 'tuklas_tutor_sheet.dart';
@@ -80,8 +81,9 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
+      isDismissible: true, 
+      enableDrag: true,    
+      useSafeArea: true, // BUG FIX: Forces the modal to respect the status bar
       backgroundColor: Colors.transparent,
       builder: (context) => ChallengeBottomSheet(
         challengeCard: challengeCard,
@@ -96,35 +98,10 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.pop(context, false), 
-        ),
-      ),
-      floatingActionButton: _deckData != null && !_isLoading
-          ? FloatingActionButton.extended(
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.auto_awesome),
-              label: Text('Ask Tutor', style: GoogleFonts.inter(fontWeight: FontWeight.w900)),
-              onPressed: () {
-                final conceptCard = _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
-                showTuklasTutorSheet(
-                  context,
-                  objectName: widget.objectName,
-                  strand: widget.selectedLens,
-                  currentCardContent: conceptCard['lesson_text'] ?? '',
-                );
-              },
-            )
-          : null,
+      backgroundColor: theme.colorScheme.surface,
       bottomNavigationBar: _deckData != null && !_isLoading ? _buildChallengeBottomBar(theme) : null,
       body: _isLoading
           ? Container(
@@ -142,18 +119,66 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
             )
           : _error != null
               ? Center(child: Text(_error!, style: GoogleFonts.inter(color: theme.colorScheme.error)))
-              : _buildContent(theme),
+              : Stack(
+                  children: [
+                    // 1. CLEAN, THEME-ADAPTIVE BACKGROUND GRADIENT
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              theme.colorScheme.surface,
+                              theme.colorScheme.primary.withValues(alpha: isDark ? 0.08 : 0.03),
+                              theme.colorScheme.surface,
+                            ],
+                            stops: const [0.0, 0.5, 1.0],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // 2. Subtle Tech Grid overlay
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: isDark ? 0.03 : 0.06, 
+                        child: CustomPaint(painter: _GridPainter(color: theme.colorScheme.onSurface)),
+                      ),
+                    ),
+
+                    // 3. Native Custom Scroll View to fix scroll overlap bugs
+                    _buildScrollableContent(theme),
+                  ],
+                ),
     );
   }
 
-  Widget _buildContent(ThemeData theme) {
-    return SingleChildScrollView(
+  Widget _buildScrollableContent(ThemeData theme) {
+    return CustomScrollView(
       physics: const BouncingScrollPhysics(),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 350,
-            child: Stack(
+      slivers: [
+        SliverAppBar(
+          expandedHeight: 350.0,
+          pinned: true,
+          backgroundColor: theme.colorScheme.surface.withValues(alpha: 0.95),
+          elevation: 0,
+          leading: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context, false),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.15),
+                  border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.arrow_back_ios_new, color: theme.colorScheme.onSurface, size: 16),
+              ),
+            ),
+          ),
+          flexibleSpace: FlexibleSpaceBar(
+            background: Stack(
               fit: StackFit.expand,
               children: [
                 Image.file(File(widget.imagePath), fit: BoxFit.cover),
@@ -163,9 +188,9 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withValues(alpha: 0.6),
+                        Colors.black.withValues(alpha: 0.4), 
                         Colors.transparent,
-                        theme.scaffoldBackgroundColor,
+                        theme.colorScheme.surface, 
                       ],
                       stops: const [0.0, 0.4, 1.0],
                     ),
@@ -174,73 +199,136 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
               ],
             ),
           ),
-          Transform.translate(
-            offset: const Offset(0, -30),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${widget.selectedLens.toUpperCase()}: ${widget.objectName}',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: theme.colorScheme.primary,
-                      height: 1.1,
-                    ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                
+                // Title
+                Text(
+                  widget.objectName.toUpperCase(),
+                  style: GoogleFonts.orbitron(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.onSurface,
+                    letterSpacing: 2.0,
+                    height: 1.1,
                   ),
-                  const SizedBox(height: 32),
-                  Row(
+                ).animate().fade(delay: 100.ms).slideX(begin: -0.1),
+                
+                const SizedBox(height: 12),
+                
+                // Domain Tag with Icon
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                    border: Border(left: BorderSide(color: theme.colorScheme.primary, width: 3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildTabButton(0, 'Fun Fact', Icons.bolt, theme),
-                      const SizedBox(width: 8),
-                      _buildTabButton(1, 'Lesson', Icons.menu_book, theme),
-                      const SizedBox(width: 8),
-                      _buildTabButton(2, 'Real World', Icons.public, theme),
+                      Icon(Icons.category_rounded, size: 14, color: theme.colorScheme.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        widget.selectedLens.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.primary,
+                          letterSpacing: 2.0,
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  _buildActiveCard(),
-                  const SizedBox(height: 40),
-                ],
-              ),
+                ).animate().fade(delay: 200.ms).slideX(begin: -0.1),
+
+                const SizedBox(height: 40),
+                
+                Row(
+                  children: [
+                    _buildTabButton(0, 'Fact', Icons.bolt, theme),
+                    const SizedBox(width: 8),
+                    _buildTabButton(1, 'Lesson', Icons.menu_book, theme),
+                    const SizedBox(width: 8),
+                    _buildTabButton(2, 'World', Icons.public, theme),
+                  ],
+                ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
+                
+                const SizedBox(height: 32),
+                
+                _buildActiveCard(),
+                
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
+                      foregroundColor: theme.colorScheme.secondary,
+                      side: BorderSide(color: theme.colorScheme.secondary.withValues(alpha: 0.5), width: 1.5),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.smart_toy_rounded, size: 22),
+                    label: Text(
+                      'ASK TUKLAS TUTOR', 
+                      style: GoogleFonts.orbitron(fontWeight: FontWeight.w900, letterSpacing: 1.5)
+                    ),
+                    onPressed: () {
+                      final conceptCard = _deckData?['concept_card'] as Map<String, dynamic>? ?? {};
+                      showTuklasTutorSheet(
+                        context,
+                        objectName: widget.objectName,
+                        strand: widget.selectedLens,
+                        currentCardContent: conceptCard['lesson_text'] ?? '',
+                      );
+                    },
+                  ),
+                ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+
+                const SizedBox(height: 32), 
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildTabButton(int index, String label, IconData icon, ThemeData theme) {
     final isSelected = _selectedIndex == index;
+    final color = isSelected ? theme.colorScheme.secondary : theme.colorScheme.onSurface.withValues(alpha: 0.5);
+    final bgColor = isSelected ? theme.colorScheme.secondary.withValues(alpha: 0.15) : Colors.transparent;
+
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _selectedIndex = index),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? theme.colorScheme.secondary : theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSelected ? theme.colorScheme.secondary : theme.colorScheme.onSurface.withValues(alpha: 0.1),
-              width: 2,
+            color: bgColor,
+            border: Border(
+              bottom: BorderSide(color: isSelected ? theme.colorScheme.secondary : Colors.transparent, width: 3),
             ),
           ),
           child: Column(
             children: [
-              Icon(
-                icon,
-                color: isSelected ? theme.colorScheme.onSecondary : theme.colorScheme.primary,
-                size: 28,
-              ),
+              Icon(icon, color: color, size: 24),
               const SizedBox(height: 8),
               Text(
-                label,
-                style: GoogleFonts.inter(
+                label.toUpperCase(),
+                style: GoogleFonts.orbitron(
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isSelected ? theme.colorScheme.onSecondary : theme.colorScheme.onSurface,
+                  color: color,
+                  letterSpacing: 1.0,
                 ),
               ),
             ],
@@ -255,57 +343,84 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
     final realWorld = _deckData?['real_world_card'] ?? {};
 
     if (_selectedIndex == 0) {
-      return GlassConceptCard(title: 'Mind-Blowing Fact', content: realWorld['fun_fact'] ?? '');
+      return GlassConceptCard(title: 'DATALOG // ANOMALY', content: realWorld['fun_fact'] ?? '');
     } else if (_selectedIndex == 1) {
       return GlassConceptCard(
-        title: 'The Secret', 
+        title: 'DATALOG // CORE SECRET', 
         content: concept['lesson_text'] ?? '',
         badgeText: '${concept['domain']} | ${concept['skill']}',
       );
     } else {
-      return GlassConceptCard(title: 'Real World Impact', content: realWorld['application_text'] ?? '');
+      return GlassConceptCard(title: 'DATALOG // APPLICATION', content: realWorld['application_text'] ?? '');
     }
   }
 
   Widget _buildChallengeBottomBar(ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 64, top: 16),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.paddingOf(context).bottom + 16),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
+        color: theme.colorScheme.surface,
+        border: Border(top: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.05), width: 1)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 20,
+            blurRadius: 10,
             offset: const Offset(0, -5),
-          ),
-        ],
+          )
+        ]
       ),
       child: ElevatedButton(
-        onPressed: _showChallengeModal,
         style: ElevatedButton.styleFrom(
-          backgroundColor: theme.colorScheme.secondary,
-          foregroundColor: theme.colorScheme.onSecondary,
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: theme.colorScheme.onPrimary,
           padding: const EdgeInsets.symmetric(vertical: 20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          elevation: 5,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 15,
+          shadowColor: theme.colorScheme.primary.withValues(alpha: 0.5),
         ),
+        onPressed: _showChallengeModal,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.sports_esports, size: 24),
+            const Icon(Icons.sports_esports_rounded, size: 22),
             const SizedBox(width: 12),
             Flexible(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   'TAKE CHALLENGE TO EARN XP',
-                  style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1),
+                  style: GoogleFonts.orbitron(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2.0),
                 ),
               ),
             ),
           ],
         ),
-      ),
+      ).animate(onPlay: (c) => c.repeat(reverse: true))
+       .shimmer(duration: 2.seconds, color: theme.colorScheme.onPrimary.withValues(alpha: 0.3)),
     );
   }
+}
+
+class _GridPainter extends CustomPainter {
+  final Color color;
+  _GridPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.0;
+
+    const spacing = 40.0;
+
+    for (double i = 0; i < size.width; i += spacing) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    }
+    for (double i = 0; i < size.height; i += spacing) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
