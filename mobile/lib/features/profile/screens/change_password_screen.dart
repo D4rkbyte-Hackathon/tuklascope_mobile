@@ -1,390 +1,346 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../auth/providers/auth_controller.dart';
-import '../../auth/services/supabase_auth_service.dart';
-import '../../../core/navigation/main_nav_scope.dart';
+
+import '../../../core/widgets/gradient_scaffold.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
 
   @override
-  ConsumerState<ChangePasswordScreen> createState() =>
-      _ChangePasswordScreenState();
+  ConsumerState<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
 }
 
 class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
-  final _currentPasswordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
-  late FocusNode _currentPasswordFocus;
-  late FocusNode _newPasswordFocus;
-  late FocusNode _confirmPasswordFocus;
 
-  bool _obscureCurrentPassword = true;
-  bool _obscureNewPassword = true;
-  bool _obscureConfirmPassword = true;
-  String? _errorMessage;
   bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentPasswordFocus = FocusNode();
-    _newPasswordFocus = FocusNode();
-    _confirmPasswordFocus = FocusNode();
-    
-    // Listen to focus changes to hide/show nav bar
-    _currentPasswordFocus.addListener(_handleFocusChange);
-    _newPasswordFocus.addListener(_handleFocusChange);
-    _confirmPasswordFocus.addListener(_handleFocusChange);
-  }
-
-  void _handleFocusChange() {
-    final navScope = MainNavScope.maybeOf(context);
-    final isAnyFocused = _currentPasswordFocus.hasFocus || 
-                         _newPasswordFocus.hasFocus || 
-                         _confirmPasswordFocus.hasFocus;
-    
-    navScope?.setNavBarVisibility(!isAnyFocused);
-  }
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
 
   @override
   void dispose() {
-    _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
-    _currentPasswordFocus.dispose();
-    _newPasswordFocus.dispose();
-    _confirmPasswordFocus.dispose();
-    
-    // Show nav bar when leaving the screen
-    final navScope = MainNavScope.maybeOf(context);
-    navScope?.setNavBarVisibility(true);
-    
     super.dispose();
   }
 
-  Future<void> _changePassword() async {
-    setState(() => _errorMessage = null);
+  void _showSnackBar(String message, {bool isError = false}) {
+    final theme = Theme.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: isError ? theme.colorScheme.error : Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
 
-    // Validation
-    if (_currentPasswordController.text.isEmpty) {
-      setState(() => _errorMessage = 'Current password is required');
-      return;
-    }
-
-    if (_newPasswordController.text.isEmpty) {
-      setState(() => _errorMessage = 'New password is required');
-      return;
-    }
-
-    if (_newPasswordController.text.length < 6) {
-      setState(() => _errorMessage = 'Password must be at least 6 characters');
-      return;
-    }
-
-    if (_newPasswordController.text != _confirmPasswordController.text) {
-      setState(() => _errorMessage = 'Passwords do not match');
-      return;
-    }
-
-    if (_currentPasswordController.text == _newPasswordController.text) {
-      setState(() =>
-          _errorMessage = 'New password must be different from current password');
-      return;
-    }
+  Future<void> _updatePassword() async {
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+    FocusScope.of(context).unfocus();
 
     try {
-      final authService = ref.read(authServiceProvider);
-      await authService.changePassword(_newPasswordController.text);
-
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: _newPasswordController.text),
+      );
+      
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Password changed successfully!', style: GoogleFonts.inter()),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-        Future.delayed(const Duration(milliseconds: 500), () {
-          Navigator.pop(context);
-        });
+        _showSnackBar('Security updated: Password changed successfully!');
+        Navigator.pop(context);
       }
+    } on AuthException catch (e) {
+      _showSnackBar(e.message, isError: true);
     } catch (e) {
-      setState(() => _errorMessage = 'Error: ${e.toString()}');
+      _showSnackBar('An unexpected error occurred.', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  // Buffed Neutral Glass Card
+  Widget _buildGlassCard({required Widget child, EdgeInsetsGeometry? padding}) {
     final theme = Theme.of(context);
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: Text(
-          'Change Password',
-          style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.black.withValues(alpha: 0.3)
+            : Colors.white.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          // Neutralized borders instead of heavy primary colors
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.black.withValues(alpha: 0.05),
+          width: 1.5,
         ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          )
+        ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: isDarkMode 
-              ? const [
-                  Color(0xFF121212),
-                  Color(0xFF050505),
-                ]
-              : const [
-                  Color(0xFFFFFDF4),
-                  Color(0xFFD9D7CE),
-                ],
-          ),
-          image: const DecorationImage(
-            image: AssetImage('assets/images/background.png'),
-            fit: BoxFit.cover,
-            opacity: 0.1,
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + keyboardHeight),
-              child: Column(
-                children: [
-                // Lock Icon Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                  ),
-                  child: Icon(
-                    Icons.lock_outline,
-                    color: theme.colorScheme.primary,
-                    size: 60,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Title
-                Text(
-                  'Change Password',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                // Subtitle
-                Text(
-                  'Lorem ipsum dolor sit amet, consectetur adipisicing elit sed eiusmod tempor incididunt.',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    height: 1.5,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                // Current Password Field
-                _buildPasswordField(
-                  controller: _currentPasswordController,
-                  focusNode: _currentPasswordFocus,
-                  label: 'Old Password',
-                  isObscure: _obscureCurrentPassword,
-                  onVisibilityToggle: () => setState(
-                    () => _obscureCurrentPassword = !_obscureCurrentPassword,
-                  ),
-                  theme: theme,
-                  isEnabled: !_isLoading,
-                ),
-                const SizedBox(height: 14),
-                // New Password Field
-                _buildPasswordField(
-                  controller: _newPasswordController,
-                  focusNode: _newPasswordFocus,
-                  label: 'New Password',
-                  isObscure: _obscureNewPassword,
-                  onVisibilityToggle: () => setState(
-                    () => _obscureNewPassword = !_obscureNewPassword,
-                  ),
-                  theme: theme,
-                  isEnabled: !_isLoading,
-                ),
-                const SizedBox(height: 14),
-                // Confirm Password Field
-                _buildPasswordField(
-                  controller: _confirmPasswordController,
-                  focusNode: _confirmPasswordFocus,
-                  label: 'Confirm Password',
-                  isObscure: _obscureConfirmPassword,
-                  onVisibilityToggle: () => setState(
-                    () => _obscureConfirmPassword = !_obscureConfirmPassword,
-                  ),
-                  theme: theme,
-                  isEnabled: !_isLoading,
-                ),
-                const SizedBox(height: 14),
-                // Error Message
-                if (_errorMessage != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 10),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.error.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: theme.colorScheme.error.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: theme.colorScheme.error,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _errorMessage!,
-                            style: GoogleFonts.inter(
-                              color: theme.colorScheme.error,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                // Confirm Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _isLoading ? null : _changePassword,
-                        borderRadius: BorderRadius.circular(14),
-                        child: Center(
-                          child: _isLoading
-                              ? SizedBox(
-                                  width: 28,
-                                  height: 28,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 3,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      theme.colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                )
-                              : Text(
-                                  'CONFIRM CHANGE',
-                                  style: GoogleFonts.montserrat(
-                                    color: theme.colorScheme.onPrimary,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 30),
-              ],
+      child: child,
+    );
+  }
+
+  Widget _buildCustomHeader() {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, left: 20, right: 20, bottom: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: _buildGlassCard(
+              padding: const EdgeInsets.all(12),
+              child: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: theme.colorScheme.onSurface, 
+                size: 20,
+              ),
             ),
           ),
-        ),
-      ),
+          Text(
+            'CHANGE PASSWORD',
+            style: GoogleFonts.montserrat(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: theme.colorScheme.onSurface,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(width: 44), 
+        ],
       ),
     );
   }
 
   Widget _buildPasswordField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
     required String label,
-    required bool isObscure,
-    required VoidCallback onVisibilityToggle,
-    required ThemeData theme,
-    required bool isEnabled,
+    required TextEditingController controller,
+    required bool obscureText,
+    required VoidCallback toggleObscure,
+    required String? Function(String?) validator,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.12),
-        ),
-      ),
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        obscureText: isObscure,
-        enabled: isEnabled,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: GoogleFonts.inter(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          suffixIcon: Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: IconButton(
-              icon: Icon(
-                isObscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                size: 22,
-              ),
-              onPressed: onVisibilityToggle,
+    final theme = Theme.of(context);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            label,
+            style: GoogleFonts.montserrat(
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+              letterSpacing: 1.2,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ),
-        style: GoogleFonts.inter(
-          color: theme.colorScheme.onSurface,
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
+        _buildGlassCard(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: TextFormField(
+            controller: controller,
+            obscureText: obscureText,
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+            decoration: InputDecoration(
+              prefixIcon: Icon(
+                Icons.lock_outline_rounded,
+                color: theme.colorScheme.primary, // Accent color for interaction
+              ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                onPressed: toggleObscure,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            validator: validator,
+          ),
         ),
-        cursorColor: theme.colorScheme.primary,
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return GradientScaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Choreography: Header drops in first
+            _buildCustomHeader()
+                .animate()
+                .fade(duration: 400.ms)
+                .slideY(begin: -0.2, end: 0, curve: Curves.easeOut),
+                
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Shiny: Quantum Shield Animation
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                                blurRadius: 30,
+                                spreadRadius: 5,
+                              )
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.admin_panel_settings_rounded,
+                            size: 64,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      )
+                      .animate()
+                      .fade(delay: 100.ms)
+                      .scaleXY(begin: 0.5, curve: Curves.easeOutBack)
+                      // The infinite shiny glow
+                      .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                      .shimmer(duration: 2.seconds, color: theme.colorScheme.secondary.withValues(alpha: 0.5))
+                      .scaleXY(end: 1.05, curve: Curves.easeInOutSine),
+                      
+                      const SizedBox(height: 32),
+                      
+                      Center(
+                        child: Text(
+                          'Update Authentication',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
+                      
+                      const SizedBox(height: 8),
+                      
+                      Center(
+                        child: Text(
+                          'Ensure your new password is at least 6 characters long and hard to guess.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
+
+                      const SizedBox(height: 48),
+
+                      // Choreography: Inputs slide in sequentially
+                      _buildPasswordField(
+                        label: 'NEW PASSWORD',
+                        controller: _newPasswordController,
+                        obscureText: _obscureNew,
+                        toggleObscure: () => setState(() => _obscureNew = !_obscureNew),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Password cannot be empty';
+                          if (value.length < 6) return 'Password must be at least 6 characters';
+                          return null;
+                        },
+                      ).animate().fade(delay: 400.ms).slideX(begin: 0.05),
+
+                      const SizedBox(height: 24),
+
+                      _buildPasswordField(
+                        label: 'CONFIRM PASSWORD',
+                        controller: _confirmPasswordController,
+                        obscureText: _obscureConfirm,
+                        toggleObscure: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                        validator: (value) {
+                          if (value != _newPasswordController.text) {
+                            return 'Passwords do not match';
+                          }
+                          return null;
+                        },
+                      ).animate().fade(delay: 500.ms).slideX(begin: 0.05),
+
+                      const SizedBox(height: 48),
+
+                      // Shiny: Action Button with Shimmer Sweep
+                      SizedBox(
+                        height: 56,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: theme.colorScheme.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 8,
+                            shadowColor: theme.colorScheme.primary.withValues(alpha: 0.4),
+                          ),
+                          onPressed: _isLoading ? null : _updatePassword,
+                          child: _isLoading
+                              ? SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: theme.colorScheme.onPrimary,
+                                  ),
+                                )
+                              : Text(
+                                  'OVERRIDE PROTOCOL',
+                                  style: GoogleFonts.orbitron(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                        ),
+                      )
+                      .animate().fade(delay: 600.ms).slideY(begin: 0.2, curve: Curves.easeOutBack)
+                      // Infinite sweeping highlight on the button
+                      .animate(onPlay: (controller) => controller.repeat())
+                      .shimmer(duration: 3.seconds, delay: 1.seconds, color: Colors.white.withValues(alpha: 0.4)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
