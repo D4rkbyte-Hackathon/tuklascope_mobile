@@ -59,6 +59,51 @@ final Map<String, List<CompassQuestion>> compassQuestionBanks = {
         CompassOption(text: 'A factory or a giant bakery.', affinity: Affinity.tvl),
       ],
     ),
+    const CompassQuestion(
+      question: 'What is your favorite kind of toy or game?',
+      options: [
+        CompassOption(text: 'A chemistry set or a rubiks cube.', affinity: Affinity.stem),
+        CompassOption(text: 'Monopoly or games where you collect coins.', affinity: Affinity.abm),
+        CompassOption(text: 'Dolls, action figures, or role-playing games.', affinity: Affinity.humss),
+        CompassOption(text: 'Lego bricks or Play-Doh.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'How do you like to help out at home?',
+      options: [
+        CompassOption(text: 'Measuring ingredients exactly when baking.', affinity: Affinity.stem),
+        CompassOption(text: 'Counting the change or organizing allowance.', affinity: Affinity.abm),
+        CompassOption(text: 'Babysitting younger siblings or pets.', affinity: Affinity.humss),
+        CompassOption(text: 'Gardening, sweeping, or fixing broken toys.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'If you started a school club, what would it be?',
+      options: [
+        CompassOption(text: 'The Math and Science Explorer Club.', affinity: Affinity.stem),
+        CompassOption(text: 'The Student Store and Selling Club.', affinity: Affinity.abm),
+        CompassOption(text: 'The Reading and Helping Others Club.', affinity: Affinity.humss),
+        CompassOption(text: 'The Cooking and Crafting Club.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'What kind of TV show or movie do you enjoy most?',
+      options: [
+        CompassOption(text: 'Documentaries about space, dinosaurs, or tech.', affinity: Affinity.stem),
+        CompassOption(text: 'Shows about people running businesses or stores.', affinity: Affinity.abm),
+        CompassOption(text: 'Dramas or cartoons with emotional stories.', affinity: Affinity.humss),
+        CompassOption(text: 'Shows about building houses or cooking competitions.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'If you had a magic power, what would it be?',
+      options: [
+        CompassOption(text: 'Telekinesis to move objects and see how they work.', affinity: Affinity.stem),
+        CompassOption(text: 'Mind-reading to know exactly what people want to buy.', affinity: Affinity.abm),
+        CompassOption(text: 'Healing magic to cure anyone who is hurt.', affinity: Affinity.humss),
+        CompassOption(text: 'Super strength to build giant structures quickly.', affinity: Affinity.tvl),
+      ],
+    ),
   ],
   'High School': [
     const CompassQuestion(
@@ -106,6 +151,51 @@ final Map<String, List<CompassQuestion>> compassQuestionBanks = {
         CompassOption(text: 'Culinary Arts or Drafting/Woodshop.', affinity: Affinity.tvl),
       ],
     ),
+    const CompassQuestion(
+      question: 'What would be your ideal summer job?',
+      options: [
+        CompassOption(text: 'IT intern or lab assistant.', affinity: Affinity.stem),
+        CompassOption(text: 'Retail sales or working at a bank.', affinity: Affinity.abm),
+        CompassOption(text: 'Camp counselor or community volunteer.', affinity: Affinity.humss),
+        CompassOption(text: 'Mechanic, baker, or construction assistant.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'If you were organizing a school dance, what would you do?',
+      options: [
+        CompassOption(text: 'Set up the sound system and lighting tech.', affinity: Affinity.stem),
+        CompassOption(text: 'Manage the budget and ticket sales.', affinity: Affinity.abm),
+        CompassOption(text: 'Promote the event and write the announcements.', affinity: Affinity.humss),
+        CompassOption(text: 'Build the decorations and prepare the food.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'What do you watch most on YouTube or TikTok?',
+      options: [
+        CompassOption(text: 'Tech reviews, coding tutorials, or science experiments.', affinity: Affinity.stem),
+        CompassOption(text: 'Crypto, stock market tips, or side-hustle ideas.', affinity: Affinity.abm),
+        CompassOption(text: 'Vlogs, social commentary, or historical deep-dives.', affinity: Affinity.humss),
+        CompassOption(text: 'DIY crafting, cooking channels, or car rebuilds.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'When faced with a difficult academic topic, how do you approach it?',
+      options: [
+        CompassOption(text: 'Look for research papers and objective data.', affinity: Affinity.stem),
+        CompassOption(text: 'Find out how it applies to the real-world market.', affinity: Affinity.abm),
+        CompassOption(text: 'Discuss it with peers to hear different perspectives.', affinity: Affinity.humss),
+        CompassOption(text: 'Try to build a physical model or try it myself.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'What is your favorite elective class?',
+      options: [
+        CompassOption(text: 'Computer Science or Advanced Physics.', affinity: Affinity.stem),
+        CompassOption(text: 'Accounting or Business Management.', affinity: Affinity.abm),
+        CompassOption(text: 'Psychology, Sociology, or Literature.', affinity: Affinity.humss),
+        CompassOption(text: 'Woodshop, Culinary Arts, or Auto Mechanics.', affinity: Affinity.tvl),
+      ],
+    ),
   ],
   'Others': [
     const CompassQuestion(
@@ -151,6 +241,51 @@ final Map<String, List<CompassQuestion>> compassQuestionBanks = {
         CompassOption(text: 'To lead a successful enterprise or multinational venture.', affinity: Affinity.abm),
         CompassOption(text: 'To inspire, teach, or create positive social change.', affinity: Affinity.humss),
         CompassOption(text: 'To be recognized as a master of a highly specialized skill.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'If you had to invest your savings, where would you put it?',
+      options: [
+        CompassOption(text: 'Emerging tech startups and biotech.', affinity: Affinity.stem),
+        CompassOption(text: 'Real estate, stocks, and mutual funds.', affinity: Affinity.abm),
+        CompassOption(text: 'Social enterprises and educational non-profits.', affinity: Affinity.humss),
+        CompassOption(text: 'Manufacturing, agriculture, or a local restaurant.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'How do you prefer to volunteer your time?',
+      options: [
+        CompassOption(text: 'Doing data analysis or IT support for a charity.', affinity: Affinity.stem),
+        CompassOption(text: 'Organizing fundraisers and managing donations.', affinity: Affinity.abm),
+        CompassOption(text: 'Counseling, mentoring, or teaching others.', affinity: Affinity.humss),
+        CompassOption(text: 'Building shelters, cooking meals, or cleaning parks.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'What kind of podcast are you most likely to listen to?',
+      options: [
+        CompassOption(text: 'Science breakthroughs and coding logic.', affinity: Affinity.stem),
+        CompassOption(text: 'Economics, leadership, and market trends.', affinity: Affinity.abm),
+        CompassOption(text: 'Philosophy, history, and human stories.', affinity: Affinity.humss),
+        CompassOption(text: 'Maker spaces, DIY tips, and craftsmanship.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'How do you handle conflict in the workplace?',
+      options: [
+        CompassOption(text: 'Rely on objective data and logical reasoning.', affinity: Affinity.stem),
+        CompassOption(text: 'Negotiate a compromise that benefits the bottom line.', affinity: Affinity.abm),
+        CompassOption(text: 'Mediate the emotional issues and build consensus.', affinity: Affinity.humss),
+        CompassOption(text: 'Find a practical, hands-on workaround immediately.', affinity: Affinity.tvl),
+      ],
+    ),
+    const CompassQuestion(
+      question: 'What legacy do you want to leave behind?',
+      options: [
+        CompassOption(text: 'A groundbreaking technological invention.', affinity: Affinity.stem),
+        CompassOption(text: 'A massive, sustainable global empire.', affinity: Affinity.abm),
+        CompassOption(text: 'A movement that changed society for the better.', affinity: Affinity.humss),
+        CompassOption(text: 'A tangible masterpiece or perfectly built infrastructure.', affinity: Affinity.tvl),
       ],
     ),
   ],

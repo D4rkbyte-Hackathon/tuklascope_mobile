@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
+import 'package:google_fonts/google_fonts.dart'; 
 
 import '../../core/widgets/gradient_scaffold.dart';
 import 'compass_results_screen.dart';
@@ -21,8 +21,9 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
   final Map<int, CompassOption> _selectedAnswers = {};
   
   late final List<GlobalKey> _questionKeys;
- 
   final ScrollController _scrollController = ScrollController();
+
+  final int _minimumRequired = 5;
 
   @override
   void initState() {
@@ -32,26 +33,32 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
   }
 
   void _initializeAndShuffleQuestions() {
-    // 1. Get the raw questions based on level
     final rawQuestions = compassQuestionBanks[_userEducationLevel] ?? compassQuestionBanks['Others']!;
 
-    // 2. Map through to Deep Copy the options, shuffle the options, and recreate the question
     _activeQuestions = rawQuestions.map((q) {
       final shuffledOptions = List<CompassOption>.from(q.options)..shuffle();
       return CompassQuestion(question: q.question, options: shuffledOptions);
     }).toList();
 
-    // 3. Shuffle the overall order of the questions
     _activeQuestions.shuffle();
   }
 
+  bool get _canProceed => _selectedAnswers.length >= _minimumRequired;
   bool get _isAllAnswered => _selectedAnswers.length == _activeQuestions.length;
   double get _progress => _selectedAnswers.length / _activeQuestions.length;
 
   void _onOptionSelected(int questionIndex, CompassOption option) {
+    // 🚀 FIXED: Allow user to UNSELECT an option
+    if (_selectedAnswers[questionIndex] == option) {
+      setState(() {
+        _selectedAnswers.remove(questionIndex);
+      });
+      return; // Stop here, don't auto-scroll if they are just unselecting!
+    }
+
+    // Otherwise, set the new answer
     setState(() => _selectedAnswers[questionIndex] = option);
  
-    // Find the next unanswered question index
     int? nextIndex;
     for (int i = questionIndex + 1; i < _activeQuestions.length; i++) {
       if (!_selectedAnswers.containsKey(i)) {
@@ -69,27 +76,24 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
       }
     }
     
-    if (nextIndex == null) return; // All done — no need to scroll
+    if (nextIndex == null) return; 
  
-    // Wait one frame for the card's answered-state animation to start,
-    // then smoothly scroll so the next card sits near the top of the viewport.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final key = _questionKeys[nextIndex!];
       final ctx = key.currentContext;
       if (ctx == null) return;
  
-      // Use Scrollable.ensureVisible for reliable positioning with padding offset
       Scrollable.ensureVisible(
         ctx,
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeOutCubic,
-        alignment: 0.08, // position card near the top with a little breathing room
+        alignment: 0.08, 
       );
     });
   }
 
   void _submitAnswers() {
-    if (_isAllAnswered) {
+    if (_canProceed) {
       final Map<Affinity, int> scores = {
         Affinity.stem: 0, Affinity.abm: 0, Affinity.humss: 0, Affinity.tvl: 0,
       };
@@ -98,9 +102,9 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
         scores[option.affinity] = (scores[option.affinity] ?? 0) + 1;
       }
 
-      final int totalQuestions = _activeQuestions.length;
+      final int totalAnswered = _selectedAnswers.length;
       final Map<Affinity, double> percentages = {
-        for (var key in scores.keys) key: scores[key]! / totalQuestions,
+        for (var key in scores.keys) key: scores[key]! / totalAnswered,
       };
 
       Affinity topAffinity = Affinity.stem;
@@ -143,7 +147,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
         centerTitle: true, 
         title: RichText(
           text: TextSpan(
-            style: GoogleFonts.orbitron(fontSize: 24, fontWeight: FontWeight.w900), // 🚀 SWAPPED TO ORBITRON
+            style: GoogleFonts.orbitron(fontSize: 24, fontWeight: FontWeight.w900), 
             children: [
               TextSpan(text: 'Tuklascope ', style: TextStyle(color: primaryBlue)), 
               TextSpan(text: 'Compass', style: TextStyle(color: neonOrange)), 
@@ -160,7 +164,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                 duration: const Duration(milliseconds: 500),
                 curve: Curves.easeOutCubic,
                 height: 4,
-                width: MediaQuery.of(context).size.width * _progress,
+                width: MediaQuery.of(context).size.width * _progress, 
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: [primaryBlue, neonOrange]),
                   boxShadow: [BoxShadow(color: primaryBlue.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 1)],
@@ -170,9 +174,8 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
           ),
         ),
       ),
-      // 🚀 STEP 1: Wrap the body in a SafeArea to protect from landscape notches/side nav bars
       body: SafeArea(
-        bottom: false, // Let the floating bar handle the bottom edge
+        bottom: false, 
         child: Stack(
           children: [
             ListView.separated(
@@ -182,7 +185,7 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
                 top: 24.0,
                 left: 24.0,
                 right: 24.0,
-                bottom: MediaQuery.paddingOf(context).bottom + 120.0,
+                bottom: MediaQuery.paddingOf(context).bottom + 150.0,
               ),
               physics: const BouncingScrollPhysics(),
               itemCount: _activeQuestions.length,
@@ -213,51 +216,81 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
       child: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          // 🚀 STEP 2: Wrap the Container in a SafeArea to dynamically avoid bottom navigation bars
           child: SafeArea(
             top: false, 
             child: Container(
               padding: const EdgeInsets.only(
-                left: 24.0, right: 24.0, top: 20.0,
-                bottom: 20.0, // 🚀 STEP 3: Removed manual MediaQuery padding
+                left: 24.0, right: 24.0, top: 20.0, bottom: 20.0, 
               ),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface.withValues(alpha: 0.15),
                 border: Border(top: BorderSide(color: theme.colorScheme.onSurface.withValues(alpha: 0.2))),
               ),
-              child: SizedBox(
-                height: 56,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 400),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: _isAllAnswered ? [
-                      BoxShadow(color: neonOrange.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5))
-                    ] : [],
-                    gradient: LinearGradient(
-                      colors: _isAllAnswered 
-                          ? [theme.colorScheme.tertiary, neonOrange] 
-                          : [theme.colorScheme.onSurface.withValues(alpha: 0.4), theme.colorScheme.onSurface.withValues(alpha: 0.5)],
-                    ),
-                  ),
-                  child: ElevatedButton(
-                    onPressed: _isAllAnswered ? _submitAnswers : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: Text(
-                      _isAllAnswered ? 'Discover Your Path' : 'Answer ${_activeQuestions.length - _selectedAnswers.length} more to proceed',
-                      style: GoogleFonts.montserrat( // 🚀 SWAPPED TO MONTSERRAT
-                        fontSize: 18, 
-                        fontWeight: FontWeight.bold, 
-                        color: _isAllAnswered ? theme.colorScheme.onSecondary : theme.colorScheme.surface,
-                        letterSpacing: 1.1
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch, 
+                children: [
+                  if (_canProceed && !_isAllAnswered)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+                          const SizedBox(width: 8),
+                          Expanded( 
+                            child: Text(
+                              'You can proceed now, or answer more for higher accuracy.',
+                              style: GoogleFonts.inter(
+                                fontSize: 12, 
+                                fontWeight: FontWeight.w500,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.7)
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ).animate().fade().slideY(begin: 0.5, end: 0, duration: 300.ms),
+
+                  SizedBox(
+                    height: 56,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: _canProceed ? [
+                          BoxShadow(color: neonOrange.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5))
+                        ] : [],
+                        gradient: LinearGradient(
+                          colors: _canProceed 
+                              ? [theme.colorScheme.tertiary, neonOrange] 
+                              : [theme.colorScheme.onSurface.withValues(alpha: 0.4), theme.colorScheme.onSurface.withValues(alpha: 0.5)],
+                        ),
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _canProceed ? _submitAnswers : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: Text(
+                          _canProceed 
+                              ? 'Discover Your Path' 
+                              : 'Answer ${_minimumRequired - _selectedAnswers.length} more to proceed',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.montserrat( 
+                            fontSize: 18, 
+                            fontWeight: FontWeight.bold, 
+                            color: _canProceed ? theme.colorScheme.onSecondary : theme.colorScheme.surface,
+                            letterSpacing: 1.1
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
