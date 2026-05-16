@@ -464,82 +464,88 @@ class RecentDiscoveriesSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 180,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: recentScans.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
-            itemBuilder: (context, index) {
-              final scan = recentScans[index];
-              final objectName = scan['object_name'] as String? ?? 'Unknown';
-              final imageUrl = scan['image_url'] as String?;
-              final lens = scan['chosen_lens'] as String? ?? 'STEM';
-              final scanId = scan['id'] as String? ?? '';
+        // 🚀 ACCESSIBILITY FIX: Dynamic height instead of hardcoded 180px
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          clipBehavior: Clip.none, // Prevents shadows from getting cut off
+          child: IntrinsicHeight( // Forces all cards in the row to be the exact same height dynamically
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: recentScans.map((scan) {
+                final objectName = scan['object_name'] as String? ?? 'Unknown';
+                final imageUrl = scan['image_url'] as String?;
+                final lens = scan['chosen_lens'] as String? ?? 'STEM';
+                final scanId = scan['id'] as String? ?? '';
 
-              return GestureDetector(
-                onTap: () {
-                  if (scanId.isNotEmpty) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ScanDetailScreen(
-                          scanId: scanId,
-                          objectName: objectName,
-                          imagUrl: imageUrl ?? '', 
-                        ),
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16.0), // Replaces separatorBuilder
+                  child: GestureDetector(
+                    onTap: () {
+                      if (scanId.isNotEmpty) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ScanDetailScreen(
+                              scanId: scanId,
+                              objectName: objectName,
+                              imagUrl: imageUrl ?? '', 
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      width: 140, // Fixed width, dynamic height
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)),
+                        boxShadow: [
+                          BoxShadow(color: theme.shadowColor.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                        ],
                       ),
-                    );
-                  }
-                },
-                child: Container(
-                  width: 140,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)),
-                    boxShadow: [
-                      BoxShadow(color: theme.shadowColor.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                          child: imageUrl != null && imageUrl.isNotEmpty
-                              ? Image.network(imageUrl, fit: BoxFit.cover)
-                              : Container(
-                                  color: theme.colorScheme.primary.withOpacity(0.1), 
-                                  child: Icon(Icons.image_outlined, color: theme.colorScheme.primary)
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min, // Hug content
+                        children: [
+                          // Safely forces the image to a 4:3 aspect ratio so it doesn't break
+                          AspectRatio(
+                            aspectRatio: 4 / 3,
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                              child: imageUrl != null && imageUrl.isNotEmpty
+                                  ? Image.network(imageUrl, fit: BoxFit.cover)
+                                  : Container(
+                                      color: theme.colorScheme.primary.withOpacity(0.1), 
+                                      child: Icon(Icons.image_outlined, color: theme.colorScheme.primary)
+                                    ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  objectName, 
+                                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: theme.colorScheme.onSurface), 
+                                  // Removed maxLines so users with giant fonts can read it completely!
                                 ),
-                        ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  lens.toUpperCase(), 
+                                  style: GoogleFonts.montserrat(fontSize: 10, fontWeight: FontWeight.w900, color: theme.colorScheme.secondary, letterSpacing: 0.5) 
+                                ),
+                              ],
+                            ),
+                          )
+                        ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              objectName, 
-                              style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: theme.colorScheme.onSurface), 
-                              maxLines: 1, 
-                              overflow: TextOverflow.ellipsis
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              lens.toUpperCase(), 
-                              style: GoogleFonts.montserrat(fontSize: 10, fontWeight: FontWeight.w900, color: theme.colorScheme.secondary, letterSpacing: 0.5) 
-                            ),
-                          ],
-                        ),
-                      )
-                    ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              }).toList(),
+            ),
           ),
         ),
       ],
