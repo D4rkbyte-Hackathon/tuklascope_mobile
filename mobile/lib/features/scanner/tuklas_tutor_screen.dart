@@ -15,7 +15,6 @@ class ChatMessage {
   }
 }
 
-// 🚀 Helper to easily push this full screen from anywhere
 Future<void> navigateToTuklasTutor(
   BuildContext context, {
   required String objectName,
@@ -166,12 +165,12 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
                       .fadeIn(duration: 1.seconds),
                   const SizedBox(width: 8),
                   Text(
-                    'TUKLAS TUTOR',
+                    'TUKLAS HERO TUTOR',
                     style: GoogleFonts.orbitron(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w900,
                       color: theme.colorScheme.onSurface,
-                      letterSpacing: 2.0,
+                      letterSpacing: 1.5,
                     ),
                   ),
                 ],
@@ -197,7 +196,6 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
       ),
       body: Stack(
         children: [
-          // Background Gradient
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -214,16 +212,12 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
               ),
             ),
           ),
-
-          // Tech Grid Overlay
           Positioned.fill(
             child: Opacity(
               opacity: isDark ? 0.03 : 0.06,
               child: CustomPaint(painter: _GridPainter(color: theme.colorScheme.onSurface)),
             ),
           ),
-
-          // Main Chat Area
           SafeArea(
             child: Column(
               children: [
@@ -265,7 +259,6 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
       child: Column(
         crossAxisAlignment: isAI ? CrossAxisAlignment.start : CrossAxisAlignment.end,
         children: [
-          // Header / Sender Name
           Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: isAI ? MainAxisAlignment.start : MainAxisAlignment.end,
@@ -291,31 +284,58 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Message Body (HUD Glassmorphic)
-          Container(
+          // FIX BUG: Layout side indicator separately using IntrinsicHeight + Row
+          // to fully prevent complex cross-border paint breakdown crashes
+          ConstrainedBox(
             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.05),
-              border: Border(
-                left: isAI ? BorderSide(color: accentColor, width: 3) : BorderSide.none,
-                right: !isAI ? BorderSide(color: accentColor, width: 3) : BorderSide.none,
-                top: BorderSide(color: accentColor.withValues(alpha: 0.2), width: 1),
-                bottom: BorderSide(color: accentColor.withValues(alpha: 0.2), width: 1),
-              ),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(isAI ? 4 : 24),
-                topRight: Radius.circular(isAI ? 24 : 4),
-                bottomLeft: const Radius.circular(24),
-                bottomRight: const Radius.circular(24),
-              ),
-            ),
-            child: Text(
-              message.text,
-              style: GoogleFonts.inter(
-                fontSize: 15,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
-                height: 1.6,
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isAI)
+                    Container(
+                      width: 3.5,
+                      decoration: BoxDecoration(
+                        color: accentColor,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(4), bottom: Radius.circular(4)),
+                      ),
+                    ),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.05),
+                        border: Border.all(
+                          color: accentColor.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(isAI ? 4 : 20),
+                          topRight: Radius.circular(isAI ? 20 : 4),
+                          bottomLeft: const Radius.circular(20),
+                          bottomRight: const Radius.circular(20),
+                        ),
+                      ),
+                      child: Text(
+                        message.text,
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                          height: 1.55,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (!isAI)
+                    Container(
+                      width: 3.5,
+                      decoration: BoxDecoration(
+                        color: accentColor,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(4), bottom: Radius.circular(4)),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -347,42 +367,55 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.secondary.withValues(alpha: 0.05),
-              border: Border(
-                left: BorderSide(color: theme.colorScheme.secondary, width: 3),
-                top: BorderSide(color: theme.colorScheme.secondary.withValues(alpha: 0.2), width: 1),
-                bottom: BorderSide(color: theme.colorScheme.secondary.withValues(alpha: 0.2), width: 1),
-                right: BorderSide(color: theme.colorScheme.secondary.withValues(alpha: 0.2), width: 1),
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(24),
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
-            ),
+          IntrinsicHeight(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
+                Container(
+                  width: 3.5,
+                  decoration: BoxDecoration(
                     color: theme.colorScheme.secondary,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(4), bottom: Radius.circular(4)),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  "PROCESSING_DATALOG...",
-                  style: GoogleFonts.orbitron(
-                    color: theme.colorScheme.secondary.withValues(alpha: 0.8),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondary.withValues(alpha: 0.05),
+                    border: Border.all(
+                      color: theme.colorScheme.secondary.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(4),
+                      topRight: Radius.circular(20),
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.secondary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        "PROCESSING_DATALOG...",
+                        style: GoogleFonts.orbitron(
+                          color: theme.colorScheme.secondary.withValues(alpha: 0.8),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -426,7 +459,7 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
                       hintText: _isTyping ? 'AWAITING RESPONSE...' : 'ENTER TRANSMISSION...',
                       hintStyle: GoogleFonts.orbitron(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                        fontSize: 12,
+                        fontSize: 11,
                         letterSpacing: 1.0,
                       ),
                       border: InputBorder.none,
@@ -469,7 +502,6 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
   }
 }
 
-// Re-using the HUD background grid
 class _GridPainter extends CustomPainter {
   final Color color;
   _GridPainter({required this.color});
