@@ -22,6 +22,7 @@ class HomeHeader extends StatelessWidget {
     return Row(
       children: [
         // Clickable Profile Icon
+        // Clickable Profile Icon
         GestureDetector(
           onTap: () => MainNavScope.maybeOf(context)?.goToTab(3),
           child: Container(
@@ -35,13 +36,38 @@ class HomeHeader extends StatelessWidget {
                 )
               ],
             ),
+            // 🛠️ BUG FIXED: Safe Image Loading
             child: CircleAvatar(
               radius: 28,
               backgroundColor: theme.colorScheme.surface,
-              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl!) : null,
-              child: avatarUrl == null 
-                  ? Icon(Icons.person, size: 32, color: theme.colorScheme.primary) 
-                  : null,
+              child: avatarUrl != null && avatarUrl!.isNotEmpty
+                  ? ClipOval(
+                      child: Image.network(
+                        avatarUrl!,
+                        width: 56, // 2 * radius
+                        height: 56,
+                        fit: BoxFit.cover,
+                        // Fallback icon if URL is broken or offline
+                        errorBuilder: (context, error, stackTrace) =>
+                            Icon(Icons.person, size: 32, color: theme.colorScheme.primary),
+                        // Smooth loading spinner while fetching
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: theme.colorScheme.primary,
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      (loadingProgress.expectedTotalBytes ?? 1)
+                                  : null,
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  : Icon(Icons.person, size: 32, color: theme.colorScheme.primary),
             ),
           ),
         ),

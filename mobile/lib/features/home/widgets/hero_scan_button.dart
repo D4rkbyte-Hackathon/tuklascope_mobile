@@ -10,20 +10,24 @@ class HeroScanButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    // 🚀 Hardcoding striking Orange/Blue sci-fi palette
     const neonOrange = Color(0xFFFF7A00);
     const neonBlue = Color(0xFF00E5FF);
     const deepBlue = Color(0xFF0D3B66);
 
     return Center(
-      // Expanded canvas to comfortably fit 4 pointers
-      child: SizedBox(
-        width: 380, 
-        height: 380,
-        child: Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
+      // 🛠️ BUG FIXED: FittedBox scales the widget down to prevent overflow on small screens
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0), // Give it breathing room
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox(
+            width: 380, 
+            height: 380,
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                // ... Keep all the existing code inside the Stack exactly as it was ...
             // ==========================================
             // 1. THE CORE BUTTON 
             // ==========================================
@@ -120,77 +124,79 @@ class HeroScanButton extends StatelessWidget {
               ),
             ),
 
-            // ==========================================
-            // 2. 4-CORNER GAMIFIED POINTERS
-            // ==========================================
-            
-            // Top-Left (Blue)
-            Positioned(
-              top: 10,
-              left: 10,
-              child: const _FloatingPointer(
-                title: "NEW QUEST",
-                subtitle: "Scan to begin\nyour journey",
-                icon: Icons.south_east_rounded, 
-                color: neonBlue,
-                isTop: true,
-                isLeft: true,
-                delayMs: 0,
-                durationMs: 1800, // Unique pace
-              ),
-            ),
+                // ==========================================
+                // 2. 4-CORNER GAMIFIED POINTERS
+                // ==========================================
+                
+                // Top-Left (Blue)
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: const _FloatingPointer(
+                    title: "NEW QUEST",
+                    subtitle: "Scan to begin\nyour journey",
+                    icon: Icons.south_east_rounded, 
+                    color: neonBlue,
+                    isTop: true,
+                    isLeft: true,
+                    delayMs: 0,
+                    durationMs: 1800, // Unique pace
+                  ),
+                ),
 
-            // Top-Right (Orange)
-            Positioned(
-              top: 10,
-              right: 10,
-              child: const _FloatingPointer(
-                title: "ANALYSIS",
-                subtitle: "Identify items\ninstantly",
-                icon: Icons.south_west_rounded, 
-                color: neonOrange,
-                isTop: true,
-                isLeft: false,
-                delayMs: 700,
-                durationMs: 2200, // Unique pace
-              ),
-            ),
+                // Top-Right (Orange)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: const _FloatingPointer(
+                    title: "ANALYSIS",
+                    subtitle: "Identify items\ninstantly",
+                    icon: Icons.south_west_rounded, 
+                    color: neonOrange,
+                    isTop: true,
+                    isLeft: false,
+                    delayMs: 700,
+                    durationMs: 2200, // Unique pace
+                  ),
+                ),
 
-            // Bottom-Left (Orange)
-            Positioned(
-              bottom: 10,
-              left: 10,
-              child: const _FloatingPointer(
-                title: "TUTORIAL",
-                subtitle: "Learn about\nthe world",
-                icon: Icons.north_east_rounded, 
-                color: neonOrange,
-                isTop: false,
-                isLeft: true,
-                delayMs: 300,
-                durationMs: 1600, // Unique pace
-              ),
-            ),
+                // Bottom-Left (Orange)
+                Positioned(
+                  bottom: 10,
+                  left: 10,
+                  child: const _FloatingPointer(
+                    title: "TUTORIAL",
+                    subtitle: "Learn about\nthe world",
+                    icon: Icons.north_east_rounded, 
+                    color: neonOrange,
+                    isTop: false,
+                    isLeft: true,
+                    delayMs: 300,
+                    durationMs: 1600, // Unique pace
+                  ),
+                ),
 
-            // Bottom-Right (Blue)
-            Positioned(
-              bottom: 10,
-              right: 10,
-              child: const _FloatingPointer(
-                title: "DISCOVERY",
-                subtitle: "Unlock hidden\nartifacts",
-                icon: Icons.north_west_rounded, 
-                color: neonBlue,
-                isTop: false,
-                isLeft: false,
-                delayMs: 1100,
-                durationMs: 2000, // Unique pace
-              ),
-            ),
+                // Bottom-Right (Blue)
+                Positioned(
+                  bottom: 10,
+                  right: 10,
+                  child: const _FloatingPointer(
+                    title: "DISCOVERY",
+                    subtitle: "Unlock hidden\nartifacts",
+                    icon: Icons.north_west_rounded, 
+                    color: neonBlue,
+                    isTop: false,
+                    isLeft: false,
+                    delayMs: 1100,
+                    durationMs: 2000, // Unique pace
+                  ),
+                ),
 
-          ],
+              ],
+            ),
+          ).animate().scale(delay: 200.ms, duration: 600.ms, curve: Curves.easeOutBack),
         ),
-      ).animate().scale(delay: 200.ms, duration: 600.ms, curve: Curves.easeOutBack),
+      ),
     );
   }
 
