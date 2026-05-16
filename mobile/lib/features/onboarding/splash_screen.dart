@@ -4,11 +4,14 @@ import '../auth/presentation/screens/login_screen.dart';
 import '../../main_navigation.dart';
 import 'package:tuklascope_mobile/core/services/health_service.dart';
 
-// 1. Import your custom Gradient Scaffold
+// Import your custom Gradient Scaffold
 import '../../core/widgets/gradient_scaffold.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  // 🚀 ADDED: Optional parameter to force the next destination
+  final Widget? nextScreen; 
+  
+  const SplashScreen({super.key, this.nextScreen});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -28,19 +31,26 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
 
-    // 2. Check Supabase to see if they are already logged in
+    // 🚀 FIXED: If a specific next screen was requested, go there immediately!
+    if (widget.nextScreen != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => widget.nextScreen!),
+      );
+      return; 
+    }
+
+    // 2. Default logic: Check Supabase to see if they are already logged in
     final session = Supabase.instance.client.auth.currentSession;
 
     if (session != null) {
       Navigator.pushReplacement(
         context,
-        // Added the const here!
         MaterialPageRoute(builder: (context) => const MainNavigation()),
       );
     } else {
       Navigator.pushReplacement(
         context,
-        // Added the const here!
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
     }
@@ -48,16 +58,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 3. Swap the basic Scaffold for your beautiful GradientScaffold
     return GradientScaffold(
       body: Center(
-        // 4. Swap the Text for your actual image!
         child: Image.asset(
-          'assets/images/logo.png', // Change 'logo.png' if your file is named something else!
-          width:
-              500, // Adjust these numbers to make your logo bigger or smaller
+          'assets/images/logo.png', 
+          width: 500, 
           height: 500,
-          fit: BoxFit.contain, // Ensures the logo scales cleanly
+          fit: BoxFit.contain, 
         ),
       ),
     );
