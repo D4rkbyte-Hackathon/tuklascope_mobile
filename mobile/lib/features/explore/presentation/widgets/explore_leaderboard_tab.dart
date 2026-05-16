@@ -134,6 +134,7 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
           .order('total_xp', ascending: false) 
           .order('current_level', ascending: false) 
           .order('current_streak', ascending: false) 
+          .order('created_at', ascending: true) // 🚀 ADDED: Forces the exact same order as the RPC
           .limit(50);
       
       if (mounted) {

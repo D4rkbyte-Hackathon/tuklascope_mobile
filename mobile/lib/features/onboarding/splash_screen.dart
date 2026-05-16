@@ -49,7 +49,7 @@ class _SplashScreenState extends State<SplashScreen> {
         // Ping database to see if this user has compass results
         final compassCheck = await Supabase.instance.client
             .from('compass_results')
-            .select('id')
+            .select('user_id') // 🛠️ BUG FIXED: Changed from 'id' to 'user_id'
             .eq('user_id', session.user.id)
             .limit(1);
 

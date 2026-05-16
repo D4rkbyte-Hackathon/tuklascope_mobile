@@ -29,11 +29,7 @@ class HomeStats {
 }
 
 final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
-  
-  // 🚀 Watch auth state - when user changes, provider automatically re-runs
   ref.watch(authStateProvider);
-  
-  // Keeps the data alive so switching tabs doesn't trigger a reload
   ref.keepAlive();
 
   final client = Supabase.instance.client;
@@ -52,9 +48,7 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
     final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day).toUtc().toIso8601String();
 
-    // 🚀 1. FIRE ALL REQUESTS CONCURRENTLY WITH FAIL-SAFES
-    
-    // Fetch Profile
+    // 🚀 1. FIRE ALL REQUESTS CONCURRENTLY
     final profileFuture = client
         .from('profiles')
         .select('current_streak, total_xp, full_name, profile_picture_url') 
@@ -62,7 +56,6 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
         .maybeSingle()
         .catchError((_) => null);
 
-    // Fetch Today's Scans Count
     final scansFuture = client
         .from('scans')
         .select('id')
@@ -70,14 +63,11 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
         .gte('created_at', startOfDay)
         .catchError((_) => []);
 
-    // Fetch Leaderboard Data
-    final leaderboardFuture = client
-        .from('profiles')
-        .select('id, total_xp')
-        .order('total_xp', ascending: false)
-        .catchError((_) => []);
+    // 🛠️ BUG FIXED: Call the RPC instead of fetching all profiles
+    final rankStatsFuture = client
+        .rpc('get_user_rank_stats', params: {'user_id_param': user.id})
+        .catchError((_) => {'rank': null, 'total_users': 0});
     
-    // Fetch 3 Most Recent Discoveries
     final recentScansFuture = client
         .from('scans')
         .select('id, object_name, chosen_lens, created_at, image_url')
@@ -86,31 +76,28 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
         .limit(3)
         .catchError((_) => []);
 
-    // Fetch Real Skill Tree Branch XP from Neo4j
     final skillWebFuture = PathfinderService.getSkillWeb()
         .catchError((_) => null);
 
-    // 🚀 2. AWAIT THEM ALL SIMULTANEOUSLY (Drops load time to ~300ms)
+    // 🚀 2. AWAIT THEM ALL SIMULTANEOUSLY
     final results = await Future.wait<dynamic>([
       profileFuture,
       scansFuture,
-      leaderboardFuture,
+      rankStatsFuture, // RPC Result is here at index 2
       recentScansFuture,
       skillWebFuture,
     ]);
 
-    // 🚀 3. SAFELY EXTRACT AND CAST DATA
     final profileData = results[0] as Map<String, dynamic>?;
     final scansData = results[1] as List<dynamic>? ?? [];
-    final allProfiles = results[2] as List<dynamic>? ?? [];
+    final rankStats = results[2] as Map<String, dynamic>? ?? {}; // Parse RPC JSON
     final recentScansData = results[3] as List<dynamic>? ?? [];
     final skillData = results[4] as Map<String, dynamic>?;
 
-    // Leaderboard Calculation
-    final rankIndex = allProfiles.indexWhere((p) => p['id'] == user.id);
-    final userRank = rankIndex != -1 ? rankIndex + 1 : null;
+    // 🛠️ BUG FIXED: Extract Rank and Total from RPC
+    final userRank = rankStats['rank'] as int?;
+    final totalUsers = rankStats['total_users'] as int? ?? 0;
 
-    // Skill Tree Calculation
     Map<String, int> branchXp = {'STEM': 0, 'HUMSS': 0, 'ABM': 0, 'TVL': 0};
     if (skillData != null && skillData['xp_distribution'] != null) {
       final dist = skillData['xp_distribution'] as Map<String, dynamic>;
@@ -129,18 +116,14 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
       userName: profileData?['full_name'] as String? ?? 'Explorer',
       avatarUrl: profileData?['profile_picture_url'] as String?, 
       userRank: userRank,
-      totalUsers: allProfiles.length,
+      totalUsers: totalUsers,
       branchXp: branchXp,
       recentScans: List<Map<String, dynamic>>.from(recentScansData), 
     );
     
   } catch (e) {
     debugPrint("Home Provider Overall Error: $e");
-    return HomeStats(
-      dailyStreak: 0, totalPoints: 0, todayScansCount: 0,
-      userName: 'Explorer',
-      userRank: null, totalUsers: 0, branchXp: {'STEM': 0, 'HUMSS': 0, 'ABM': 0, 'TVL': 0},
-      recentScans: [],
-    );
+    // Return empty stats on failure
+    throw e; // Let the UI handle the error state if needed, or return defaults.
   }
 });
