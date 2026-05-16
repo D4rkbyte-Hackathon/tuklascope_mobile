@@ -118,7 +118,7 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
 
     String apiSafeGradeLevel;
     switch (rawGrade) {
-      case 'Elementary': apiSafeGradeLevel = 'Elementary (Grades 1-6)'; break;
+      case 'Elementary': apiSafeGradeLevel = 'Elementary (Grades 4-6)'; break;
       case 'Senior High School': apiSafeGradeLevel = 'SHS (Grades 11-12)'; break;
       case 'College': case 'Others': apiSafeGradeLevel = 'College/Undergrad'; break;
       case 'High School': default: apiSafeGradeLevel = 'JHS (Grades 7-10)'; break;
