@@ -20,8 +20,6 @@ import '../widgets/profile_promo_card.dart';
 import 'edit_profile_screen.dart';
 import '../widgets/about_tab.dart'; // Add this line!
 
-import 'package:url_launcher/url_launcher.dart';
-
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -141,17 +139,6 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  Future<void> _launchGitHubProfile(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch $url')),
-        );
-      }
-    }
   }
 
   @override

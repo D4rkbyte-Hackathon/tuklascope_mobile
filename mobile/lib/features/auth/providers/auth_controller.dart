@@ -81,6 +81,7 @@ class AuthController extends AsyncNotifier<void> {
       rethrow;
     }
   }
+
   // New method for Facebook sign-in
   Future<AuthResponse?> signInWithFacebook() async {
     state = const AsyncLoading();
@@ -131,31 +132,27 @@ final appUserProvider = StreamProvider<AppUser?>((ref) async* {
       );
 
   // Combine them into our AppUser master object
- yield* Rx.combineLatest2<UserProfile?, SkillTree?, AppUser?>(
-  profileStream,
-  skillTreeStream,
-  (profile, skillTree) {
-    if (profile == null) return null; // Profile is required
-    
-    // Provide default skill tree for new users if missing
-    final finalSkillTree = skillTree ?? SkillTree(
-      userId: user.id,
-      aghamMathXp: 0,
-      siningWikaXp: 0,
-      negosyoPamamahalaXp: 0,
-      buhayKasanayanXp: 0,
-    );
-    
-    return AppUser(auth: user, profile: profile, skillTree: finalSkillTree);
-  },
-).where((user) => user != null).timeout(
-  const Duration(seconds: 5),
-  onTimeout: (sink) {
-    // If timeout occurs, close the stream gracefully
-    sink.close();
-  },
-);
+  // 🚀 FIX: Removed the dangerous .timeout() and sink.close() trap
+  yield* Rx.combineLatest2<UserProfile?, SkillTree?, AppUser?>(
+    profileStream,
+    skillTreeStream,
+    (profile, skillTree) {
+      if (profile == null) return null; // Profile is required
+      
+      // Provide default skill tree for new users if missing
+      final finalSkillTree = skillTree ?? SkillTree(
+        userId: user.id,
+        aghamMathXp: 0,
+        siningWikaXp: 0,
+        negosyoPamamahalaXp: 0,
+        buhayKasanayanXp: 0,
+      );
+      
+      return AppUser(auth: user, profile: profile, skillTree: finalSkillTree);
+    },
+  ).where((user) => user != null);
 });
+
 // ==========================================
 // 4. AUTH METHOD PROVIDERS (OAuth vs Email/Password)
 // ==========================================

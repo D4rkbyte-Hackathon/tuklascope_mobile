@@ -107,7 +107,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
           // For social logins with incomplete profile, show completion screen
           String? displayName;
-          String userEmail = user.email ?? '';
+          final String userEmail = user.email ?? '';
           
           // Get name from user metadata
           final userMetadata = user.userMetadata;

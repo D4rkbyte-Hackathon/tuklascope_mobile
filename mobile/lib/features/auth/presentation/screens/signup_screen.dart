@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +14,6 @@ import '../../../profile/services/profile_service.dart'; // 🚀 ADDED: To use y
 import 'login_screen.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/neon_text_field.dart';
-import '../../providers/auth_controller.dart';
 import '../../../../core/widgets/gradient_scaffold.dart';
 import '../../../../core/navigation/auth_transitions.dart';
 
@@ -114,6 +115,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // 🚀 FIX: Actually utilizing the email existence check before doing anything else
+      final emailExists = await _authService.checkIfEmailExists(email);
+      if (emailExists) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        return _showSnackBar('This email is already registered. Please log in.');
+      }
+
       await _authService.sendSignupVerificationOtp(
         email: email,
         password: password,
@@ -198,7 +207,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             'city': _cityController.text.trim(),
                             'country': _countryController.text.trim(),
                             'education_level': _selectedEducationLevel,
-                            if (finalAvatarUrl != null) 'profile_picture_url': finalAvatarUrl,
+                            'profile_picture_url': ?finalAvatarUrl,
                           }).eq('id', user.id);
                         } catch (e) {
                           debugPrint('Error updating profile: $e');
@@ -416,7 +425,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           });
         },
         itemBuilder: (context, index) {
-          int realIndex = index % 11;
+          final int realIndex = index % 11;
           return AnimatedBuilder(
             animation: _avatarPageController,
             builder: (context, child) {

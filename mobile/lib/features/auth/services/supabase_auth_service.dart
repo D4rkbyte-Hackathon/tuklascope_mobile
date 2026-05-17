@@ -42,11 +42,11 @@ class SupabaseAuthService {
       await googleSignIn.initialize(serverClientId: webClientId);
 
       // Trigger the native popup
-      final GoogleSignInAccount? googleUser = await googleSignIn.authenticate();
-      if (googleUser == null) return null; // User canceled the sign-in
+      final GoogleSignInAccount googleUser = await googleSignIn.authenticate();
+// User canceled the sign-in
 
       // Extract the authentication data
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       // 🚀 V7 FIX: We ONLY grab the idToken.
       // accessToken was removed in v7, but Supabase doesn't need it anyway!
@@ -128,9 +128,13 @@ class SupabaseAuthService {
       await _supabase.auth.updateUser(
         UserAttributes(password: newPassword),
       );
-      print('✓ Password changed successfully');
+      if (kDebugMode) {
+        print('✓ Password changed successfully');
+      }
     } catch (e) {
-      print('✗ Error changing password: $e');
+      if (kDebugMode) {
+        print('✗ Error changing password: $e');
+      }
       rethrow;
     }
   }

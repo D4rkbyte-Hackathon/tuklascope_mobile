@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -381,9 +383,14 @@ class LeaderboardTeaser extends StatelessWidget {
     final theme = Theme.of(context);
     
     Color trophyColor = theme.colorScheme.tertiary;
-    if (rank == 1) trophyColor = const Color(0xFFFFD700); // Pure Gold
-    else if (rank == 2) trophyColor = const Color(0xFFC0C0C0); // Silver
-    else if (rank == 3) trophyColor = const Color(0xFFCD7F32); // Bronze
+    if (rank == 1) {
+      trophyColor = const Color(0xFFFFD700);
+    } else if (rank == 2) {
+      trophyColor = const Color(0xFFC0C0C0);
+    }
+    else if (rank == 3) {
+      trophyColor = const Color(0xFFCD7F32);
+    }
 
     return GestureDetector(
       onTap: () => MainNavScope.maybeOf(context)?.goToTab(4), 
@@ -437,12 +444,36 @@ class LeaderboardTeaser extends StatelessWidget {
 }
 
 // =========================================================================
-// 5. RECENT DISCOVERIES SECTION (HORIZONTAL LIST)
+// 5. RECENT DISCOVERIES SECTION (OPTIMIZED HORIZONTAL LIST)
 // =========================================================================
 class RecentDiscoveriesSection extends StatelessWidget {
   final List<Map<String, dynamic>> recentScans;
 
   const RecentDiscoveriesSection({super.key, required this.recentScans});
+
+  Color _getLensColor(String lens) {
+    switch (lens.toUpperCase()) {
+      case 'STEM': return Colors.greenAccent[400]!;
+      case 'HUMSS': return Colors.orangeAccent[400]!;
+      case 'ABM': return Colors.blueAccent[400]!;
+      case 'TVL': return Colors.redAccent[400]!;
+      default: return Colors.purpleAccent[400]!;
+    }
+  }
+
+  String _formatDate(String? isoString) {
+    if (isoString == null) return "Recently";
+    try {
+      final date = DateTime.parse(isoString).toLocal();
+      final now = DateTime.now();
+      final diff = now.difference(date);
+      if (diff.inHours < 24) return "${diff.inHours == 0 ? 1 : diff.inHours}h ago";
+      if (diff.inDays == 1) return "Yesterday";
+      return "${date.month}/${date.day}/${date.year}";
+    } catch (e) {
+      return "Recently";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -464,88 +495,141 @@ class RecentDiscoveriesSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        // 🚀 ACCESSIBILITY FIX: Dynamic height instead of hardcoded 180px
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          clipBehavior: Clip.none, // Prevents shadows from getting cut off
-          child: IntrinsicHeight( // Forces all cards in the row to be the exact same height dynamically
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: recentScans.map((scan) {
-                final objectName = scan['object_name'] as String? ?? 'Unknown';
-                final imageUrl = scan['image_url'] as String?;
-                final lens = scan['chosen_lens'] as String? ?? 'STEM';
-                final scanId = scan['id'] as String? ?? '';
+        // 🚀 UX FIX: Removed IntrinsicHeight. Defined explicit fixed dimensions for 60fps scrolling.
+        SizedBox(
+          height: 220, // Tall aspect ratio to match ScanHistoryCard
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            clipBehavior: Clip.none, 
+            itemCount: recentScans.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 16),
+            itemBuilder: (context, index) {
+              final scan = recentScans[index];
+              final objectName = scan['object_name'] as String? ?? 'Unknown';
+              final imageUrl = scan['image_url'] as String?;
+              final lens = scan['chosen_lens'] as String? ?? 'STEM';
+              final scanId = scan['id'] as String? ?? '';
+              final timeStr = _formatDate(scan['created_at'] as String?);
+              final accentColor = _getLensColor(lens);
 
-                return Padding(
-                  padding: const EdgeInsets.only(right: 16.0), // Replaces separatorBuilder
-                  child: GestureDetector(
-                    onTap: () {
-                      if (scanId.isNotEmpty) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ScanDetailScreen(
-                              scanId: scanId,
-                              objectName: objectName,
-                              imagUrl: imageUrl ?? '', 
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    child: Container(
-                      width: 140, // Fixed width, dynamic height
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)),
-                        boxShadow: [
-                          BoxShadow(color: theme.shadowColor.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
-                        ],
+              return GestureDetector(
+                onTap: () {
+                  if (scanId.isNotEmpty) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ScanDetailScreen(
+                          scanId: scanId,
+                          objectName: objectName,
+                          imagUrl: imageUrl ?? '', 
+                        ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisSize: MainAxisSize.min, // Hug content
-                        children: [
-                          // Safely forces the image to a 4:3 aspect ratio so it doesn't break
-                          AspectRatio(
-                            aspectRatio: 4 / 3,
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                              child: imageUrl != null && imageUrl.isNotEmpty
-                                  ? Image.network(imageUrl, fit: BoxFit.cover)
-                                  : Container(
-                                      color: theme.colorScheme.primary.withOpacity(0.1), 
-                                      child: Icon(Icons.image_outlined, color: theme.colorScheme.primary)
-                                    ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  objectName, 
-                                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: theme.colorScheme.onSurface), 
-                                  // Removed maxLines so users with giant fonts can read it completely!
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  lens.toUpperCase(), 
-                                  style: GoogleFonts.montserrat(fontSize: 10, fontWeight: FontWeight.w900, color: theme.colorScheme.secondary, letterSpacing: 0.5) 
-                                ),
+                    );
+                  }
+                },
+                child: Container(
+                  width: 150, 
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: accentColor.withOpacity(0.3), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(color: accentColor.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 5)),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Background Image
+                        imageUrl != null && imageUrl.isNotEmpty
+                            ? Image.network(imageUrl, fit: BoxFit.contain)
+                            : Container(
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                child: Icon(Icons.science, color: accentColor.withOpacity(0.5), size: 40),
+                              ),
+                        
+                        // Dark Overlay Gradient (Better contrast for white text)
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.85),
                               ],
+                              stops: const [0.4, 1.0],
                             ),
-                          )
-                        ],
-                      ),
+                          ),
+                        ),
+
+                        // Lens Tag Badge (Top Right)
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: accentColor.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.white.withOpacity(0.2)),
+                            ),
+                            child: Text(
+                              lens.toUpperCase(),
+                              style: GoogleFonts.orbitron(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Title & Time (Bottom)
+                        Positioned(
+                          bottom: 12,
+                          left: 12,
+                          right: 12,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                objectName,
+                                style: GoogleFonts.orbitron(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(Icons.timeline, size: 10, color: Colors.white.withOpacity(0.6)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    timeStr,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      color: Colors.white.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                );
-              }).toList(),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ],

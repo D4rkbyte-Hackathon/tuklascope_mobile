@@ -5,12 +5,17 @@ import '../../main_navigation.dart';
 import 'package:tuklascope_mobile/core/services/health_service.dart';
 
 import '../../core/widgets/gradient_scaffold.dart';
-import 'compass_questions_screen.dart'; // 🚀 IMPORTED Compass Screen
+import 'compass_questions_screen.dart'; 
 
 class SplashScreen extends StatefulWidget {
   final Widget? nextScreen; 
+  final bool handlesNavigation; // 🚀 ADDED FLAG
   
-  const SplashScreen({super.key, this.nextScreen});
+  const SplashScreen({
+    super.key, 
+    this.nextScreen, 
+    this.handlesNavigation = true, // Default to true so your SignupScreen transition still works
+  });
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -28,7 +33,8 @@ class _SplashScreenState extends State<SplashScreen> {
     // 1. Wait for splash effect
     await Future.delayed(const Duration(seconds: 2));
 
-    if (!mounted) return;
+    // 🚀 CRITICAL FIX: Early exit if it's being used inside AuthGate purely as a loading screen!
+    if (!mounted || !widget.handlesNavigation) return; 
 
     // 2. If a specific next screen was requested (e.g. fresh sign up flow)
     if (widget.nextScreen != null) {
@@ -44,17 +50,15 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (session != null) {
       
-      // 🚀 FIXED: Mandatory Compass Edge-case check!
       try {
         // Ping database to see if this user has compass results
         final compassCheck = await Supabase.instance.client
             .from('compass_results')
-            .select('user_id') // 🛠️ BUG FIXED: Changed from 'id' to 'user_id'
+            .select('user_id') 
             .eq('user_id', session.user.id)
             .limit(1);
 
         if (compassCheck.isEmpty) {
-          // If empty, they quit the app before finishing! Force them back to the compass.
           if (!mounted) return;
           Navigator.pushReplacement(
             context,
@@ -65,7 +69,6 @@ class _SplashScreenState extends State<SplashScreen> {
       } catch (e) {
         debugPrint('🚨 COMPASS CHECK ERROR: $e');
         if (mounted) {
-           // Show a warning banner so we know the DB is angry, instead of failing silently
            ScaffoldMessenger.of(context).showSnackBar(
              SnackBar(content: Text('Database Error: $e'), backgroundColor: Colors.red),
            );

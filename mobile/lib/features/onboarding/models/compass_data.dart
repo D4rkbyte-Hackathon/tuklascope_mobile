@@ -197,7 +197,9 @@ final Map<String, List<CompassQuestion>> compassQuestionBanks = {
       ],
     ),
   ],
-  'Others': [
+  
+  // 🚀 CHANGED THIS KEY TO 'Senior High School' = 'Others'
+  'Senior High School': [
     const CompassQuestion(
       question: 'You are faced with a complex, real-world challenge. How do you approach it?',
       options: [

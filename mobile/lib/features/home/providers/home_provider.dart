@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -28,27 +29,44 @@ class HomeStats {
   });
 }
 
-final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
-  ref.watch(authStateProvider);
-  ref.keepAlive();
-
-  final client = Supabase.instance.client;
-  final user = client.auth.currentUser;
-
-  if (user == null) {
-    return HomeStats(
-      dailyStreak: 0, totalPoints: 0, todayScansCount: 0,
-      userName: 'Explorer', avatarUrl: null,
-      userRank: null, totalUsers: 0, branchXp: {'STEM': 0, 'HUMSS': 0, 'ABM': 0, 'TVL': 0},
-      recentScans: [],
-    );
+// 🚀 FIX: Upgraded to AsyncNotifier for true SWR support
+class HomeStatsNotifier extends AsyncNotifier<HomeStats> {
+  
+  @override
+  FutureOr<HomeStats> build() async {
+    // Watches auth state so the cache resets if they log out
+    ref.watch(authStateProvider);
+    return _fetchData();
   }
 
-  try {
+  // 🚀 THE MAGIC METHOD: Fetches data and updates state WITHOUT triggering 'isLoading'
+  Future<void> refreshSilently() async {
+    try {
+      final newData = await _fetchData();
+      // Instantly injects the new data into the UI without triggering a loading rebuild flicker!
+      state = AsyncData(newData);
+    } catch (e) {
+      debugPrint("Silent refresh failed (User might be offline): $e");
+      // We do NOT change the state to Error here, so the user keeps seeing their cached data safely.
+    }
+  }
+
+  Future<HomeStats> _fetchData() async {
+    final client = Supabase.instance.client;
+    final user = client.auth.currentUser;
+
+    if (user == null) {
+      return HomeStats(
+        dailyStreak: 0, totalPoints: 0, todayScansCount: 0,
+        userName: 'Explorer', avatarUrl: null,
+        userRank: null, totalUsers: 0, branchXp: {'STEM': 0, 'HUMSS': 0, 'ABM': 0, 'TVL': 0},
+        recentScans: [],
+      );
+    }
+
     final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day).toUtc().toIso8601String();
 
-    // 🚀 1. FIRE ALL REQUESTS CONCURRENTLY
     final profileFuture = client
         .from('profiles')
         .select('current_streak, total_xp, full_name, profile_picture_url') 
@@ -63,7 +81,6 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
         .gte('created_at', startOfDay)
         .catchError((_) => []);
 
-    // 🛠️ BUG FIXED: Call the RPC instead of fetching all profiles
     final rankStatsFuture = client
         .rpc('get_user_rank_stats', params: {'user_id_param': user.id})
         .catchError((_) => {'rank': null, 'total_users': 0});
@@ -79,22 +96,20 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
     final skillWebFuture = PathfinderService.getSkillWeb()
         .catchError((_) => null);
 
-    // 🚀 2. AWAIT THEM ALL SIMULTANEOUSLY
     final results = await Future.wait<dynamic>([
       profileFuture,
       scansFuture,
-      rankStatsFuture, // RPC Result is here at index 2
+      rankStatsFuture, 
       recentScansFuture,
       skillWebFuture,
     ]);
 
     final profileData = results[0] as Map<String, dynamic>?;
     final scansData = results[1] as List<dynamic>? ?? [];
-    final rankStats = results[2] as Map<String, dynamic>? ?? {}; // Parse RPC JSON
+    final rankStats = results[2] as Map<String, dynamic>? ?? {}; 
     final recentScansData = results[3] as List<dynamic>? ?? [];
     final skillData = results[4] as Map<String, dynamic>?;
 
-    // 🛠️ BUG FIXED: Extract Rank and Total from RPC
     final userRank = rankStats['rank'] as int?;
     final totalUsers = rankStats['total_users'] as int? ?? 0;
 
@@ -120,10 +135,10 @@ final homeStatsProvider = FutureProvider.autoDispose<HomeStats>((ref) async {
       branchXp: branchXp,
       recentScans: List<Map<String, dynamic>>.from(recentScansData), 
     );
-    
-  } catch (e) {
-    debugPrint("Home Provider Overall Error: $e");
-    // Return empty stats on failure
-    throw e; // Let the UI handle the error state if needed, or return defaults.
   }
+}
+
+// Notice it's an AsyncNotifierProvider now, permanently cached in memory
+final homeStatsProvider = AsyncNotifierProvider<HomeStatsNotifier, HomeStats>(() {
+  return HomeStatsNotifier();
 });

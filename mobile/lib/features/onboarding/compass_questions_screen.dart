@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart'; 
+import 'package:supabase_flutter/supabase_flutter.dart'; 
 
 import '../../core/widgets/gradient_scaffold.dart';
 import 'compass_results_screen.dart';
@@ -16,24 +17,80 @@ class CompassQuestionsScreen extends StatefulWidget {
 }
 
 class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
-  final String _userEducationLevel = 'Others'; 
-  late final List<CompassQuestion> _activeQuestions;
+  // 🚀 Change default to Senior High School so we always have a safe baseline
+  String _userEducationLevel = 'Senior High School'; 
+  late List<CompassQuestion> _activeQuestions;
   final Map<int, CompassOption> _selectedAnswers = {};
   
-  late final List<GlobalKey> _questionKeys;
+  late List<GlobalKey> _questionKeys;
   final ScrollController _scrollController = ScrollController();
 
   final int _minimumRequired = 5;
+  bool _isLoading = true; 
 
   @override
   void initState() {
     super.initState();
-    _initializeAndShuffleQuestions();
-    _questionKeys = List.generate(_activeQuestions.length, (_) => GlobalKey());
+    _fetchUserDataAndInitialize(); 
+  }
+
+  Future<void> _fetchUserDataAndInitialize() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId != null) {
+        final profile = await Supabase.instance.client
+            .from('profiles')
+            .select('education_level')
+            .eq('id', userId)
+            .maybeSingle(); 
+        
+        if (profile != null && profile['education_level'] != null) {
+          String fetchedLevel = profile['education_level'].toString().trim();
+
+          // 🚀 REVISED LOGIC: If they picked 'Others', route them to 'Senior High School'
+          if (fetchedLevel == 'Others') {
+            fetchedLevel = 'Senior High School';
+          }
+
+          if (compassQuestionBanks.containsKey(fetchedLevel)) {
+             _userEducationLevel = fetchedLevel;
+          } else {
+             _userEducationLevel = 'Senior High School'; // Safe fallback
+          }
+
+        } else {
+          // Warning if RLS block
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Warning: Supabase returned empty. Check RLS policies!'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching education level: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('DB Fetch Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        _initializeAndShuffleQuestions();
+        _questionKeys = List.generate(_activeQuestions.length, (_) => GlobalKey());
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _initializeAndShuffleQuestions() {
-    final rawQuestions = compassQuestionBanks[_userEducationLevel] ?? compassQuestionBanks['Others']!;
+    // 🚀 Uses the newly synced keys
+    final rawQuestions = compassQuestionBanks[_userEducationLevel] ?? compassQuestionBanks['Senior High School']!;
 
     _activeQuestions = rawQuestions.map((q) {
       final shuffledOptions = List<CompassOption>.from(q.options)..shuffle();
@@ -48,15 +105,13 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
   double get _progress => _selectedAnswers.length / _activeQuestions.length;
 
   void _onOptionSelected(int questionIndex, CompassOption option) {
-    // 🚀 FIXED: Allow user to UNSELECT an option
     if (_selectedAnswers[questionIndex] == option) {
       setState(() {
         _selectedAnswers.remove(questionIndex);
       });
-      return; // Stop here, don't auto-scroll if they are just unselecting!
+      return; 
     }
 
-    // Otherwise, set the new answer
     setState(() => _selectedAnswers[questionIndex] = option);
  
     int? nextIndex;
@@ -138,6 +193,14 @@ class _CompassQuestionsScreenState extends State<CompassQuestionsScreen> {
     final theme = Theme.of(context);
     final neonOrange = theme.colorScheme.secondary;
     final primaryBlue = theme.colorScheme.primary;
+
+    if (_isLoading) {
+      return GradientScaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: neonOrange),
+        ),
+      );
+    }
 
     return GradientScaffold(
       appBar: AppBar(

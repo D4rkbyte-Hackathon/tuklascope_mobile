@@ -243,11 +243,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Widget _buildAvatarScroller(ThemeData theme, String? currentAvatarUrl) {
     // BUG FIX 1: Check if the custom slot has a valid image 
     // (either just uploaded, or currently saved in the DB as a custom URL)
-    bool hasValidCustomImage = _customProfileImage != null || 
+    final bool hasValidCustomImage = _customProfileImage != null || 
         (currentAvatarUrl != null && currentAvatarUrl.isNotEmpty && !_avatarOptions.contains(currentAvatarUrl));
     
     // Enable the button if they select a pre-loaded avatar OR if they are on the custom slot and it has an image
-    bool isButtonEnabled = _selectedAvatarIndex != 0 || hasValidCustomImage;
+    final bool isButtonEnabled = _selectedAvatarIndex != 0 || hasValidCustomImage;
 
     return Column(
       children: [
@@ -261,7 +261,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               });
             },
             itemBuilder: (context, index) {
-              int realIndex = index % 11;
+              final int realIndex = index % 11;
               return AnimatedBuilder(
                 animation: _avatarPageController,
                 builder: (context, child) {
@@ -672,7 +672,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
                   if (!_hasInitializedAvatar) {
                     if (profile.profilePictureUrl != null && profile.profilePictureUrl!.isNotEmpty) {
-                      int foundIndex = _avatarOptions.indexOf(profile.profilePictureUrl!);
+                      final int foundIndex = _avatarOptions.indexOf(profile.profilePictureUrl!);
                       if (foundIndex != -1) {
                         _selectedAvatarIndex = foundIndex;
                       } else {

@@ -23,7 +23,7 @@ class AboutTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Base delay for stagger choreography
-    int delayStep = 100;
+    const int delayStep = 100;
     int currentDelay = 0;
 
     return ListView(
