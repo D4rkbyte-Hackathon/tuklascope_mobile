@@ -39,6 +39,10 @@ class PathwaySchema(BaseModel):
     target_strand: PathwayStrand
     status: PathwayStatus = Field(description="User's current status for this pathway")
     progress_percentage: int = Field(default=0)
+    badge_claimed: bool = Field(
+        default=False,
+        description="True after the user claims the pathway badge reward",
+    )
     tasks: list[PathwayTaskSchema] = []
 
 
