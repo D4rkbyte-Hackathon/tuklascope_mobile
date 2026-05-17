@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/services/chat_service.dart';
+import '../../core/widgets/tutor_markdown_text.dart';
 
 class ChatMessage {
   final String text;
@@ -317,13 +318,9 @@ class _TuklasTutorScreenState extends State<TuklasTutorScreen> {
                           bottomRight: const Radius.circular(20),
                         ),
                       ),
-                      child: Text(
-                        message.text,
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
-                          height: 1.55,
-                        ),
+                      child: TutorMarkdownText(
+                        data: message.text,
+                        textColor: theme.colorScheme.onSurface.withValues(alpha: 0.9),
                       ),
                     ),
                   ),

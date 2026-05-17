@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:tuklascope_mobile/core/widgets/tutor_markdown_text.dart';
 
 class GlassConceptCard extends StatelessWidget {
   final String title;
@@ -46,12 +47,7 @@ class GlassConceptCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: accentColor.withValues(alpha: 0.05),
             border: Border.all(color: accentColor.withValues(alpha: 0.3), width: 1.5),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(4),
-              topRight: Radius.circular(24),
-              bottomLeft: Radius.circular(24),
-              bottomRight: Radius.circular(4),
-            )
+            borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,13 +79,11 @@ class GlassConceptCard extends StatelessWidget {
                     .fadeIn(duration: 1.seconds),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      content,
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        height: 1.6,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
-                      ),
+                    child: TutorMarkdownText(
+                      data: content,
+                      textColor: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                      fontSize: 15,
+                      lineHeight: 1.6,
                     ),
                   ),
                 ],
