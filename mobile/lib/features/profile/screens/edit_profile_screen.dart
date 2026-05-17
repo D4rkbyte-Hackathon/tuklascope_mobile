@@ -8,7 +8,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/widgets/gradient_scaffold.dart';
 import '../services/profile_service.dart';
+import '../utils/display_badge_utils.dart';
 import '../../auth/providers/auth_controller.dart';
+import '../../pathways/models/pathway_models.dart';
+import '../../pathways/providers/pathways_provider.dart';
 import '../providers/profile_provider.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -20,18 +23,8 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   // Badges State
   final List<String?> _selectedBadges = [null, null, null];
-  final List<String> _availableBadges = [
-    'assets/images/badges/badge_architect.png',
-    'assets/images/badges/badge_chemist.png',
-    'assets/images/badges/badge_chronicler.png',
-    'assets/images/badges/badge_code.png',
-    'assets/images/badges/badge_ecologist.png',
-    'assets/images/badges/badge_engineering.png',
-    'assets/images/badges/badge_gourmet.png',
-    'assets/images/badges/badge_market.png',
-    'assets/images/badges/badge_math.png',
-    'assets/images/badges/badge_physics.png',
-  ];
+  bool _hasInitializedBadges = false;
+  bool _isSavingBadges = false;
 
   // Avatar Scroller State
   File? _customProfileImage;
@@ -435,15 +428,42 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
-  // Helper to format 'assets/.../badge_architect.png' into 'Architect'
-  String _formatBadgeName(String path) {
-    final filename = path.split('/').last; 
-    final namePart = filename.replaceAll('badge_', '').replaceAll('.png', ''); 
-    return namePart[0].toUpperCase() + namePart.substring(1); 
+  Set<String> _unlockedBadgePaths(List<Pathway> pathways) {
+    return pathways
+        .where((p) => p.status == PathwayStatus.completed)
+        .map((p) => p.badgeUrl)
+        .toSet();
   }
 
-  // --- UPDATED UX BADGE LOGIC ---
-  void _showBadgeSelectionSheet(ThemeData theme, int slotIndex) {
+  void _initializeBadgesFromProfile(List<String?> saved, Set<String> unlocked) {
+    for (var i = 0; i < 3; i++) {
+      final badge = saved[i];
+      _selectedBadges[i] =
+          badge != null && unlocked.contains(badge) ? badge : null;
+    }
+    _hasInitializedBadges = true;
+  }
+
+  Future<void> _persistDisplayedBadges() async {
+    if (_isSavingBadges) return;
+    setState(() => _isSavingBadges = true);
+    try {
+      await ref.read(profileServiceProvider).updateDisplayedBadges(_selectedBadges);
+      ref.invalidate(appUserProvider);
+      _showSnackBar('Display badges updated!');
+    } catch (e) {
+      _showSnackBar('Could not save badges: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _isSavingBadges = false);
+    }
+  }
+
+  void _showBadgeSelectionSheet(
+    ThemeData theme,
+    int slotIndex,
+    List<Pathway> pathways,
+    Set<String> unlockedBadgePaths,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: theme.colorScheme.surface, // FIX 2: Solid background
@@ -487,59 +507,108 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     ),
                     const SizedBox(height: 24),
                     
-                    // Grid View with fixed height to prevent sheet jumping
-                    SizedBox(
-                      height: 280,
-                      child: GridView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
+                    if (unlockedBadgePaths.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text(
+                          'Complete a pathway to unlock badges you can display.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
                         ),
-                        itemCount: _availableBadges.length,
-                        itemBuilder: (context, index) {
-                          final badge = _availableBadges[index];
-                          final isAlreadyEquipped = _selectedBadges.contains(badge);
-                          final isCurrentlySelected = locallySelectedBadge == badge;
+                      )
+                    else
+                      SizedBox(
+                        height: 280,
+                        child: GridView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 4,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                          ),
+                          itemCount: pathways.length,
+                          itemBuilder: (context, index) {
+                            final pathway = pathways[index];
+                            final badge = pathway.badgeUrl;
+                            final isUnlocked = unlockedBadgePaths.contains(badge);
+                            final isAlreadyEquipped = _selectedBadges.contains(badge);
+                            final isCurrentlySelected = locallySelectedBadge == badge;
 
-                          return GestureDetector(
-                            onTap: () {
-                              if (!isAlreadyEquipped) {
+                            return GestureDetector(
+                              onTap: () {
+                                if (!isUnlocked) {
+                                  _showSnackBar(
+                                    'Complete "${pathway.title}" to unlock this badge',
+                                    isError: true,
+                                  );
+                                  return;
+                                }
+                                if (isAlreadyEquipped) {
+                                  _showSnackBar('Badge already equipped!', isError: true);
+                                  return;
+                                }
                                 setModalState(() => locallySelectedBadge = badge);
-                              } else {
-                                _showSnackBar('Badge already equipped!', isError: true);
-                              }
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isCurrentlySelected 
-                                      ? theme.colorScheme.primary 
-                                      : (isAlreadyEquipped 
-                                          ? theme.colorScheme.onSurface.withValues(alpha: 0.1)
-                                          : theme.colorScheme.secondary.withValues(alpha: 0.5)),
-                                  width: isCurrentlySelected ? 4 : 2,
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isCurrentlySelected
+                                        ? theme.colorScheme.primary
+                                        : (isUnlocked
+                                            ? theme.colorScheme.secondary.withValues(alpha: 0.5)
+                                            : theme.colorScheme.onSurface.withValues(alpha: 0.15)),
+                                    width: isCurrentlySelected ? 4 : 2,
+                                  ),
+                                  color: isCurrentlySelected
+                                      ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                                      : Colors.transparent,
+                                  boxShadow: isCurrentlySelected
+                                      ? [BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.3), blurRadius: 10)]
+                                      : [],
                                 ),
-                                color: isCurrentlySelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : Colors.transparent,
-                                boxShadow: isCurrentlySelected 
-                                    ? [BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.3), blurRadius: 10)]
-                                    : [],
-                              ),
-                              child: Opacity(
-                                opacity: isAlreadyEquipped ? 0.3 : 1.0,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(10.0),
-                                  child: Image.asset(badge, fit: BoxFit.contain),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Opacity(
+                                      opacity: isUnlocked
+                                          ? (isAlreadyEquipped ? 0.35 : 1.0)
+                                          : 0.45,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(10.0),
+                                        child: ColorFiltered(
+                                          colorFilter: isUnlocked
+                                              ? const ColorFilter.mode(
+                                                  Colors.transparent,
+                                                  BlendMode.multiply,
+                                                )
+                                              : const ColorFilter.matrix(<double>[
+                                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                                  0, 0, 0, 1, 0,
+                                                ]),
+                                          child: buildBadgeImage(badge),
+                                        ),
+                                      ),
+                                    ),
+                                    if (!isUnlocked)
+                                      Icon(
+                                        Icons.lock_outline_rounded,
+                                        size: 18,
+                                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                      ),
+                                  ],
                                 ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
-                    ),
                     
                     const SizedBox(height: 16),
                     
@@ -551,11 +620,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               key: ValueKey(locallySelectedBadge),
                               children: [
                                 Text(
-                                  _formatBadgeName(locallySelectedBadge!),
+                                  pathways
+                                      .firstWhere((p) => p.badgeUrl == locallySelectedBadge)
+                                      .title,
                                   style: GoogleFonts.montserrat(
-                                    fontWeight: FontWeight.bold, 
-                                    fontSize: 18, 
-                                    color: theme.colorScheme.primary
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: theme.colorScheme.primary,
                                   ),
                                 ).animate().fade().slideY(begin: 0.2),
                                 const SizedBox(height: 16),
@@ -565,9 +636,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                     backgroundColor: theme.colorScheme.secondary,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                   ),
-                                  onPressed: () {
+                                  onPressed: () async {
                                     setState(() => _selectedBadges[slotIndex] = locallySelectedBadge);
                                     Navigator.pop(context);
+                                    await _persistDisplayedBadges();
                                   },
                                   child: Text('Confirm', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 16)),
                                 ).animate().scaleXY(begin: 0.9, curve: Curves.easeOutBack),
@@ -596,18 +668,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
-  Widget _buildSelectedBadgeSlot(String badgePath, ThemeData theme, int slotIndex) {
+  Widget _buildSelectedBadgeSlot(
+    String badgePath,
+    ThemeData theme,
+    int slotIndex,
+    List<Pathway> pathways,
+    Set<String> unlockedBadgePaths,
+  ) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
         GestureDetector(
-          onTap: () => _showBadgeSelectionSheet(theme, slotIndex),
+          onTap: () => _showBadgeSelectionSheet(theme, slotIndex, pathways, unlockedBadgePaths),
           child: _buildGlassCard(
             padding: const EdgeInsets.all(12.0),
             child: SizedBox(
               width: 55,
               height: 55,
-              child: Image.asset(badgePath, fit: BoxFit.contain),
+              child: buildBadgeImage(badgePath),
             ),
           ),
         ),
@@ -615,7 +693,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           top: -8,
           right: -8,
           child: GestureDetector(
-            onTap: () => setState(() => _selectedBadges[slotIndex] = null),
+            onTap: () async {
+              setState(() => _selectedBadges[slotIndex] = null);
+              await _persistDisplayedBadges();
+            },
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
@@ -633,9 +714,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
-  Widget _buildEmptyBadgeSlot(ThemeData theme, int slotIndex) {
+  Widget _buildEmptyBadgeSlot(
+    ThemeData theme,
+    int slotIndex,
+    List<Pathway> pathways,
+    Set<String> unlockedBadgePaths,
+  ) {
     return GestureDetector(
-      onTap: () => _showBadgeSelectionSheet(theme, slotIndex),
+      onTap: () => _showBadgeSelectionSheet(theme, slotIndex, pathways, unlockedBadgePaths),
       child: _buildGlassCard(
         padding: const EdgeInsets.all(12),
         child: SizedBox(
@@ -655,6 +741,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final appUserState = ref.watch(appUserProvider);
+    final pathwaysState = ref.watch(pathwaysCatalogProvider);
 
     return GradientScaffold(
       body: SafeArea(
@@ -669,6 +756,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 data: (appUser) {
                   if (appUser == null) return Center(child: Text("Not logged in", style: GoogleFonts.inter()));
                   final profile = appUser.profile;
+
+                  return pathwaysState.when(
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(
+                      child: Text('Error loading badges: $e', style: GoogleFonts.inter()),
+                    ),
+                    data: (catalog) {
+                  final pathways = catalog.pathways;
+                  final unlockedBadgePaths = _unlockedBadgePaths(pathways);
+
+                  if (!_hasInitializedBadges) {
+                    _initializeBadgesFromProfile(profile.displayBadges, unlockedBadgePaths);
+                  }
 
                   if (!_hasInitializedAvatar) {
                     if (profile.profilePictureUrl != null && profile.profilePictureUrl!.isNotEmpty) {
@@ -754,9 +854,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ).animate().fade(delay: 450.ms).slideX(begin: -0.1),
                       const SizedBox(height: 4),
                       Text(
-                        'Choose up to 3 badges to highlight on your profile.',
+                        'Choose up to 3 unlocked badges to highlight on your profile.',
                         style: GoogleFonts.inter(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                       ).animate().fade(delay: 500.ms),
+                      if (_isSavingBadges) ...[
+                        const SizedBox(height: 8),
+                        const LinearProgressIndicator(minHeight: 2),
+                      ],
                       const SizedBox(height: 20),
 
                       Row(
@@ -764,13 +868,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         children: List.generate(3, (index) {
                           final currentBadge = _selectedBadges[index];
                           if (currentBadge != null) {
-                            return _buildSelectedBadgeSlot(currentBadge, theme, index);
+                            return _buildSelectedBadgeSlot(
+                              currentBadge,
+                              theme,
+                              index,
+                              pathways,
+                              unlockedBadgePaths,
+                            );
                           } else {
-                            return _buildEmptyBadgeSlot(theme, index);
+                            return _buildEmptyBadgeSlot(
+                              theme,
+                              index,
+                              pathways,
+                              unlockedBadgePaths,
+                            );
                           }
                         }),
                       ).animate().fade(delay: 550.ms).slideY(begin: 0.2, curve: Curves.easeOutBack),
                     ],
+                  );
+                    },
                   );
                 },
               ),

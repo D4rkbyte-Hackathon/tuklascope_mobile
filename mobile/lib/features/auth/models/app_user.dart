@@ -13,6 +13,11 @@ class UserProfile {
   final DateTime? lastActionDate;
   final String? bio;
   final String? profilePictureUrl;
+  final String? displayBadge1;
+  final String? displayBadge2;
+  final String? displayBadge3;
+
+  List<String?> get displayBadges => [displayBadge1, displayBadge2, displayBadge3];
 
   UserProfile({
     required this.id,
@@ -27,6 +32,9 @@ class UserProfile {
     this.lastActionDate,
     this.bio,
     this.profilePictureUrl,
+    this.displayBadge1,
+    this.displayBadge2,
+    this.displayBadge3,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -45,8 +53,17 @@ class UserProfile {
           : null,
       bio: json['bio'],
       profilePictureUrl: json['profile_picture_url'],
+      displayBadge1: _nullableProfileString(json['display_badge_1']),
+      displayBadge2: _nullableProfileString(json['display_badge_2']),
+      displayBadge3: _nullableProfileString(json['display_badge_3']),
     );
   }
+}
+
+String? _nullableProfileString(dynamic value) {
+  if (value == null) return null;
+  final s = value.toString().trim();
+  return s.isEmpty ? null : s;
 }
 
 class SkillTree {

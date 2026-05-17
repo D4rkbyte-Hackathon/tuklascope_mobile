@@ -93,7 +93,7 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
       
       var query = Supabase.instance.client
           .from('profiles')
-          .select('id, full_name, total_xp, education_level, profile_picture_url, bio, country, city, current_streak, current_level');
+          .select('id, full_name, total_xp, education_level, profile_picture_url, bio, country, city, current_streak, current_level, display_badge_1, display_badge_2, display_badge_3');
 
       if (currentUser != null) {
         final myProfile = await Supabase.instance.client

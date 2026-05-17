@@ -66,6 +66,27 @@ class ProfileService {
     }
   }
 
+  /// Save up to three featured badge asset paths or URLs.
+  Future<void> updateDisplayedBadges(List<String?> badges) async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await _supabase.from('profiles').update({
+        'display_badge_1': badges.elementAtOrNull(0),
+        'display_badge_2': badges.elementAtOrNull(1),
+        'display_badge_3': badges.elementAtOrNull(2),
+      }).eq('id', userId);
+
+      print('✓ Display badges updated');
+    } catch (e) {
+      print('✗ Error updating display badges: $e');
+      rethrow;
+    }
+  }
+
   /// Delete profile picture
   Future<void> deleteProfilePicture() async {
     try {

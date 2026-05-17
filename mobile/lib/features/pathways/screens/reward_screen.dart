@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/pathway_models.dart';
 import '../providers/pathways_provider.dart';
+import '../widgets/pathway_quest_modals.dart';
 import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
 
 class RewardScreen extends ConsumerWidget {
@@ -131,17 +132,11 @@ class RewardScreen extends ConsumerWidget {
                                           )
                                           .enroll(currentPathway.id);
 
-                                      // Check if the user is still on this screen before showing SnackBar
                                       if (!context.mounted) return;
 
-                                      ScaffoldMessenger.of(
+                                      await showEnrollmentSuccessModal(
                                         context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Successfully enrolled!',
-                                          ),
-                                        ),
+                                        pathway: currentPathway,
                                       );
                                     } catch (e) {
                                       // Check if mounted before showing error
@@ -205,6 +200,8 @@ class RewardScreen extends ConsumerWidget {
                             theme,
                           );
                         }),
+                        const SizedBox(height: 24),
+                        _buildGoToScanButton(context, theme),
                       ],
 
                       // ---------------------------------------------------
@@ -237,6 +234,40 @@ class RewardScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGoToScanButton(BuildContext context, ThemeData theme) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          backgroundColor: theme.colorScheme.secondary,
+          foregroundColor: theme.colorScheme.onSecondary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 4,
+          shadowColor: theme.colorScheme.secondary.withValues(alpha: 0.4),
+        ),
+        icon: const Icon(Icons.document_scanner_outlined, size: 22),
+        label: Text(
+          'GO TO SCAN',
+          style: GoogleFonts.orbitron(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
+        onPressed: () {
+          final navScope = MainNavScope.maybeOf(context);
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          navScope?.goToTab(1);
+        },
       ),
     );
   }
