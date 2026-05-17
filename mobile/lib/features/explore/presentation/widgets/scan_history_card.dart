@@ -4,23 +4,29 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
 
 class ScanHistoryCard extends StatefulWidget {
+  final String scanId;
   final String title;
   final String subtitle;
   final String tag;
   final String? imageUrl;
   final int? xpAwarded;
+  final bool isFavorite;
   final Color accent;
   final VoidCallback? onTap;
+  final Future<void> Function(bool isFavorite)? onFavoriteChanged;
 
   const ScanHistoryCard({
     super.key,
+    required this.scanId,
     required this.title,
     required this.subtitle,
     required this.tag,
     this.imageUrl,
     this.xpAwarded,
+    this.isFavorite = false,
     required this.accent,
     this.onTap,
+    this.onFavoriteChanged,
   });
 
   @override
@@ -29,7 +35,7 @@ class ScanHistoryCard extends StatefulWidget {
 
 class _ScanHistoryCardState extends State<ScanHistoryCard> {
   bool _isPressed = false;
-  bool _isFavorite = false; 
+  bool _isTogglingFavorite = false;
 
   @override
   Widget build(BuildContext context) {
@@ -37,35 +43,38 @@ class _ScanHistoryCardState extends State<ScanHistoryCard> {
     final isDark = theme.brightness == Brightness.dark;
     final glowColor = widget.accent;
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        if (widget.onTap != null) widget.onTap!();
-      },
-      onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedScale(
-        scale: _isPressed ? 0.96 : 1.0, 
-        duration: const Duration(milliseconds: 150),
-        child: AspectRatio(
-          aspectRatio: 0.68, 
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: glowColor.withValues(alpha: 0.2),
-                  blurRadius: 25,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 8),
+    return AnimatedScale(
+      scale: _isPressed ? 0.96 : 1.0,
+      duration: const Duration(milliseconds: 150),
+      child: AspectRatio(
+        aspectRatio: 0.68,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            GestureDetector(
+              onTapDown: (_) => setState(() => _isPressed = true),
+              onTapUp: (_) {
+                setState(() => _isPressed = false);
+                widget.onTap?.call();
+              },
+              onTapCancel: () => setState(() => _isPressed = false),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: glowColor.withValues(alpha: 0.2),
+                      blurRadius: 25,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), 
-                child: Container(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
@@ -105,35 +114,6 @@ class _ScanHistoryCardState extends State<ScanHistoryCard> {
                                     Colors.transparent,
                                     Colors.black.withValues(alpha: 0.8),
                                   ],
-                                ),
-                              ),
-                            ),
-                            
-                            // Favorite Star Button
-                            Positioned(
-                              top: 12,
-                              left: 12,
-                              child: GestureDetector(
-                                onTap: () => setState(() => _isFavorite = !_isFavorite),
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.4),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: _isFavorite ? Colors.amber : Colors.white.withValues(alpha: 0.2),
-                                    ),
-                                    boxShadow: _isFavorite ? [
-                                      BoxShadow(color: Colors.amber.withValues(alpha: 0.5), blurRadius: 10)
-                                    ] : [],
-                                  ),
-                                  child: Icon(
-                                    _isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
-                                    color: _isFavorite ? Colors.amber : Colors.white,
-                                    size: 20,
-                                  ).animate(target: _isFavorite ? 1 : 0)
-                                   .scaleXY(begin: 1.0, end: 1.2, duration: 200.ms, curve: Curves.easeOutBack)
-                                   .then().scaleXY(end: 1.0),
                                 ),
                               ),
                             ),
@@ -242,12 +222,66 @@ class _ScanHistoryCardState extends State<ScanHistoryCard> {
                       ),
                     ],
                   ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+            Positioned(
+              top: 12,
+              left: 12,
+              child: _buildFavoriteButton(),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildFavoriteButton() {
+    final isFavorite = widget.isFavorite;
+
+    return GestureDetector(
+      onTap: _isTogglingFavorite ? null : _handleFavoriteTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.4),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isFavorite ? Colors.amber : Colors.white.withValues(alpha: 0.2),
+          ),
+          boxShadow: isFavorite
+              ? [BoxShadow(color: Colors.amber.withValues(alpha: 0.5), blurRadius: 10)]
+              : [],
+        ),
+        child: _isTogglingFavorite
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.amber),
+              )
+            : Icon(
+                isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
+                color: isFavorite ? Colors.amber : Colors.white,
+                size: 20,
+              ).animate(target: isFavorite ? 1 : 0)
+               .scaleXY(begin: 1.0, end: 1.2, duration: 200.ms, curve: Curves.easeOutBack)
+               .then()
+               .scaleXY(end: 1.0),
+      ),
+    );
+  }
+
+  Future<void> _handleFavoriteTap() async {
+    if (widget.onFavoriteChanged == null || _isTogglingFavorite) return;
+
+    setState(() => _isTogglingFavorite = true);
+    try {
+      await widget.onFavoriteChanged!(!widget.isFavorite);
+    } finally {
+      if (mounted) setState(() => _isTogglingFavorite = false);
+    }
   }
 }
