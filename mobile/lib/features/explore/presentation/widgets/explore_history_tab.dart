@@ -86,7 +86,13 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
 
   bool _isScanFavorite(Map<String, dynamic> scan) {
     final value = scan['is_favorite'];
-    return value is bool && value;
+    if (value is bool) return value;
+    if (value is int) return value != 0;
+    if (value is String) {
+      final normalized = value.toLowerCase();
+      return normalized == 'true' || normalized == '1';
+    }
+    return false;
   }
 
   Future<void> _toggleScanFavorite(String scanId, bool isFavorite) async {
