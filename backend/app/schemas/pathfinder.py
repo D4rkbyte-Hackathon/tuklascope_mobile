@@ -30,11 +30,21 @@ class PathfinderResponse(BaseModel):
     )
 
 
+# --- NEW: Define the structure of our rich JSON skill object ---
+class SkillDetail(BaseModel):
+    skill_name: str
+    domains: list[str]
+    strand: str
+    level: int
+    xp: int
+
+
 class SkillWebResponse(BaseModel):
     xp_distribution: dict[str, int] = Field(
         default_factory=dict, description="Total XP per strand"
     )
-    top_skills: list[str] = Field(
+    # Update to expect a list of dictionaries, not strings
+    top_skills: list[SkillDetail] = Field(
         default_factory=list,
-        description="List of specific mastered topics and their levels",
+        description="List of specific mastered topics, their domains, and levels",
     )

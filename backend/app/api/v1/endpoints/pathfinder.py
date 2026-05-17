@@ -54,14 +54,10 @@ async def get_user_skills(db_data: tuple[Client, str] = Depends(get_user_db_clie
         if not skill_web:
             return SkillWebResponse(xp_distribution={}, top_skills=[])
 
-        # Safely ensure top_skills is a list before validating against Pydantic schema
-        top_skills = skill_web.get("top_skills", [])
-        if isinstance(top_skills, dict):
-            # If Neo4j accidentally returns a dict, convert keys to list to prevent 500 error
-            top_skills = list(top_skills.keys())
-
+        # Safely pass the new structured JSON directly to the Pydantic model
         return SkillWebResponse(
-            xp_distribution=skill_web.get("xp_distribution", {}), top_skills=top_skills
+            xp_distribution=skill_web.get("xp_distribution", {}),
+            top_skills=skill_web.get("top_skills", []),
         )
 
     except HTTPException:
