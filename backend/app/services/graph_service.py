@@ -28,10 +28,11 @@ async def get_existing_skills_for_strand(strand_name: str) -> list[str]:
 
 async def get_user_skill_web(user_id: str) -> dict | None:
     """
-    Builds the user's complete RPG profile.
-    Returns their Strand XP, their top Domains, and their highest-leveled Skills.
+    Builds the user's complete RPG profile directly from the Graph DB.
+    Returns their Strand XP distribution and their highest-leveled Skills as structured JSON.
     """
     if not neo4j_db.driver:
+        logger.error("Neo4j driver not initialized.")
         return None
 
     # Query 1: Base Classes (Strands)
@@ -40,11 +41,17 @@ async def get_user_skill_web(user_id: str) -> dict | None:
     RETURN s.name AS strand, e.total_xp AS xp
     """
 
-    # Query 2 now fetches the Strand (s:Strand) that the domain falls under!
+    # Query 2: Mastered Skills with Aggregated Domains
+    # A single skill can belong to multiple domains, so we collect them into an array.
     skills_query = """
-    MATCH (u:User {id: $user_id})-[m:MASTERED]->(k:Skill)-[:BELONGS_TO]->(d:Domain)-[:FALLS_UNDER]->(s:Strand)
-    RETURN k.name AS skill_name, d.name AS domain_name, s.name AS strand_name, m.level AS level, m.total_xp AS xp
-    ORDER BY level DESC, xp DESC LIMIT 8
+    MATCH (u:User {id: $user_id})-[m:MASTERED]->(k:Skill)
+    OPTIONAL MATCH (k)-[:BELONGS_TO]->(d:Domain)-[:FALLS_UNDER]->(s:Strand)
+    RETURN k.name AS skill_name, 
+           collect(DISTINCT d.name) AS domains, 
+           collect(DISTINCT s.name) AS strands, 
+           m.level AS level, 
+           m.total_xp AS xp
+    ORDER BY level DESC, xp DESC LIMIT 12
     """
 
     try:
@@ -55,20 +62,34 @@ async def get_user_skill_web(user_id: str) -> dict | None:
             skills_query, user_id=user_id
         )
 
-        if not xp_records:
+        if not xp_records and not skill_records:
             return None
 
-        xp_distribution = {record["strand"]: record["xp"] for record in xp_records}
+        # Format Strand distribution cleanly (e.g., {"stem": 1400, "abm": 50})
+        xp_distribution = {record["strand"].lower(): record["xp"] for record in xp_records}
 
-        # We now pack the strand name into the string using [brackets]
-        top_skills = [
-            f"{rec['skill_name']} ({rec['domain_name']}) [{rec['strand_name']}] - Lv.{rec['level']}"
-            for rec in skill_records
-        ]
+        # Build strict JSON objects, eliminating frontend Regex parsing
+        top_skills = []
+        for rec in skill_records:
+            strands = rec["strands"]
+            # Default to the first strand found, or fallback to 'stem' if detached
+            primary_strand = strands[0].lower() if strands else "stem"
+            
+            top_skills.append({
+                "skill_name": rec["skill_name"],
+                "domains": rec["domains"],  # Now a proper array: ["Physics", "Computer Science"]
+                "strand": primary_strand,
+                "level": rec["level"],
+                "xp": rec["xp"]
+            })
 
-        return {"xp_distribution": xp_distribution, "top_skills": top_skills}
+        return {
+            "xp_distribution": xp_distribution, 
+            "top_skills": top_skills
+        }
+        
     except Exception as e:
-        logger.error(f"Failed to fetch Skill Web: {str(e)}")
+        logger.error(f"Failed to fetch Skill Web from Neo4j: {str(e)}")
         return None
 
 
