@@ -13,6 +13,7 @@ import '../../../onboarding/compass_questions_screen.dart'; // 🚀 RE-ADDED: Ne
 import '../../../profile/services/profile_service.dart'; // 🚀 ADDED: To use your working image upload logic
 import 'login_screen.dart';
 import '../widgets/auth_button.dart';
+import '../widgets/email_verification_otp_modal.dart';
 import '../widgets/neon_text_field.dart';
 import '../../../../core/widgets/gradient_scaffold.dart';
 import '../../../../core/navigation/auth_transitions.dart';
@@ -129,7 +130,20 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       );
 
       if (!mounted) return;
-      _showOtpVerificationDialog(email);
+
+      final verified = await EmailVerificationOtpModal.show(
+        context,
+        email: email,
+        onVerify: (code) => _authService.verifyEmailWithOtp(
+          email: email,
+          otpCode: code,
+        ),
+        onResend: () => _authService.resendSignupVerificationOtp(email: email),
+      );
+
+      if (verified == true && mounted) {
+        await _completeSignupAfterVerification();
+      }
 
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -144,106 +158,44 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
   }
 
-  void _showOtpVerificationDialog(String email) {
-    final TextEditingController otpController = TextEditingController();
-    bool isVerifying = false;
+  Future<void> _completeSignupAfterVerification() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      try {
+        String? finalAvatarUrl;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text('Verify Your Email', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Enter the 6-digit code sent to $email to prove you are human!', style: GoogleFonts.inter()),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: otpController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '6-digit OTP',
-                      hintText: '000000',
-                    ),
-                    enabled: !isVerifying,
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isVerifying ? null : () => Navigator.pop(context),
-                  child: Text('Cancel', style: GoogleFonts.inter()),
-                ),
-                ElevatedButton(
-                  onPressed: isVerifying ? null : () async {
-                    final code = otpController.text.trim();
-                    if (code.isEmpty) return;
+        if (_selectedAvatarIndex == 0 && _customProfileImage != null) {
+          finalAvatarUrl = await ref
+              .read(profileServiceProvider)
+              .uploadProfilePicture(_customProfileImage!.path);
+        } else if (_selectedAvatarIndex > 0) {
+          finalAvatarUrl = _avatarOptions[_selectedAvatarIndex];
+        }
 
-                    setDialogState(() => isVerifying = true);
+        await Supabase.instance.client.from('profiles').update({
+          'full_name': _nameController.text.trim(),
+          'city': _cityController.text.trim(),
+          'country': _countryController.text.trim(),
+          'education_level': _selectedEducationLevel,
+          'profile_picture_url': finalAvatarUrl,
+        }).eq('id', user.id);
+      } catch (e) {
+        debugPrint('Error updating profile: $e');
+        if (mounted) {
+          _showSnackBar('Profile update warning: $e', isError: true);
+        }
+      }
+    }
 
-                    final verified = await _authService.verifyEmailWithOtp(
-                      email: email,
-                      otpCode: code,
-                    );
+    if (!mounted) return;
+    _showSnackBar('Account created successfully!', isError: false);
 
-                    if (verified) {
-                      final user = Supabase.instance.client.auth.currentUser;
-                      if (user != null) {
-                        try {
-                          String? finalAvatarUrl;
-                          
-                          // 🚀 FIXED: Using your exact working ProfileService logic
-                          if (_selectedAvatarIndex == 0 && _customProfileImage != null) {
-                            finalAvatarUrl = await ref.read(profileServiceProvider).uploadProfilePicture(_customProfileImage!.path);
-                          } else if (_selectedAvatarIndex > 0) {
-                            finalAvatarUrl = _avatarOptions[_selectedAvatarIndex];
-                          }
-
-                          await Supabase.instance.client.from('profiles').update({
-                            'full_name': _nameController.text.trim(),
-                            'city': _cityController.text.trim(),
-                            'country': _countryController.text.trim(),
-                            'education_level': _selectedEducationLevel,
-                            'profile_picture_url': ?finalAvatarUrl,
-                          }).eq('id', user.id);
-                        } catch (e) {
-                          debugPrint('Error updating profile: $e');
-                          if (mounted) {
-                            _showSnackBar('Profile update warning: $e', isError: true);
-                          }
-                        }
-                      }
-
-                      if (!mounted) return;
-                      Navigator.pop(context); // Close dialog
-                      _showSnackBar('Account created successfully!', isError: false);
-                      
-                      // 🚀 FIXED: Pass the CompassQuestionsScreen to the splash screen
-                      Navigator.pushReplacement(
-                        context, 
-                        MaterialPageRoute(
-                          builder: (context) => const SplashScreen(nextScreen: CompassQuestionsScreen())
-                        )
-                      );
-                    } else {
-                      setDialogState(() => isVerifying = false);
-                      if (mounted) {
-                         _showSnackBar('Invalid OTP code. Please try again.');
-                      }
-                    }
-                  },
-                  child: isVerifying
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Text('Verify', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                ),
-              ],
-            );
-          }
-        );
-      },
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const SplashScreen(nextScreen: CompassQuestionsScreen()),
+      ),
     );
   }
 
