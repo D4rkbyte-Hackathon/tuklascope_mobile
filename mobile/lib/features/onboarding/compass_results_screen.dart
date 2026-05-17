@@ -205,22 +205,27 @@ class _CompassResultsScreenState extends State<CompassResultsScreen> {
                             try {
                               final userId = Supabase.instance.client.auth.currentUser?.id;
                               if (userId != null) {
+                                // 🚀 FIX 3: Safe map unwrapping to prevent crash
                                 await Supabase.instance.client.from('compass_results').upsert({
                                   'user_id': userId,
-                                  'stem_affinity': (widget.affinityScores[Affinity.stem]! * 100).toInt(),
-                                  'abm_affinity': (widget.affinityScores[Affinity.abm]! * 100).toInt(),
-                                  'humss_affinity': (widget.affinityScores[Affinity.humss]! * 100).toInt(),
-                                  'tvl_affinity': (widget.affinityScores[Affinity.tvl]! * 100).toInt(),
+                                  'stem_affinity': ((widget.affinityScores[Affinity.stem] ?? 0.0) * 100).toInt(),
+                                  'abm_affinity': ((widget.affinityScores[Affinity.abm] ?? 0.0) * 100).toInt(),
+                                  'humss_affinity': ((widget.affinityScores[Affinity.humss] ?? 0.0) * 100).toInt(),
+                                  'tvl_affinity': ((widget.affinityScores[Affinity.tvl] ?? 0.0) * 100).toInt(),
                                 }, onConflict: 'user_id'); 
                               }
                             } catch (e) {
                               debugPrint('Failed to save compass results: $e');
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Database Error: $e'), backgroundColor: Colors.red),
+                                  SnackBar(
+                                    content: const Text('Could not sync results, but you can continue offline.'), 
+                                    backgroundColor: theme.colorScheme.error
+                                  ),
                                 );
                               }
-                              return; 
+                              // 🚀 FIX 2: Removed the `return;` 
+                              // We log the error but still let them proceed to MainNavigation!
                             }
 
                             if (context.mounted) {
@@ -231,6 +236,7 @@ class _CompassResultsScreenState extends State<CompassResultsScreen> {
                               );
                             }
                           },
+                          // ... (keep the rest of the button style the same)
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
