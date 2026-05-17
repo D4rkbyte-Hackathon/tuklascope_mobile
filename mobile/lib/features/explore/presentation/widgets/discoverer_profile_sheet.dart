@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart'; // NAVBAR LISTENER
+import 'package:tuklascope_mobile/features/profile/utils/display_badge_utils.dart';
 
 class DiscovererProfileSheet extends StatelessWidget {
   final Map<String, dynamic> user;
@@ -31,6 +32,7 @@ class DiscovererProfileSheet extends StatelessWidget {
     final city = user['city'];
     final country = user['country'];
     final grade = user['education_level'];
+    final featuredBadges = displayBadgesFromProfile(user);
 
     // Dynamic Bottom Padding for NavBar
     final navScope = MainNavScope.maybeOf(context);
@@ -173,11 +175,15 @@ class DiscovererProfileSheet extends StatelessWidget {
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        _buildBadgePlaceholder(theme, accentColor, 0),
-                                        const SizedBox(width: 24),
-                                        _buildBadgePlaceholder(theme, accentColor, 1),
-                                        const SizedBox(width: 24),
-                                        _buildBadgePlaceholder(theme, accentColor, 2),
+                                        for (var i = 0; i < 3; i++) ...[
+                                          if (i > 0) const SizedBox(width: 24),
+                                          _buildFeaturedBadgeSlot(
+                                            theme,
+                                            accentColor,
+                                            featuredBadges[i],
+                                            i,
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ],
@@ -265,32 +271,57 @@ class DiscovererProfileSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildBadgePlaceholder(ThemeData theme, Color accent, int index) {
-    return Container(
+  Widget _buildFeaturedBadgeSlot(
+    ThemeData theme,
+    Color accent,
+    String? badgePath,
+    int index,
+  ) {
+    final hasBadge = badgePath != null && badgePath.isNotEmpty;
+
+    final slot = Container(
       width: 56,
       height: 56,
+      padding: hasBadge ? const EdgeInsets.all(6) : null,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
         border: Border.all(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.15), 
-          width: 2
+          color: hasBadge
+              ? accent.withValues(alpha: 0.6)
+              : theme.colorScheme.onSurface.withValues(alpha: 0.12),
+          width: hasBadge ? 2.5 : 2,
         ),
+        boxShadow: hasBadge
+            ? [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.25),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
-      child: Center(
-        child: Icon(
-          Icons.lock_outline_rounded, 
-          size: 20, 
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.3) 
-        ),
-      ),
-    )
-    .animate(onPlay: (c) => c.repeat(reverse: true))
-    .boxShadow(
-      begin: BoxShadow(color: accent.withValues(alpha: 0.0), blurRadius: 0),
-      end: BoxShadow(color: accent.withValues(alpha: 0.3), blurRadius: 15, spreadRadius: 1),
-      duration: 1.5.seconds,
-      delay: (index * 300).ms, 
+      child: hasBadge
+          ? buildBadgeImage(badgePath, fit: BoxFit.contain)
+          : Center(
+              child: Icon(
+                Icons.shield_outlined,
+                size: 22,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+              ),
+            ),
     );
+
+    if (!hasBadge) return slot;
+
+    return slot
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .boxShadow(
+          begin: BoxShadow(color: accent.withValues(alpha: 0.0), blurRadius: 0),
+          end: BoxShadow(color: accent.withValues(alpha: 0.3), blurRadius: 15, spreadRadius: 1),
+          duration: 1.5.seconds,
+          delay: (index * 300).ms,
+        );
   }
 }
