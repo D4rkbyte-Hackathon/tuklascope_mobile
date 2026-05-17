@@ -60,7 +60,7 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     final offset = _scrollController.offset;
     final viewportHeight = _scrollController.position.viewportDimension;
 
-    bool newShowGoToTop = offset > 250;
+    final bool newShowGoToTop = offset > 250;
     bool newShowGoToMe = false;
     
     if (_myIndex != -1) {
@@ -71,8 +71,8 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
         myEstimatedOffset = 220.0 + ((_myIndex - 3) * 80.0); 
       }
       
-      bool isAboveViewport = myEstimatedOffset < (offset - 80); 
-      bool isBelowViewport = myEstimatedOffset > (offset + viewportHeight - 100);
+      final bool isAboveViewport = myEstimatedOffset < (offset - 80); 
+      final bool isBelowViewport = myEstimatedOffset > (offset + viewportHeight - 100);
       
       newShowGoToMe = isAboveViewport || isBelowViewport;
     }

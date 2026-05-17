@@ -160,7 +160,7 @@ class _TechRingPainter extends CustomPainter {
       // Draw 4 precise arc segments for the outer ring
       for (int i = 0; i < 4; i++) {
         final startAngle = i * (math.pi / 2) + 0.2;
-        final sweepAngle = (math.pi / 2) - 0.4;
+        const sweepAngle = (math.pi / 2) - 0.4;
         canvas.drawArc(Rect.fromCircle(center: center, radius: radius), startAngle, sweepAngle, false, paint);
       }
     } else {

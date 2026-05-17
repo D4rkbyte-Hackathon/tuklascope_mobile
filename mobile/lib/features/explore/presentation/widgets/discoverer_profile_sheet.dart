@@ -40,10 +40,15 @@ class DiscovererProfileSheet extends StatelessWidget {
 
     // Determine the user's primary accent color based on rank
     Color accentColor = theme.colorScheme.secondary;
-    if (rank == 1) accentColor = Colors.amber;
-    else if (rank == 2) accentColor = Colors.blueGrey[300]!;
-    else if (rank == 3) accentColor = const Color(0xFFCD7F32); 
-    else if (isMe) accentColor = theme.colorScheme.primary;
+    if (rank == 1) {
+      accentColor = Colors.amber;
+    } else if (rank == 2) {
+      accentColor = Colors.blueGrey[300]!;
+    } else if (rank == 3) {
+      accentColor = const Color(0xFFCD7F32);
+    } else if (isMe) {
+      accentColor = theme.colorScheme.primary;
+    }
 
     String locationText = [city, country].where((e) => e != null && e.isNotEmpty).join(', ');
     if (locationText.isEmpty) locationText = 'Parts Unknown';

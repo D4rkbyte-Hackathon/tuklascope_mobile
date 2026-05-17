@@ -62,7 +62,7 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
   }
 
   List<Map<String, dynamic>> _getFilteredScans() {
-    var filtered = _scanHistory.where((scan) {
+    final filtered = _scanHistory.where((scan) {
       final matchesSearch = _searchQuery.isEmpty ||
           (scan['object_name'] as String?)
               ?.toLowerCase()
@@ -328,15 +328,20 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
             try {
               final date = DateTime.parse(createdAt);
               final difference = DateTime.now().difference(date);
-              if (difference.inDays == 0) formattedDate = 'Today';
-              else if (difference.inDays == 1) formattedDate = 'Yesterday';
-              else if (difference.inDays < 7) formattedDate = '${difference.inDays}d ago';
-              else formattedDate = '${(difference.inDays / 7).toStringAsFixed(0)}w ago';
+              if (difference.inDays == 0) {
+                formattedDate = 'Today';
+              } else if (difference.inDays == 1) {
+                formattedDate = 'Yesterday';
+              } else if (difference.inDays < 7) {
+                formattedDate = '${difference.inDays}d ago';
+              } else {
+                formattedDate = '${(difference.inDays / 7).toStringAsFixed(0)}w ago';
+              }
             } catch (_) {}
           }
 
-          double scale = max(0.85, 1.0 - (_currentPage - index).abs() * 0.15);
-          double opacity = max(0.4, 1.0 - (_currentPage - index).abs() * 0.5);
+          final double scale = max(0.85, 1.0 - (_currentPage - index).abs() * 0.15);
+          final double opacity = max(0.4, 1.0 - (_currentPage - index).abs() * 0.5);
 
           return Transform.scale(
             scale: scale,
