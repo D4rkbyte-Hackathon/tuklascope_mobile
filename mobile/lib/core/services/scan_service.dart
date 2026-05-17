@@ -16,7 +16,9 @@ class ScanService {
 
       final response = await Supabase.instance.client
           .from('scans')
-          .select('id, object_name, chosen_lens, image_url, created_at, xp_awarded')
+          .select(
+            'id, object_name, chosen_lens, image_url, created_at, xp_awarded, is_favorite',
+          )
           .eq('user_id', currentUser.id)
           .order('created_at', ascending: false)
           .limit(limit);
@@ -46,7 +48,9 @@ class ScanService {
 
       final response = await Supabase.instance.client
           .from('scans')
-          .select('id, object_name, chosen_lens, image_url, created_at, xp_awarded')
+          .select(
+            'id, object_name, chosen_lens, image_url, created_at, xp_awarded, is_favorite',
+          )
           .eq('user_id', currentUser.id)
           .eq('chosen_lens', lens)
           .order('created_at', ascending: false)
@@ -82,6 +86,32 @@ class ScanService {
     } catch (e) {
       debugPrint('🚨 Error fetching scan: $e');
       return null;
+    }
+  }
+
+  /// Toggles favorite status for a scan owned by the current user.
+  static Future<bool> setScanFavorite({
+    required String scanId,
+    required bool isFavorite,
+  }) async {
+    try {
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      if (currentUser == null) {
+        debugPrint('❌ No user logged in');
+        return false;
+      }
+
+      await Supabase.instance.client
+          .from('scans')
+          .update({'is_favorite': isFavorite})
+          .eq('id', scanId)
+          .eq('user_id', currentUser.id);
+
+      debugPrint('✅ Scan $scanId favorite=$isFavorite');
+      return true;
+    } catch (e) {
+      debugPrint('🚨 Error updating scan favorite: $e');
+      return false;
     }
   }
 }
