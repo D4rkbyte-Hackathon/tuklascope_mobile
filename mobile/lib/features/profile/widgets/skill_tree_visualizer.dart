@@ -5,15 +5,23 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/profile_models.dart';
 
 // --- SHARED GLASS CARD HELPER ---
-Widget _buildGlassCard(ThemeData theme, {required Widget child, EdgeInsetsGeometry? padding}) {
+Widget _buildGlassCard(
+  ThemeData theme, {
+  required Widget child,
+  EdgeInsetsGeometry? padding,
+}) {
   final isDark = theme.brightness == Brightness.dark;
   return Container(
     padding: padding,
     decoration: BoxDecoration(
-      color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.45),
+      color: isDark
+          ? Colors.black.withValues(alpha: 0.3)
+          : Colors.white.withValues(alpha: 0.45),
       borderRadius: BorderRadius.circular(20),
       border: Border.all(
-        color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.6),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.6),
         width: 1.5,
       ),
       boxShadow: [
@@ -21,31 +29,113 @@ Widget _buildGlassCard(ThemeData theme, {required Widget child, EdgeInsetsGeomet
           color: Colors.black.withValues(alpha: 0.03),
           blurRadius: 15,
           offset: const Offset(0, 6),
-        )
+        ),
       ],
     ),
     child: child,
   );
 }
 
-// --- BOTTOM SHEET UI ---
-void showNodeDetailsBottomSheet(BuildContext context, SkillNode node) {
-  final theme = Theme.of(context);
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (context) {
-      return BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+// --- 🚀 THE PATHFINDING ENGINE ---
+// Traces lineage up to the root and down to the leaves for the glowing lightning strike effect
+Set<String>? getActivePathIds(String? focusId, List<SkillNode> nodes) {
+  if (focusId == null) return null;
+
+  Set<String> activeIds = {focusId, 'root'}; // Root is always powered on
+  SkillNode? get(String id) => nodes.where((n) => n.id == id).firstOrNull;
+
+  // Trace UP to parents
+  void addAncestors(String id) {
+    final node = get(id);
+    if (node == null) return;
+    for (var parentId in node.connectedNodeIds) {
+      if (!activeIds.contains(parentId)) {
+        activeIds.add(parentId);
+        addAncestors(parentId);
+      }
+    }
+  }
+
+  // Trace DOWN to children
+  void addDescendants(String id) {
+    for (var node in nodes) {
+      if (node.connectedNodeIds.contains(id) && !activeIds.contains(node.id)) {
+        activeIds.add(node.id);
+        addDescendants(node.id);
+      }
+    }
+  }
+
+  addAncestors(focusId);
+  addDescendants(focusId);
+  return activeIds;
+}
+
+// --- 🚀 THE NON-BLOCKING FLOATING PANEL ---
+class NodeDetailsOverlay extends StatefulWidget {
+  final String? focusedNodeId;
+  final List<SkillNode> nodes;
+  final ThemeData theme;
+  final VoidCallback onClose;
+
+  const NodeDetailsOverlay({
+    super.key,
+    required this.focusedNodeId,
+    required this.nodes,
+    required this.theme,
+    required this.onClose,
+  });
+
+  @override
+  State<NodeDetailsOverlay> createState() => _NodeDetailsOverlayState();
+}
+
+class _NodeDetailsOverlayState extends State<NodeDetailsOverlay> {
+  SkillNode? _cachedNode;
+
+  @override
+  void didUpdateWidget(NodeDetailsOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusedNodeId != null) {
+      _cachedNode = widget.nodes.firstWhere(
+        (n) => n.id == widget.focusedNodeId,
+        orElse: () => widget.nodes.first,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isVisible = widget.focusedNodeId != null;
+    final node = _cachedNode;
+
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+      bottom: isVisible ? 0 : -500, // Slides out of view entirely
+      left: 0,
+      right: 0,
+      child: node == null ? const SizedBox.shrink() : _buildPanel(node),
+    );
+  }
+
+  Widget _buildPanel(SkillNode node) {
+    int currentXpInLevel = node.xp % 500;
+    double progressPercent = currentXpInLevel / 500.0;
+    int nextLevel = node.level + 1;
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(32, 16, 32, 32),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface.withValues(alpha: 0.85),
+            color: widget.theme.colorScheme.surface.withValues(alpha: 0.85),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
             border: Border(
               top: BorderSide(
-                color: node.color.withValues(alpha: 0.5),
+                color: node.color.withValues(alpha: 0.6),
                 width: 2,
               ),
             ),
@@ -57,112 +147,152 @@ void showNodeDetailsBottomSheet(BuildContext context, SkillNode node) {
               ),
             ],
           ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Drag handle
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag Handle & Close Button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(width: 48), // Balance
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: widget.theme.colorScheme.onSurface.withValues(
+                        alpha: 0.2,
+                      ),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: widget.theme.colorScheme.onSurface.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
+                    onPressed: widget.onClose,
+                  ),
+                ],
+              ),
+              CircleAvatar(
+                backgroundColor: node.color.withValues(alpha: 0.15),
+                radius: 30,
+                child: Icon(
+                  node.id == 'root' ? Icons.person : Icons.hub,
+                  color: node.color,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                node.title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.montserrat(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: widget.theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                node.description,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: widget.theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Gamified XP Bar
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'LVL ${node.level}',
+                    style: GoogleFonts.orbitron(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: widget.theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    'LVL $nextLevel',
+                    style: GoogleFonts.orbitron(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: widget.theme.colorScheme.onSurface.withValues(
+                        alpha: 0.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                height: 16,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: widget.theme.colorScheme.onSurface.withValues(
+                    alpha: 0.05,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: widget.theme.colorScheme.onSurface.withValues(
+                      alpha: 0.1,
+                    ),
                   ),
                 ),
-                CircleAvatar(
-                  backgroundColor: node.color.withValues(alpha: 0.15),
-                  radius: 35,
-                  child: Icon(
-                    node.id == 'root' ? Icons.person : Icons.hub,
-                    color: node.color,
-                    size: 35,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  node.title,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.montserrat(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  node.description,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                child: Stack(
                   children: [
-                    buildStatPill('LEVEL', '${node.level}', node.color),
-                    buildStatPill(
-                      'TOTAL XP',
-                      '${node.xp}',
-                      node.color,
+                    FractionallySizedBox(
+                      widthFactor: progressPercent.clamp(0.0, 1.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          gradient: LinearGradient(
+                            colors: [
+                              node.color.withValues(alpha: 0.5),
+                              node.color,
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: node.color.withValues(alpha: 0.5),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-              ],
-            ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$currentXpInLevel / 500 XP TO NEXT LEVEL',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: widget.theme.colorScheme.onSurface.withValues(
+                    alpha: 0.5,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
 }
 
-Widget buildStatPill(String label, String value, Color color) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.05),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
-      boxShadow: [
-        BoxShadow(
-          color: color.withValues(alpha: 0.1),
-          blurRadius: 10,
-          spreadRadius: 1,
-        ),
-      ],
-    ),
-    child: Column(
-      children: [
-        Text(
-          value,
-          style: GoogleFonts.orbitron(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: color.withValues(alpha: 0.8),
-            letterSpacing: 1.5,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-// --- DYNAMIC NETWORK WIDGET ---
-class DynamicSkillTreeNetwork extends StatelessWidget {
+// --- DYNAMIC NETWORK WIDGET (MINI VIEW) ---
+class DynamicSkillTreeNetwork extends StatefulWidget {
   final ThemeData theme;
   final List<SkillNode> nodes;
   final String userName;
@@ -174,9 +304,17 @@ class DynamicSkillTreeNetwork extends StatelessWidget {
     required this.userName,
   });
 
-  void _handleTap(BuildContext context, Offset localPosition) {
+  @override
+  State<DynamicSkillTreeNetwork> createState() =>
+      _DynamicSkillTreeNetworkState();
+}
+
+class _DynamicSkillTreeNetworkState extends State<DynamicSkillTreeNetwork> {
+  final ValueNotifier<String?> _focusedNodeId = ValueNotifier(null);
+
+  void _handleTap(Offset localPosition) {
     const center = Offset(400, 400);
-    for (var node in nodes.reversed) {
+    for (var node in widget.nodes.reversed) {
       final nodeCenter =
           center +
           Offset(
@@ -184,10 +322,11 @@ class DynamicSkillTreeNetwork extends StatelessWidget {
             node.radialDistance * math.sin(node.angle),
           );
       if ((localPosition - nodeCenter).distance <= node.radius + 15) {
-        showNodeDetailsBottomSheet(context, node);
-        return;
+        _focusedNodeId.value = node.id;
+        return; // Found a node
       }
     }
+    _focusedNodeId.value = null; // Tapped empty space, dismiss panel
   }
 
   @override
@@ -195,17 +334,16 @@ class DynamicSkillTreeNetwork extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: widget.theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.2),
+          color: widget.theme.colorScheme.primary.withValues(alpha: 0.2),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.05),
+            color: widget.theme.colorScheme.primary.withValues(alpha: 0.05),
             blurRadius: 20,
-            spreadRadius: 2,
           ),
         ],
       ),
@@ -216,85 +354,116 @@ class DynamicSkillTreeNetwork extends StatelessWidget {
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
             ),
-            child: Stack(
-              children: [
-                SizedBox(
-                  height: 350,
-                  width: double.infinity,
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    child: SizedBox(
-                      width: 800,
-                      height: 800,
-                      // 🚀 FIX: Moved GestureDetector to wrap the entire Stack
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTapUp: (details) =>
-                            _handleTap(context, details.localPosition),
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: CustomPaint(
-                                painter: TechGridPainter(theme.colorScheme.primary),
-                              ),
-                            ),
-                            Positioned.fill(
-                              child: CustomPaint(
-                                painter: OrganicTreePainter(
-                                  theme: theme,
-                                  nodes: nodes,
-                                  scale: 1.0,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                      child: IconButton.filled(
-                        style: IconButton.styleFrom(
-                          backgroundColor: theme.colorScheme.surface.withValues(
-                            alpha: 0.5,
+            child: SizedBox(
+              height: 350,
+              width: double.infinity,
+              child: Stack(
+                children: [
+                  // Layer 1: The Interactive Graph
+                  Positioned.fill(
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: SizedBox(
+                        width: 800,
+                        height: 800,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTapUp: (details) =>
+                              _handleTap(details.localPosition),
+                          child: ValueListenableBuilder<String?>(
+                            valueListenable: _focusedNodeId,
+                            builder: (context, focusedId, child) {
+                              final activePathIds = getActivePathIds(
+                                focusedId,
+                                widget.nodes,
+                              );
+                              return Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: CustomPaint(
+                                      painter: TechGridPainter(
+                                        widget.theme.colorScheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned.fill(
+                                    child: CustomPaint(
+                                      painter: OrganicTreePainter(
+                                        theme: widget.theme,
+                                        nodes: widget.nodes,
+                                        scale: 1.0,
+                                        activePathIds: activePathIds,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
-                          foregroundColor: theme.colorScheme.primary,
                         ),
-                        icon: const Icon(Icons.fullscreen),
-                        onPressed: () =>
-                            Navigator.of(context, rootNavigator: true).push(
-                              MaterialPageRoute(
-                                builder: (context) => FullScreenSkillTree(
-                                  theme: theme,
-                                  nodes: nodes,
-                                ),
-                              ),
-                            ),
                       ),
                     ),
                   ),
-                ),
-              ],
+
+                  // Layer 2: Fullscreen Button
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                        child: IconButton.filled(
+                          style: IconButton.styleFrom(
+                            backgroundColor: widget.theme.colorScheme.surface
+                                .withValues(alpha: 0.5),
+                            foregroundColor: widget.theme.colorScheme.primary,
+                          ),
+                          icon: const Icon(Icons.fullscreen),
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true).push(
+                                MaterialPageRoute(
+                                  builder: (context) => FullScreenSkillTree(
+                                    theme: widget.theme,
+                                    nodes: widget.nodes,
+                                  ),
+                                ),
+                              ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Layer 3: The Floating Glass Panel
+                  ValueListenableBuilder<String?>(
+                    valueListenable: _focusedNodeId,
+                    builder: (context, focusedId, child) {
+                      return NodeDetailsOverlay(
+                        focusedNodeId: focusedId,
+                        nodes: widget.nodes,
+                        theme: widget.theme,
+                        onClose: () => _focusedNodeId.value = null,
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
+
           GestureDetector(
             onTap: () => Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute(
-                builder: (context) =>
-                    FullScreenSkillTree(theme: theme, nodes: nodes),
+                builder: (context) => FullScreenSkillTree(
+                  theme: widget.theme,
+                  nodes: widget.nodes,
+                ),
               ),
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                color: widget.theme.colorScheme.primary.withValues(alpha: 0.05),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(20),
                   bottomRight: Radius.circular(20),
@@ -306,7 +475,7 @@ class DynamicSkillTreeNetwork extends StatelessWidget {
                   Icon(
                     Icons.zoom_out_map,
                     size: 16,
-                    color: theme.colorScheme.primary,
+                    color: widget.theme.colorScheme.primary,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -314,8 +483,7 @@ class DynamicSkillTreeNetwork extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1.1,
-                      color: theme.colorScheme.primary,
+                      color: widget.theme.colorScheme.primary,
                     ),
                   ),
                 ],
@@ -332,8 +500,11 @@ class DynamicSkillTreeNetwork extends StatelessWidget {
 class FullScreenSkillTree extends StatefulWidget {
   final ThemeData theme;
   final List<SkillNode> nodes;
-
-  const FullScreenSkillTree({super.key, required this.theme, required this.nodes});
+  const FullScreenSkillTree({
+    super.key,
+    required this.theme,
+    required this.nodes,
+  });
 
   @override
   State<FullScreenSkillTree> createState() => _FullScreenSkillTreeState();
@@ -342,29 +513,22 @@ class FullScreenSkillTree extends StatefulWidget {
 class _FullScreenSkillTreeState extends State<FullScreenSkillTree> {
   final TransformationController _transformationController =
       TransformationController();
+  final ValueNotifier<String?> _focusedNodeId = ValueNotifier(null);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final screenSize = MediaQuery.of(context).size;
-      final offsetX = 1000.0 - (screenSize.width / 2);
-      final offsetY = 1000.0 - (screenSize.height / 2);
       _transformationController.value = Matrix4.translationValues(
-        -offsetX,
-        -offsetY,
+        -(1000.0 - (screenSize.width / 2)),
+        -(1000.0 - (screenSize.height / 2)),
         0.0,
       );
     });
   }
 
-  @override
-  void dispose() {
-    _transformationController.dispose();
-    super.dispose();
-  }
-
-  void _handleTap(BuildContext context, Offset localPosition) {
+  void _handleTap(Offset localPosition) {
     const center = Offset(1000, 1000);
     for (var node in widget.nodes.reversed) {
       final nodeCenter =
@@ -374,10 +538,11 @@ class _FullScreenSkillTreeState extends State<FullScreenSkillTree> {
             node.radialDistance * math.sin(node.angle),
           );
       if ((localPosition - nodeCenter).distance <= node.radius + 15) {
-        showNodeDetailsBottomSheet(context, node);
+        _focusedNodeId.value = node.id;
         return;
       }
     }
+    _focusedNodeId.value = null;
   }
 
   @override
@@ -386,7 +551,7 @@ class _FullScreenSkillTreeState extends State<FullScreenSkillTree> {
       backgroundColor: widget.theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
-          // 1. The Interactive Panning/Zooming Layer
+          // Layer 1: Interactive Viewer
           InteractiveViewer(
             transformationController: _transformationController,
             minScale: 0.2,
@@ -396,44 +561,57 @@ class _FullScreenSkillTreeState extends State<FullScreenSkillTree> {
             child: SizedBox(
               width: 2000,
               height: 2000,
-              // 🚀 FIX: Moved GestureDetector to wrap the entire Stack
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
-                onTapUp: (details) =>
-                    _handleTap(context, details.localPosition),
-                child: Stack(
-                  children: [
-                    // Textured Blueprint Background
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: TechGridPainter(widget.theme.colorScheme.primary),
-                      ),
-                    ),
-                    // The Neural Network
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: OrganicTreePainter(
-                          theme: widget.theme,
-                          nodes: widget.nodes,
-                          scale: 1.0,
-                          isFullScreen: true,
+                onTapUp: (details) => _handleTap(details.localPosition),
+                child: ValueListenableBuilder<String?>(
+                  valueListenable: _focusedNodeId,
+                  builder: (context, focusedId, child) {
+                    final activePathIds = getActivePathIds(
+                      focusedId,
+                      widget.nodes,
+                    );
+                    return Stack(
+                      children: [
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: TechGridPainter(
+                              widget.theme.colorScheme.primary,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: OrganicTreePainter(
+                              theme: widget.theme,
+                              nodes: widget.nodes,
+                              scale: 1.0,
+                              isFullScreen: true,
+                              activePathIds: activePathIds,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
           ),
-          
-          // 2. Custom Floating Header
+
+          // Layer 2: Top Header Bar
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.only(top: 8, left: 20, right: 20, bottom: 10),
+                padding: const EdgeInsets.only(
+                  top: 8,
+                  left: 20,
+                  right: 20,
+                  bottom: 10,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -443,9 +621,9 @@ class _FullScreenSkillTreeState extends State<FullScreenSkillTree> {
                         widget.theme,
                         padding: const EdgeInsets.all(12),
                         child: Icon(
-                          Icons.arrow_back_ios_new_rounded, 
-                          color: widget.theme.colorScheme.primary, 
-                          size: 20
+                          Icons.arrow_back_ios_new_rounded,
+                          color: widget.theme.colorScheme.primary,
+                          size: 20,
                         ),
                       ),
                     ),
@@ -465,51 +643,17 @@ class _FullScreenSkillTreeState extends State<FullScreenSkillTree> {
             ),
           ),
 
-          // 3. Elevated Floating Pill
-          Positioned(
-            bottom: 110,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(30),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: widget.theme.colorScheme.surface.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(
-                        color: widget.theme.colorScheme.onSurface.withValues(alpha: 0.1),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.pinch,
-                          size: 16,
-                          color: widget.theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Pinch to zoom • Drag to pan',
-                          style: GoogleFonts.inter(
-                            color: widget.theme.colorScheme.onSurface,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          // Layer 3: Floating Bottom Sheet
+          ValueListenableBuilder<String?>(
+            valueListenable: _focusedNodeId,
+            builder: (context, focusedId, child) {
+              return NodeDetailsOverlay(
+                focusedNodeId: focusedId,
+                nodes: widget.nodes,
+                theme: widget.theme,
+                onClose: () => _focusedNodeId.value = null,
+              );
+            },
           ),
         ],
       ),
@@ -517,10 +661,9 @@ class _FullScreenSkillTreeState extends State<FullScreenSkillTree> {
   }
 }
 
-// --- GAMIFIED BACKGROUND GRID PAINTER ---
+// --- BACKGROUND GRID PAINTER ---
 class TechGridPainter extends CustomPainter {
   final Color color;
-  
   TechGridPainter(this.color);
 
   @override
@@ -529,54 +672,53 @@ class TechGridPainter extends CustomPainter {
       ..color = color.withValues(alpha: 0.04)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
-
     const double spacing = 50.0;
-    
-    // Draw Grid Lines
-    for (double i = 0; i < size.width; i += spacing) {
+    for (double i = 0; i < size.width; i += spacing)
       canvas.drawLine(Offset(i, 0), Offset(i, size.height), linePaint);
-    }
-    for (double i = 0; i < size.height; i += spacing) {
+    for (double i = 0; i < size.height; i += spacing)
       canvas.drawLine(Offset(0, i), Offset(size.width, i), linePaint);
-    }
-
-    // Draw Intersection Data Dots
-    final dotPaint = Paint()
-      ..color = color.withValues(alpha: 0.12)
-      ..style = PaintingStyle.fill;
-      
-    for (double x = 0; x < size.width; x += spacing) {
-      for (double y = 0; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), 1.5, dotPaint);
-      }
-    }
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// --- CUSTOM NODE PAINTER ---
+// --- 🚀 THE GENIUS GRAPH PAINTER ---
 class OrganicTreePainter extends CustomPainter {
   final ThemeData theme;
   final List<SkillNode> nodes;
   final double scale;
   final bool isFullScreen;
+  final Set<String>? activePathIds; // The precise lineage algorithm output
 
   OrganicTreePainter({
     required this.theme,
     required this.nodes,
     required this.scale,
     this.isFullScreen = false,
+    this.activePathIds,
   });
+
+  bool isNodeFocused(SkillNode node) {
+    if (activePathIds == null) return true; // Everything visible when no focus
+    return activePathIds!.contains(node.id);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     if (nodes.isEmpty) return;
-
     final center = isFullScreen
         ? const Offset(1000, 1000)
         : const Offset(400, 400);
+
+    // 🪐 Draw Orbital Guides
+    final orbitPaint = Paint()
+      ..color = theme.colorScheme.onSurface.withValues(alpha: 0.03)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawCircle(center, 110, orbitPaint);
+    canvas.drawCircle(center, 220, orbitPaint);
+    canvas.drawCircle(center, 330, orbitPaint);
 
     Offset getOffset(SkillNode node) =>
         center +
@@ -585,121 +727,99 @@ class OrganicTreePainter extends CustomPainter {
           node.radialDistance * math.sin(node.angle),
         );
 
-    // Buffed Gradient Branches
-    void drawOrganicBranch(SkillNode n1, SkillNode n2) {
+    // Draw Smooth Edges
+    void drawEdge(SkillNode n1, SkillNode n2) {
+      bool isEdgeFocused =
+          isNodeFocused(n1) && isNodeFocused(n2) && activePathIds != null;
+      double opacity = activePathIds == null
+          ? 0.25
+          : (isEdgeFocused ? 0.9 : 0.02);
+      double thickness = activePathIds == null
+          ? 1.5
+          : (isEdgeFocused ? 4.0 : 0.5);
+
+      if (opacity < 0.05 && activePathIds != null) return;
+
       final p1 = getOffset(n1);
       final p2 = getOffset(n2);
       final path = Path()..moveTo(p1.dx, p1.dy);
 
       final midPoint = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
       final angle = math.atan2(p2.dy - p1.dy, p2.dx - p1.dx);
-      final cpX = midPoint.dx - math.sin(angle) * 30;
-      final cpY = midPoint.dy + math.cos(angle) * 30;
+      final cpX = midPoint.dx - math.sin(angle) * (n1.id == 'root' ? 0 : 50);
+      final cpY = midPoint.dy + math.cos(angle) * (n1.id == 'root' ? 0 : 50);
 
       path.quadraticBezierTo(cpX, cpY, p2.dx, p2.dy);
-      
-      final isRootConnection = n1.id == 'root';
+
       final gradient = LinearGradient(
         colors: [
-          n1.color.withValues(alpha: 0.6),
-          n2.color.withValues(alpha: 0.6),
+          n1.color.withValues(alpha: opacity),
+          n2.color.withValues(alpha: opacity),
         ],
       ).createShader(Rect.fromPoints(p1, p2));
-
       canvas.drawPath(
         path,
         Paint()
           ..shader = gradient
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
-          ..strokeWidth = (isRootConnection ? 5.0 : 2.5),
+          ..strokeWidth = thickness,
       );
     }
 
-    final root = nodes.firstWhere((n) => n.id == 'root');
+    // Render Edges
     for (var node in nodes) {
       if (node.id == 'root') continue;
-      if (node.strand == 'root') {
-        drawOrganicBranch(root, node);
-      } else {
-        final parentNode = nodes.firstWhere(
-          (n) => n.id == node.strand,
-          orElse: () => root,
-        );
-        drawOrganicBranch(parentNode, node);
+      if (node.connectedNodeIds.isNotEmpty) {
+        for (String parentId in node.connectedNodeIds) {
+          try {
+            final parentNode = nodes.firstWhere((n) => n.id == parentId);
+            drawEdge(parentNode, node);
+          } catch (_) {}
+        }
+      } else if (node.strand == 'root') {
+        drawEdge(nodes.first, node);
       }
     }
 
-    // Buffed Glowing Nodes
+    // Render Nodes
     for (var node in nodes) {
       final pCenter = getOffset(node);
+      final isFocused = isNodeFocused(node);
+      double nodeOpacity = isFocused ? 1.0 : 0.15;
 
-      if (node.id == 'root') {
-        final Rect coreRect = Rect.fromCircle(
-          center: pCenter,
-          radius: node.radius,
-        );
-        // Outer Glow
-        canvas.drawCircle(
-          pCenter,
-          node.radius + 8,
-          Paint()
-            ..color = node.color.withValues(alpha: 0.3)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15),
-        );
-        // Inner Gradient
-        canvas.drawCircle(
-          pCenter,
-          node.radius,
-          Paint()
-            ..shader = LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
-            ).createShader(coreRect),
-        );
-      } else {
-        // Outer Glow
-        canvas.drawCircle(
-          pCenter,
-          node.radius + 4,
-          Paint()
-            ..color = node.color.withValues(alpha: 0.2)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-        );
-        // Background
-        canvas.drawCircle(
-          pCenter,
-          node.radius,
-          Paint()..color = theme.colorScheme.surface,
-        );
-        // Stroke Ring
-        canvas.drawCircle(
-          pCenter,
-          node.radius,
-          Paint()
-            ..color = node.color
-            ..strokeWidth = 3.5
-            ..style = PaintingStyle.stroke,
-        );
-      }
+      canvas.drawCircle(
+        pCenter,
+        node.radius + (isFocused ? 6 : 2),
+        Paint()
+          ..color = node.color.withValues(alpha: isFocused ? 0.3 : 0.0)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+      );
+      canvas.drawCircle(
+        pCenter,
+        node.radius,
+        Paint()
+          ..color = theme.colorScheme.surface.withValues(alpha: nodeOpacity),
+      );
+      canvas.drawCircle(
+        pCenter,
+        node.radius,
+        Paint()
+          ..color = node.color.withValues(alpha: nodeOpacity)
+          ..strokeWidth = isFocused ? 3.5 : 1.5
+          ..style = PaintingStyle.stroke,
+      );
+
+      if (!isFocused) continue;
 
       final text = node.id == 'root' ? node.title : node.title.split(' ')[0];
       final textPainter = TextPainter(
         text: TextSpan(
           text: text,
           style: GoogleFonts.inter(
-            color: node.id == 'root'
-                ? Colors.white
-                : theme.colorScheme.onSurface,
-            fontSize: node.id == 'root' ? 16 : 12,
-            fontWeight: FontWeight.w800,
-            shadows: node.id != 'root' ? [
-              Shadow(
-                color: theme.colorScheme.surface,
-                blurRadius: 4,
-              )
-            ] : [],
+            color: theme.colorScheme.onSurface,
+            fontSize: node.id == 'root' ? 16 : 11,
+            fontWeight: FontWeight.w900,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -711,24 +831,6 @@ class OrganicTreePainter extends CustomPainter {
           pCenter.dy - (textPainter.height / 2),
         ),
       );
-
-      if (node.id != 'root') {
-        final levelPainter = TextPainter(
-          text: TextSpan(
-            text: 'Lv.${node.level}',
-            style: GoogleFonts.orbitron(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        levelPainter.paint(
-          canvas,
-          pCenter + Offset(-levelPainter.width / 2, node.radius + 4),
-        );
-      }
     }
   }
 

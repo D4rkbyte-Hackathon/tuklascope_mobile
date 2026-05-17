@@ -42,7 +42,6 @@ async def get_user_skill_web(user_id: str) -> dict | None:
     """
 
     # Query 2: Mastered Skills with Aggregated Domains
-    # A single skill can belong to multiple domains, so we collect them into an array.
     skills_query = """
     MATCH (u:User {id: $user_id})-[m:MASTERED]->(k:Skill)
     OPTIONAL MATCH (k)-[:BELONGS_TO]->(d:Domain)-[:FALLS_UNDER]->(s:Strand)
@@ -66,28 +65,28 @@ async def get_user_skill_web(user_id: str) -> dict | None:
             return None
 
         # Format Strand distribution cleanly (e.g., {"stem": 1400, "abm": 50})
-        xp_distribution = {record["strand"].lower(): record["xp"] for record in xp_records}
+        xp_distribution = {
+            record["strand"].lower(): record["xp"] for record in xp_records
+        }
 
         # Build strict JSON objects, eliminating frontend Regex parsing
         top_skills = []
         for rec in skill_records:
             strands = rec["strands"]
-            # Default to the first strand found, or fallback to 'stem' if detached
             primary_strand = strands[0].lower() if strands else "stem"
-            
-            top_skills.append({
-                "skill_name": rec["skill_name"],
-                "domains": rec["domains"],  # Now a proper array: ["Physics", "Computer Science"]
-                "strand": primary_strand,
-                "level": rec["level"],
-                "xp": rec["xp"]
-            })
 
-        return {
-            "xp_distribution": xp_distribution, 
-            "top_skills": top_skills
-        }
-        
+            top_skills.append(
+                {
+                    "skill_name": rec["skill_name"],
+                    "domains": rec["domains"],  # Array of strings mapping many-to-many
+                    "strand": primary_strand,
+                    "level": rec["level"],
+                    "xp": rec["xp"],
+                }
+            )
+
+        return {"xp_distribution": xp_distribution, "top_skills": top_skills}
+
     except Exception as e:
         logger.error(f"Failed to fetch Skill Web from Neo4j: {str(e)}")
         return None
