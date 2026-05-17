@@ -22,7 +22,8 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
   String _searchQuery = '';
   
   String _sortOrder = 'newest'; 
-  String? _selectedLens; 
+  String? _selectedLens;
+  bool _showFavoritesOnly = false;
 
   late PageController _pageController;
   double _currentPage = 0.0;
@@ -69,8 +70,9 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
               .contains(_searchQuery.toLowerCase()) == true;
       
       final matchesLens = _selectedLens == null || scan['chosen_lens'] == _selectedLens;
-      
-      return matchesSearch && matchesLens;
+      final matchesFavorite = !_showFavoritesOnly || _isScanFavorite(scan);
+
+      return matchesSearch && matchesLens && matchesFavorite;
     }).toList();
 
     filtered.sort((a, b) {
@@ -80,6 +82,41 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
     });
 
     return filtered;
+  }
+
+  bool _isScanFavorite(Map<String, dynamic> scan) {
+    final value = scan['is_favorite'];
+    return value is bool && value;
+  }
+
+  Future<void> _toggleScanFavorite(String scanId, bool isFavorite) async {
+    final index = _scanHistory.indexWhere((scan) => scan['id'] == scanId);
+    if (index == -1) return;
+
+    final previous = _isScanFavorite(_scanHistory[index]);
+    setState(() {
+      _scanHistory[index] = {..._scanHistory[index], 'is_favorite': isFavorite};
+    });
+
+    final success = await ScanService.setScanFavorite(
+      scanId: scanId,
+      isFavorite: isFavorite,
+    );
+
+    if (!success && mounted) {
+      setState(() {
+        _scanHistory[index] = {..._scanHistory[index], 'is_favorite': previous};
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not update favorite. Please try again.',
+            style: GoogleFonts.inter(),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -134,7 +171,8 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
 
   Widget _buildFilterButton(ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
-    final hasActiveFilter = _selectedLens != null || _sortOrder == 'oldest';
+    final hasActiveFilter =
+        _selectedLens != null || _sortOrder == 'oldest' || _showFavoritesOnly;
 
     return Material(
       elevation: isDark ? 0 : 2,
@@ -225,12 +263,39 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
                         Wrap(
                           spacing: 12,
                           runSpacing: 12,
-                          children: ['STEM', 'History', 'Art', 'Biology'].map((lens) {
+                          children: ['STEM', 'ABM', 'HUMSS', 'TVL'].map((lens) {
                             return _buildSciFiChip(lens, _selectedLens == lens, primaryColor, () {
                               setDialogState(() => _selectedLens = _selectedLens == lens ? null : lens);
                               setState(() {});
                             });
                           }).toList(),
+                        ),
+                        const SizedBox(height: 28),
+                        Text(
+                          'FAVORITES',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          children: [
+                            _buildSciFiChip(
+                              'Show Favorites',
+                              _showFavoritesOnly,
+                              Colors.amber,
+                              () {
+                                setDialogState(
+                                  () => _showFavoritesOnly = !_showFavoritesOnly,
+                                );
+                                setState(() {});
+                              },
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 36),
                         SizedBox(
@@ -317,6 +382,7 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
         itemCount: filteredScans.length,
         itemBuilder: (context, index) {
           final scan = filteredScans[index];
+          final scanId = scan['id'] as String? ?? '';
           final objectName = scan['object_name'] as String? ?? 'Unknown Item';
           final lens = scan['chosen_lens'] as String? ?? 'STEM';
           final createdAt = scan['created_at'] as String?;
@@ -349,15 +415,19 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
               opacity: opacity,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
-                child: ScanHistoryCard( 
+                child: ScanHistoryCard(
+                  scanId: scanId,
                   title: objectName,
                   subtitle: formattedDate,
                   tag: lens,
                   imageUrl: imageUrl,
                   xpAwarded: xp,
+                  isFavorite: _isScanFavorite(scan),
                   accent: theme.colorScheme.secondary,
+                  onFavoriteChanged: scanId.isEmpty
+                      ? null
+                      : (isFavorite) => _toggleScanFavorite(scanId, isFavorite),
                   onTap: () {
-                    final scanId = scan['id'] as String? ?? '';
                     if (scanId.isNotEmpty) {
                       Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) => ScanDetailScreen(scanId: scanId, objectName: objectName, imagUrl: imageUrl ?? '')));
