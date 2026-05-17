@@ -74,7 +74,8 @@ class DiscoveryService {
     required String chosenLens,
     required String imagePath,
     required Map<String, dynamic> learningDeck,
-    required bool isAlignedWithCompass, // 🚀 FIX: Must be calculated by the UI
+    required bool isAlignedWithCompass,
+    String? gamificationToken,
   }) async {
     try {
       final session = Supabase.instance.client.auth.currentSession;
@@ -115,6 +116,7 @@ class DiscoveryService {
         'learning_deck': learningDeck,
         'is_aligned_with_compass':
             isAlignedWithCompass, // 🚀 FIX: Dynamic alignment
+        if (gamificationToken != null) 'gamification_token': gamificationToken,
       };
 
       final response = await ApiClient.post(

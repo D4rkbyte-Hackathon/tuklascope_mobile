@@ -12,6 +12,7 @@ class ChallengeBottomSheet extends ConsumerStatefulWidget {
   final String selectedLens;
   final String imagePath;
   final Map<String, dynamic> fullDeckData;
+  final String? gamificationToken;
 
   const ChallengeBottomSheet({
     super.key,
@@ -20,10 +21,12 @@ class ChallengeBottomSheet extends ConsumerStatefulWidget {
     required this.selectedLens,
     required this.imagePath,
     required this.fullDeckData,
+    this.gamificationToken,
   });
 
   @override
-  ConsumerState<ChallengeBottomSheet> createState() => _ChallengeBottomSheetState();
+  ConsumerState<ChallengeBottomSheet> createState() =>
+      _ChallengeBottomSheetState();
 }
 
 class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
@@ -72,6 +75,7 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
       imagePath: widget.imagePath,
       learningDeck: widget.fullDeckData,
       isAlignedWithCompass: isAligned,
+      gamificationToken: widget.gamificationToken,
     );
 
     if (success && mounted) {
@@ -124,15 +128,20 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
         padding: const EdgeInsets.fromLTRB(32, 16, 32, 32),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          border: Border(top: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5), width: 2)),
+          border: Border(
+            top: BorderSide(
+              color: theme.colorScheme.primary.withValues(alpha: 0.5),
+              width: 2,
+            ),
+          ),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           boxShadow: [
             BoxShadow(
               color: theme.colorScheme.primary.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, -10),
-            )
-          ]
+            ),
+          ],
         ),
         child: SafeArea(
           child: SingleChildScrollView(
@@ -168,7 +177,9 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
                         (index) => Padding(
                           padding: const EdgeInsets.only(left: 4.0),
                           child: Icon(
-                            index < attemptsLeft ? Icons.favorite : Icons.favorite_border,
+                            index < attemptsLeft
+                                ? Icons.favorite
+                                : Icons.favorite_border,
                             size: 24,
                             color: Colors.redAccent,
                           ),
@@ -192,7 +203,9 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
                 ...options.map((option) {
                   final bool isThisSelected = selectedOption == option;
                   Color buttonColor = theme.scaffoldBackgroundColor;
-                  Color borderColor = theme.colorScheme.onSurface.withValues(alpha: 0.1);
+                  Color borderColor = theme.colorScheme.onSurface.withValues(
+                    alpha: 0.1,
+                  );
 
                   if (isEvaluating && isThisSelected) {
                     if (lastResult == true) {
@@ -203,14 +216,18 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
                       borderColor = Colors.red;
                     }
                   } else if (isThisSelected) {
-                    buttonColor = theme.colorScheme.primary.withValues(alpha: 0.2);
+                    buttonColor = theme.colorScheme.primary.withValues(
+                      alpha: 0.2,
+                    );
                     borderColor = theme.colorScheme.primary;
                   }
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16.0),
                     child: InkWell(
-                      onTap: isEvaluating ? null : () => setState(() => selectedOption = option),
+                      onTap: isEvaluating
+                          ? null
+                          : () => setState(() => selectedOption = option),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         padding: const EdgeInsets.all(20),
@@ -222,7 +239,7 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
                             topRight: Radius.circular(16),
                             bottomLeft: Radius.circular(16),
                             bottomRight: Radius.circular(4),
-                          )
+                          ),
                         ),
                         child: Text(
                           option,
@@ -274,20 +291,28 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
                     child: Column(
                       children: [
                         Icon(
-                          lastResult == true ? Icons.check_circle_outline : Icons.cancel_outlined,
-                          color: lastResult == true ? Colors.green : Colors.red,
-                          size: 48,
-                        ).animate(onPlay: (c) => c.repeat(reverse: true)).scaleXY(begin: 0.9, end: 1.1),
+                              lastResult == true
+                                  ? Icons.check_circle_outline
+                                  : Icons.cancel_outlined,
+                              color: lastResult == true
+                                  ? Colors.green
+                                  : Colors.red,
+                              size: 48,
+                            )
+                            .animate(onPlay: (c) => c.repeat(reverse: true))
+                            .scaleXY(begin: 0.9, end: 1.1),
                         const SizedBox(height: 16),
                         Text(
                           lastResult == true
                               ? "ACCESS GRANTED\n$explanation"
                               : attemptsLeft > 0
-                                  ? "WARNING: Incorrect. You have 1 attempt remaining."
-                                  : "CRITICAL FAILURE. The door closes...",
+                              ? "WARNING: Incorrect. You have 1 attempt remaining."
+                              : "CRITICAL FAILURE. The door closes...",
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
-                            color: lastResult == true ? Colors.green : Colors.red,
+                            color: lastResult == true
+                                ? Colors.green
+                                : Colors.red,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -297,7 +322,10 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
                           ElevatedButton(
                             onPressed: () {
                               Navigator.pop(context); // Pop Modal
-                              Navigator.pop(context, true); // Return TRUE to Teaser Doors
+                              Navigator.pop(
+                                context,
+                                true,
+                              ); // Return TRUE to Teaser Doors
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,

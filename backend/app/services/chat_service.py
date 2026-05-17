@@ -6,9 +6,7 @@ from fastapi import HTTPException
 
 # Keep temperature low for factual, focused tutoring
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    google_api_key=settings.GEMINI_API_KEY,
-    temperature=0.4
+    model="gemini-3-flash", google_api_key=settings.GEMINI_API_KEY, temperature=0.4
 )
 
 
@@ -19,7 +17,7 @@ async def generate_tutor_response(data: ChatRequest) -> str:
             "You are the Tuklascope AI Tutor, a friendly, culturally-aware Filipino educational guide. "
             f"The student is currently looking at a scanned object: '{data.object_name}' "
             f"through the lens of the '{data.strand}' academic strand.\n\n"
-            f"They are specifically reading this learning card:\n\"{data.card_content}\"\n\n"
+            f'They are specifically reading this learning card:\n"{data.card_content}"\n\n'
             "Answer their questions accurately based ONLY on this context and the K-12 DepEd curriculum. "
             "Explain concepts simply, clearly, and directly. Use a supportive and encouraging tone. "
             "Do not hallucinate information outside of this scope."
@@ -44,4 +42,5 @@ async def generate_tutor_response(data: ChatRequest) -> str:
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Tutor AI Processing Error: {str(e)}")
+            status_code=500, detail=f"Tutor AI Processing Error: {str(e)}"
+        )
