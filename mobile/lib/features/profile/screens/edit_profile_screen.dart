@@ -12,6 +12,7 @@ import '../utils/display_badge_utils.dart';
 import '../../auth/providers/auth_controller.dart';
 import '../../pathways/models/pathway_models.dart';
 import '../../pathways/providers/pathways_provider.dart';
+import '../../pathways/utils/pathway_utils.dart';
 import '../providers/profile_provider.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -430,7 +431,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Set<String> _unlockedBadgePaths(List<Pathway> pathways) {
     return pathways
-        .where((p) => p.status == PathwayStatus.completed)
+        .where(isPathwayBadgeUnlocked)
         .map((p) => p.badgeUrl)
         .toSet();
   }

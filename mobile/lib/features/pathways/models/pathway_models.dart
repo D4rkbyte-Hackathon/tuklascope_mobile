@@ -48,6 +48,7 @@ class Pathway {
   final String targetStrand;
   final PathwayStatus status;
   final int progressPercentage;
+  final bool badgeClaimed;
   final List<PathwayTask> tasks;
 
   Pathway({
@@ -61,6 +62,7 @@ class Pathway {
     required this.targetStrand,
     required this.status,
     required this.progressPercentage,
+    this.badgeClaimed = false,
     required this.tasks,
   });
 
@@ -78,6 +80,7 @@ class Pathway {
       targetStrand: json['target_strand'] as String? ?? 'GENERAL',
       status: PathwayStatusExtension.fromString(json['status'] as String),
       progressPercentage: json['progress_percentage'] as int? ?? 0,
+      badgeClaimed: json['badge_claimed'] as bool? ?? false,
       tasks:
           (json['tasks'] as List<dynamic>?)
               ?.map((e) => PathwayTask.fromJson(e as Map<String, dynamic>))
