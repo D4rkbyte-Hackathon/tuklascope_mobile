@@ -191,6 +191,14 @@ class SupabaseAuthService {
     }
   }
 
+  /// Resends the signup verification OTP to the user's email.
+  Future<void> resendSignupVerificationOtp({required String email}) async {
+    await _supabase.auth.resend(
+      type: OtpType.signup,
+      email: email,
+    );
+  }
+
   /// Verifies the 6-digit code sent to the user's inbox
   Future<bool> verifyEmailWithOtp({
     required String email, 
