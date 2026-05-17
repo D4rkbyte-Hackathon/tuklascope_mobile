@@ -217,8 +217,9 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
                       ],
                     ),
 
-                    const Spacer(),
-
+                    const SizedBox(
+                      height: 16,
+                    ), // 🚀 Replaced Spacer to prevent Flex issues
                     // 🚀 THE MAGICAL QUEST DETECTED BADGE
                     if (widget.isQuestMatch && !widget.isSecured)
                       Container(
@@ -275,32 +276,43 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     Text(
                       widget.isSecured ? "Data Fully Assimilated" : title,
                       textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.montserrat(
-                        fontSize: 24,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
                         height: 1.2,
                       ),
                     ),
-                    const Spacer(),
-                    Text(
-                      widget.isSecured
-                          ? "You have successfully absorbed the knowledge from this pathway. Choose another lens to continue extracting."
-                          : teaser,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.8,
+
+                    const SizedBox(height: 12), // 🚀 Replaced Spacer
+                    // 🚀 FIX: Wrap Teaser in an Expanded + ScrollView so it NEVER overflows again!
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Text(
+                          widget.isSecured
+                              ? "You have successfully absorbed the knowledge from this pathway. Choose another lens to continue extracting."
+                              : teaser,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 14, // Slightly smaller font
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.8,
+                            ),
+                            height: 1.5,
+                          ),
                         ),
-                        height: 1.5,
                       ),
                     ),
-                    const Spacer(),
+
+                    const SizedBox(height: 16), // 🚀 Replaced Spacer
+
                     SizedBox(
                       width: double.infinity,
                       height: 60,

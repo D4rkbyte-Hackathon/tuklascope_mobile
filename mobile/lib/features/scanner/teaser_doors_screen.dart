@@ -56,6 +56,8 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
       List<String>.from(widget.aiData['quest_target_lenses'] ?? []);
 
   Future<void> _enterPortal(String lens, String teaser) async {
+    final String? token =
+        widget.aiData['gamification_token']; // 🚀 NEW: Extract the token
     final result = await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) => DiscoveryCardsScreen(
@@ -64,6 +66,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
           selectedLens: lens,
           imagePath: widget.imagePath,
           teaserContext: teaser,
+          gamificationToken: token,
         ),
       ),
     );
@@ -79,17 +82,17 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
   Widget _buildGlassCard({required Widget child, EdgeInsetsGeometry? padding}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: isDark 
-            ? Colors.black.withValues(alpha: 0.4) 
+        color: isDark
+            ? Colors.black.withValues(alpha: 0.4)
             : Colors.white.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark 
-              ? Colors.white.withValues(alpha: 0.1) 
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.1)
               : Colors.white.withValues(alpha: 0.5),
           width: 1.5,
         ),
@@ -98,7 +101,7 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
             color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 15,
             offset: const Offset(0, 6),
-          )
+          ),
         ],
       ),
       child: child,
@@ -116,7 +119,11 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
             onTap: () => Navigator.pop(context),
             child: _buildGlassCard(
               padding: const EdgeInsets.all(12),
-              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
           ),
           Text(
