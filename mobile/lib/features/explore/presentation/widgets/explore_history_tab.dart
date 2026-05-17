@@ -225,7 +225,7 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
                         Wrap(
                           spacing: 12,
                           runSpacing: 12,
-                          children: ['STEM', 'History', 'Art', 'Biology'].map((lens) {
+                          children: ['STEM', 'ABM', 'HUMSS', 'TVL'].map((lens) {
                             return _buildSciFiChip(lens, _selectedLens == lens, primaryColor, () {
                               setDialogState(() => _selectedLens = _selectedLens == lens ? null : lens);
                               setState(() {});
