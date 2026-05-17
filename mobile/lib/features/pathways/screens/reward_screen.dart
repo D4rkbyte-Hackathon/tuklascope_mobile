@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/pathway_models.dart';
 import '../providers/pathways_provider.dart';
+import '../widgets/pathway_quest_modals.dart';
 import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
 
 class RewardScreen extends ConsumerWidget {
@@ -131,17 +132,11 @@ class RewardScreen extends ConsumerWidget {
                                           )
                                           .enroll(currentPathway.id);
 
-                                      // Check if the user is still on this screen before showing SnackBar
                                       if (!context.mounted) return;
 
-                                      ScaffoldMessenger.of(
+                                      await showEnrollmentSuccessModal(
                                         context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Successfully enrolled!',
-                                          ),
-                                        ),
+                                        pathway: currentPathway,
                                       );
                                     } catch (e) {
                                       // Check if mounted before showing error
