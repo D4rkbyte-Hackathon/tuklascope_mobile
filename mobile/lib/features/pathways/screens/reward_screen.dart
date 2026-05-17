@@ -205,6 +205,8 @@ class RewardScreen extends ConsumerWidget {
                             theme,
                           );
                         }),
+                        const SizedBox(height: 24),
+                        _buildGoToScanButton(context, theme),
                       ],
 
                       // ---------------------------------------------------
@@ -237,6 +239,40 @@ class RewardScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGoToScanButton(BuildContext context, ThemeData theme) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          backgroundColor: theme.colorScheme.secondary,
+          foregroundColor: theme.colorScheme.onSecondary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 4,
+          shadowColor: theme.colorScheme.secondary.withValues(alpha: 0.4),
+        ),
+        icon: const Icon(Icons.document_scanner_outlined, size: 22),
+        label: Text(
+          'GO TO SCAN',
+          style: GoogleFonts.orbitron(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
+        onPressed: () {
+          final navScope = MainNavScope.maybeOf(context);
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          navScope?.goToTab(1);
+        },
       ),
     );
   }
