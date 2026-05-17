@@ -116,7 +116,7 @@ class DiscoveryService {
         'learning_deck': learningDeck,
         'is_aligned_with_compass':
             isAlignedWithCompass, // 🚀 FIX: Dynamic alignment
-        if (gamificationToken != null) 'gamification_token': gamificationToken,
+        'gamification_token': ?gamificationToken,
       };
 
       final response = await ApiClient.post(
