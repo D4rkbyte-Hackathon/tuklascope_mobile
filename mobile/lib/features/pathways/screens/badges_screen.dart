@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/pathways_provider.dart';
-import '../models/pathway_models.dart';
+import '../utils/pathway_utils.dart';
 
 class BadgesScreen extends ConsumerWidget {
   const BadgesScreen({super.key});
@@ -45,7 +45,7 @@ class BadgesScreen extends ConsumerWidget {
             itemCount: pathways.length,
             itemBuilder: (context, index) {
               final pathway = pathways[index];
-              final isUnlocked = pathway.status == PathwayStatus.completed;
+              final isUnlocked = isPathwayBadgeUnlocked(pathway);
 
               return Column(
                 children: [

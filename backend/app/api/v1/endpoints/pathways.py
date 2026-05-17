@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase import Client
 from app.core.security import get_user_db_client
@@ -29,7 +31,10 @@ async def get_pathway_catalog(
         # 2. Fetch the user's specific progress state
         user_state_res = (
             db_client.table("user_pathways")
-            .select("pathway_id, status, user_pathway_tasks(task_id, is_completed)")
+            .select(
+                "pathway_id, status, badge_claimed_at, "
+                "user_pathway_tasks(task_id, is_completed)"
+            )
             .eq("user_id", user_id)
             .execute()
         )
@@ -38,6 +43,7 @@ async def get_pathway_catalog(
         user_enrollments = {
             row["pathway_id"]: {
                 "status": row["status"],
+                "badge_claimed": row.get("badge_claimed_at") is not None,
                 "tasks": {
                     t["task_id"]: t["is_completed"]
                     for t in row.get("user_pathway_tasks", [])
@@ -54,7 +60,12 @@ async def get_pathway_catalog(
         for p in catalog_res.data:
             p_id = p["id"]
             u_state = user_enrollments.get(
-                p_id, {"status": PathwayStatus.AVAILABLE.value, "tasks": {}}
+                p_id,
+                {
+                    "status": PathwayStatus.AVAILABLE.value,
+                    "badge_claimed": False,
+                    "tasks": {},
+                },
             )
 
             status_val = u_state["status"]
@@ -102,6 +113,7 @@ async def get_pathway_catalog(
                     target_strand=p.get("target_strand", "GENERAL"),
                     status=status_val,
                     progress_percentage=progress_pct,
+                    badge_claimed=u_state["badge_claimed"],
                     tasks=mapped_tasks,
                 )
             )
@@ -158,4 +170,62 @@ async def enroll_in_pathway(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Enrollment failed due to server error.",
+        )
+
+
+@router.post("/{pathway_id}/claim-badge")
+async def claim_pathway_badge(
+    pathway_id: str, db_data: tuple[Client, str] = Depends(get_user_db_client)
+):
+    db_client, user_id = db_data
+    try:
+        enrollment_res = (
+            db_client.table("user_pathways")
+            .select("id, status, badge_claimed_at")
+            .eq("user_id", user_id)
+            .eq("pathway_id", pathway_id)
+            .maybe_single()
+            .execute()
+        )
+
+        enrollment = enrollment_res.data
+        if not enrollment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="You are not enrolled in this pathway.",
+            )
+
+        if enrollment.get("badge_claimed_at"):
+            return {
+                "status": "already_claimed",
+                "pathway_id": pathway_id,
+            }
+
+        if enrollment["status"] != PathwayStatus.COMPLETED.value:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Complete every quest milestone before claiming your badge.",
+            )
+
+        claimed_at = datetime.now(timezone.utc).isoformat()
+        db_client.table("user_pathways").update(
+            {"badge_claimed_at": claimed_at}
+        ).eq("id", enrollment["id"]).execute()
+
+        return {
+            "status": "claimed",
+            "pathway_id": pathway_id,
+            "badge_claimed_at": claimed_at,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Failed to claim badge for pathway {pathway_id}, user {user_id}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to claim pathway badge.",
         )

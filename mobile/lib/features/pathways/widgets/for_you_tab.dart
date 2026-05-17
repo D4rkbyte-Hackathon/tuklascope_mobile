@@ -9,7 +9,8 @@ import '../models/pathway_models.dart';
 import '../providers/pathways_provider.dart';
 import '../screens/reward_screen.dart';
 import '../services/compass_recommendation_service.dart';
-import '../../pathways/utils/pathway_utils.dart';
+import '../utils/pathway_utils.dart';
+import 'pathway_quest_modals.dart';
 
 class ForYouTab extends ConsumerWidget {
   /// When true, content is embedded in a parent [CustomScrollView] and does not
@@ -273,7 +274,7 @@ class _CompassSummaryCard extends StatelessWidget {
 
 // ─── Individual Recommended Card ─────────────────────────────────────────────
 
-class _RecommendedPathwayCard extends StatelessWidget {
+class _RecommendedPathwayCard extends ConsumerWidget {
   final RecommendedPathway rec;
 
   const _RecommendedPathwayCard({required this.rec});
@@ -308,9 +309,11 @@ class _RecommendedPathwayCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final pathway = rec.pathway;
+    final canClaim = canClaimPathwayBadge(pathway);
+    final catalogLoading = ref.watch(pathwaysCatalogProvider).isLoading;
     final strandColor = _strandColor(pathway.targetStrand);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -449,15 +452,19 @@ class _RecommendedPathwayCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: pathway.status == PathwayStatus.completed
-                                ? Colors.green.withValues(alpha: 0.9)
-                                : Colors.amber.withValues(alpha: 0.9),
+                            color: canClaim
+                                ? Colors.amber.shade700.withValues(alpha: 0.95)
+                                : pathway.status == PathwayStatus.completed
+                                    ? Colors.green.withValues(alpha: 0.9)
+                                    : Colors.amber.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            pathway.status == PathwayStatus.completed
-                                ? '✓ Done'
-                                : '▶ Active',
+                            canClaim
+                                ? 'Claim Badge'
+                                : pathway.status == PathwayStatus.completed
+                                    ? '✓ Done'
+                                    : '▶ Active',
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
@@ -577,6 +584,37 @@ class _RecommendedPathwayCard extends StatelessWidget {
                         ],
                       ),
                     ],
+                    if (canClaim) ...[
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: Colors.amber.shade700,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.workspace_premium_rounded,
+                            size: 20,
+                          ),
+                          label: Text(
+                            'CLAIM BADGE',
+                            style: GoogleFonts.orbitron(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          onPressed: catalogLoading
+                              ? null
+                              : () => _claimBadge(context, ref, pathway),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -584,6 +622,32 @@ class _RecommendedPathwayCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+Future<void> _claimBadge(
+  BuildContext context,
+  WidgetRef ref,
+  Pathway pathway,
+) async {
+  try {
+    await ref.read(pathwaysCatalogProvider.notifier).claimBadge(pathway.id);
+
+    if (!context.mounted) return;
+
+    final updated = ref.read(pathwaysCatalogProvider).value;
+    final latest = updated?.pathways.firstWhere(
+          (p) => p.id == pathway.id,
+          orElse: () => pathway,
+        ) ??
+        pathway;
+
+    await showBadgeRewardModal(context, pathway: latest);
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
     );
   }
 }

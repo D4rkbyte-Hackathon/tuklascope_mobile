@@ -32,4 +32,20 @@ class PathwaysService {
       throw Exception(errorDetail);
     }
   }
+
+  Future<void> claimPathwayBadge(String pathwayId) async {
+    final response = await ApiClient.post(ApiConfig.claimPathwayBadge(pathwayId));
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      String errorDetail = 'Failed to claim badge';
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded['detail'] != null) {
+          errorDetail = decoded['detail'].toString();
+        }
+      } catch (_) {}
+
+      throw Exception(errorDetail);
+    }
+  }
 }
