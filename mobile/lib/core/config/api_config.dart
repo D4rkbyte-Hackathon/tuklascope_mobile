@@ -20,4 +20,6 @@ class ApiConfig {
   static String get chatAsk => '$baseUrl/chat';
   static String get pathwaysCatalog => '$baseUrl/pathways/catalog';
   static String enrollPathway(String id) => '$baseUrl/pathways/$id/enroll';
+  static String claimPathwayBadge(String id) =>
+      '$baseUrl/pathways/$id/claim-badge';
 }
