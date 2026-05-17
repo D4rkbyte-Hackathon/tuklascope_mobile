@@ -18,7 +18,7 @@ from app.schemas.cards import LearningDeckResponse
 # 1. GLOBAL LLM INITIALIZATION
 # ==========================================
 llm = ChatGoogleGenerativeAI(
-    model="gemini-3-flash",
+    model="gemini-2.5-flash",
     google_api_key=settings.GEMINI_API_KEY,
     temperature=0.7,
     max_retries=2,  # Built-in retry logic for brief network hiccups
