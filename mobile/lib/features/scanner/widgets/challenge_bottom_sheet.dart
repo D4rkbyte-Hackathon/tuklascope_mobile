@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:tuklascope_mobile/core/services/discovery_service.dart';
 import 'package:tuklascope_mobile/features/home/providers/home_provider.dart';
 import 'package:tuklascope_mobile/features/profile/providers/profile_provider.dart';
+import 'package:tuklascope_mobile/features/pathways/providers/pathways_provider.dart';
 
 class ChallengeBottomSheet extends ConsumerStatefulWidget {
   final Map<String, dynamic> challengeCard;
@@ -34,6 +35,7 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
   String? selectedOption;
   bool isEvaluating = false;
   bool? lastResult; // null = waiting, true = correct, false = wrong
+  bool isExtracting = false; // 🚀 NEW: Tracks the database save state
 
   late final String question;
   late final List<String> options;
@@ -81,18 +83,20 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
     if (success && mounted) {
       ref.invalidate(homeStatsProvider);
       ref.invalidate(profileStatsProvider);
+      ref.invalidate(
+        pathwaysCatalogProvider,
+      ); // 🚀 Force Pathways tab to refresh
     }
   }
 
+  // 🚀 REFACTORED: Now evaluates instantly, no awaiting the backend here
   void _submitAnswer() {
     setState(() {
       isEvaluating = true;
-      lastResult = (selectedOption == correctAnswer);
+      lastResult = (selectedOption == correctAnswer); // 🚀 Evaluate INSTANTLY
     });
 
-    if (lastResult == true) {
-      _saveProgressToBackend();
-    } else {
+    if (lastResult == false) {
       attemptsLeft--;
       if (attemptsLeft > 0) {
         Future.delayed(const Duration(milliseconds: 1500), () {
@@ -112,6 +116,25 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
           }
         });
       }
+    }
+    // If true, do nothing else! The UI will automatically show the EXTRACT XP button.
+  }
+
+  // 🚀 NEW: This handles the actual backend database saving when the user clicks EXTRACT
+  Future<void> _handleExtractXP() async {
+    setState(() {
+      isExtracting = true; // Show spinner on the button
+    });
+
+    // 🚀 AWAIT THE BACKEND SAVE ONLY UPON CLICKING THE BUTTON
+    await _saveProgressToBackend();
+
+    if (mounted) {
+      setState(() {
+        isExtracting = false;
+      });
+      Navigator.pop(context); // Pop Modal
+      Navigator.pop(context, true); // Return TRUE to Teaser Doors
     }
   }
 
@@ -214,6 +237,12 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
                     } else if (lastResult == false) {
                       buttonColor = Colors.red.withValues(alpha: 0.2);
                       borderColor = Colors.red;
+                    } else {
+                      // Fallback just in case
+                      buttonColor = theme.colorScheme.primary.withValues(
+                        alpha: 0.2,
+                      );
+                      borderColor = theme.colorScheme.primary;
                     }
                   } else if (isThisSelected) {
                     buttonColor = theme.colorScheme.primary.withValues(
@@ -320,32 +349,35 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
                         if (lastResult == true) ...[
                           const SizedBox(height: 24),
                           ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context); // Pop Modal
-                              Navigator.pop(
-                                context,
-                                true,
-                              ); // Return TRUE to Teaser Doors
-                            },
+                            onPressed: isExtracting ? null : _handleExtractXP,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.download_rounded),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'EXTRACT XP',
-                                  style: GoogleFonts.orbitron(
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.5,
+                            child: isExtracting
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.download_rounded),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'EXTRACT XP',
+                                        style: GoogleFonts.orbitron(
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 1.5,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
-                            ),
                           ),
                         ],
                       ],
