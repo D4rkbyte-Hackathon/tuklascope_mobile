@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/pathway_models.dart';
 import '../providers/pathways_provider.dart';
+import '../utils/pathway_utils.dart';
 import '../widgets/pathway_quest_modals.dart';
 import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
 
@@ -17,11 +18,10 @@ class RewardScreen extends ConsumerWidget {
     final isNavBarVisible = navScope?.isNavBarVisible ?? true;
     final theme = Theme.of(context);
 
-    // Watch the live catalog state to get real-time updates after enrolling
     final catalogState = ref.watch(pathwaysCatalogProvider);
     final isEnrolling = catalogState.isLoading;
+    final isClaiming = catalogState.isLoading;
 
-    // Find the most up-to-date version of this pathway from the provider
     final currentPathway =
         catalogState.value?.pathways.firstWhere(
           (p) => p.id == pathway.id,
@@ -29,7 +29,9 @@ class RewardScreen extends ConsumerWidget {
         ) ??
         pathway;
 
-    final bool isCompleted = currentPathway.status == PathwayStatus.completed;
+    final bool isQuestFinished = isPathwayQuestFinished(currentPathway);
+    final bool isBadgeUnlocked = isPathwayBadgeUnlocked(currentPathway);
+    final bool canClaimBadge = canClaimPathwayBadge(currentPathway);
     final bool isAvailable = currentPathway.status == PathwayStatus.available;
 
     return Scaffold(
@@ -63,11 +65,35 @@ class RewardScreen extends ConsumerWidget {
                       image: DecorationImage(
                         image: AssetImage(currentPathway.badgeUrl),
                         fit: BoxFit.contain,
+                        colorFilter: isBadgeUnlocked
+                            ? null
+                            : const ColorFilter.matrix([
+                                0.2126,
+                                0.7152,
+                                0.0722,
+                                0,
+                                0,
+                                0.2126,
+                                0.7152,
+                                0.0722,
+                                0,
+                                0,
+                                0.2126,
+                                0.7152,
+                                0.0722,
+                                0,
+                                0,
+                                0,
+                                0,
+                                0,
+                                1,
+                                0,
+                              ]),
                       ),
                       shape: BoxShape.circle,
                       border: Border.all(
                         width: 6,
-                        color: isCompleted ? Colors.green : Colors.grey,
+                        color: isBadgeUnlocked ? Colors.green : Colors.grey,
                       ),
                     ),
                   ),
@@ -99,7 +125,6 @@ class RewardScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // --- DYNAMIC CONTENT BASED ON ENROLLMENT STATUS ---
                       if (isAvailable) ...[
                         Text(
                           "Ready to begin? Enroll in this quest to unlock tasks and start earning points.",
@@ -139,7 +164,6 @@ class RewardScreen extends ConsumerWidget {
                                         pathway: currentPathway,
                                       );
                                     } catch (e) {
-                                      // Check if mounted before showing error
                                       if (!context.mounted) return;
 
                                       ScaffoldMessenger.of(
@@ -172,9 +196,11 @@ class RewardScreen extends ConsumerWidget {
                         ),
                       ] else ...[
                         Text(
-                          isCompleted
-                              ? "Congratulations! You've completed the ${currentPathway.title} journey."
-                              : "You are actively on this quest. Track your milestones below.",
+                          canClaimBadge
+                              ? "Every milestone is complete! Claim your badge to add it to your collection."
+                              : isBadgeUnlocked
+                                  ? "Congratulations! You've completed the ${currentPathway.title} journey."
+                                  : "You are actively on this quest. Track your milestones below.",
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
                             fontSize: 16,
@@ -192,7 +218,6 @@ class RewardScreen extends ConsumerWidget {
                             color: theme.colorScheme.onSurface,
                           ),
                         ),
-                        // The tasks are now driven entirely by the backend data!
                         ...currentPathway.tasks.map((task) {
                           return _buildMilestone(
                             task.description,
@@ -200,11 +225,21 @@ class RewardScreen extends ConsumerWidget {
                             theme,
                           );
                         }),
-                        const SizedBox(height: 24),
-                        _buildGoToScanButton(context, theme),
+                        if (canClaimBadge) ...[
+                          const SizedBox(height: 24),
+                          _buildClaimBadgeButton(
+                            context,
+                            ref,
+                            theme,
+                            currentPathway,
+                            isClaiming,
+                          ),
+                        ] else if (!isQuestFinished) ...[
+                          const SizedBox(height: 24),
+                          _buildGoToScanButton(context, theme),
+                        ],
                       ],
 
-                      // ---------------------------------------------------
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 400),
                         curve: Curves.easeOutQuint,
@@ -234,6 +269,67 @@ class RewardScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildClaimBadgeButton(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    Pathway pathway,
+    bool isClaiming,
+  ) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          backgroundColor: Colors.amber.shade700,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 6,
+          shadowColor: Colors.amber.withValues(alpha: 0.45),
+        ),
+        icon: const Icon(Icons.workspace_premium_rounded, size: 24),
+        label: Text(
+          'CLAIM BADGE',
+          style: GoogleFonts.orbitron(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
+        onPressed: isClaiming
+            ? null
+            : () async {
+                try {
+                  await ref
+                      .read(pathwaysCatalogProvider.notifier)
+                      .claimBadge(pathway.id);
+
+                  if (!context.mounted) return;
+
+                  final updated = ref.read(pathwaysCatalogProvider).value;
+                  final latest = updated?.pathways.firstWhere(
+                        (p) => p.id == pathway.id,
+                        orElse: () => pathway,
+                      ) ??
+                      pathway;
+
+                  await showBadgeRewardModal(context, pathway: latest);
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
       ),
     );
   }
