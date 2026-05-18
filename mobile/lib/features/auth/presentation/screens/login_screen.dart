@@ -9,8 +9,8 @@ import 'signup_screen.dart';
 import '../widgets/auth_gate.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/neon_text_field.dart';
-import 'social_login_profile_screen.dart'; // 🚀 NEW SCREEN FOR DISPLAYING SOCIAL LOGIN INFORMATION
 import '../../providers/auth_controller.dart';
+import '../../providers/auth_flow_providers.dart';
 import '../../../../core/widgets/gradient_scaffold.dart';
 import '../../../../core/navigation/auth_transitions.dart';
 
@@ -75,65 +75,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (!mounted) return;
       if (authResponse != null) {
-        final user = Supabase.instance.client.auth.currentUser;
-        
-        if (user != null && isSocialLogin) {
-          // Check if profile is already complete
-          try {
-            final profileData = await Supabase.instance.client
-                .from('profiles')
-                .select('full_name, education_level')
-                .eq('id', user.id)
-                .single();
-
-            final isProfileComplete = profileData['full_name'] != null &&
-                profileData['full_name'].toString().isNotEmpty &&
-                profileData['education_level'] != null &&
-                profileData['education_level'].toString().isNotEmpty;
-
-            if (isProfileComplete) {
-              // Profile already complete → Go to home
-              if (!mounted) return;
-              _showSuccess('Welcome back!');
-              Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const AuthGate()),
-                (route) => false,
-              );
-              return;
-            }
-          } catch (e) {
-            debugPrint('Error checking profile: $e');
-            // Profile might not exist yet, continue to profile screen
-          }
-
-          // For social logins with incomplete profile, show completion screen
-          String? displayName;
-          final String userEmail = user.email ?? '';
-          
-          // Get name from user metadata
-          final userMetadata = user.userMetadata;
-          if (userMetadata != null) {
-            displayName = userMetadata['full_name'] as String?;
-          }
-          
-          if (!mounted) return;
-          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => SocialLoginProfileScreen(
-                initialName: displayName,
-                userEmail: userEmail,
-              ),
-            ),
-            (route) => false,
-          );
-        } else {
-          // For regular login, go to AuthGate
+        if (!mounted) return;
+        if (isSocialLogin) {
           _showSuccess('Successfully signed in with $providerName!');
-          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const AuthGate()),
-            (route) => false,
-          );
         }
+
+        final userId = Supabase.instance.client.auth.currentUser?.id;
+        if (userId != null) {
+          ref.invalidate(profileCompletionCheckProvider(userId));
+          ref.invalidate(compassCheckProvider(userId));
+        }
+
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+          (route) => false,
+        );
       }
     } on AuthException catch (e) {
       if (!mounted) return;
