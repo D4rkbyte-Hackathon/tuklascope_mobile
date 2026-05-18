@@ -2,11 +2,13 @@ import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../auth/presentation/widgets/auth_gate.dart';
+import '../auth/providers/auth_flow_providers.dart';
 import '../../core/widgets/gradient_scaffold.dart';
-import '../../main_navigation.dart';
 import 'models/compass_data.dart';
 import 'widgets/diamond_radar_painter.dart';
 
@@ -202,39 +204,67 @@ class _CompassResultsScreenState extends State<CompassResultsScreen> {
                         ),
                         child: ElevatedButton(
                           onPressed: () async {
-                            try {
-                              final userId = Supabase.instance.client.auth.currentUser?.id;
-                              if (userId != null) {
-                                // 🚀 FIX 3: Safe map unwrapping to prevent crash
-                                await Supabase.instance.client.from('compass_results').upsert({
+                            final userId =
+                                Supabase.instance.client.auth.currentUser?.id;
+                            var savedToDatabase = false;
+
+                            if (userId != null) {
+                              try {
+                                await Supabase.instance.client
+                                    .from('compass_results')
+                                    .upsert({
                                   'user_id': userId,
-                                  'stem_affinity': ((widget.affinityScores[Affinity.stem] ?? 0.0) * 100).toInt(),
-                                  'abm_affinity': ((widget.affinityScores[Affinity.abm] ?? 0.0) * 100).toInt(),
-                                  'humss_affinity': ((widget.affinityScores[Affinity.humss] ?? 0.0) * 100).toInt(),
-                                  'tvl_affinity': ((widget.affinityScores[Affinity.tvl] ?? 0.0) * 100).toInt(),
-                                }, onConflict: 'user_id'); 
+                                  'stem_affinity': ((widget.affinityScores[
+                                                  Affinity.stem] ??
+                                              0.0) *
+                                          100)
+                                      .toInt(),
+                                  'abm_affinity': ((widget.affinityScores[
+                                                  Affinity.abm] ??
+                                              0.0) *
+                                          100)
+                                      .toInt(),
+                                  'humss_affinity': ((widget.affinityScores[
+                                                  Affinity.humss] ??
+                                              0.0) *
+                                          100)
+                                      .toInt(),
+                                  'tvl_affinity': ((widget.affinityScores[
+                                                  Affinity.tvl] ??
+                                              0.0) *
+                                          100)
+                                      .toInt(),
+                                }, onConflict: 'user_id');
+                                savedToDatabase = true;
+                              } catch (e) {
+                                debugPrint('Failed to save compass results: $e');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text(
+                                        'Could not sync results. You may be asked to retake the compass later.',
+                                      ),
+                                      backgroundColor: theme.colorScheme.error,
+                                    ),
+                                  );
+                                }
                               }
-                            } catch (e) {
-                              debugPrint('Failed to save compass results: $e');
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('Could not sync results, but you can continue offline.'), 
-                                    backgroundColor: theme.colorScheme.error
-                                  ),
-                                );
-                              }
-                              // 🚀 FIX 2: Removed the `return;` 
-                              // We log the error but still let them proceed to MainNavigation!
                             }
 
-                            if (context.mounted) {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (context) => const MainNavigation()),
-                                (route) => false,
-                              );
+                            if (!context.mounted) return;
+
+                            if (userId != null && savedToDatabase) {
+                              ProviderScope.containerOf(context)
+                                  .invalidate(compassCheckProvider(userId));
                             }
+
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AuthGate(),
+                              ),
+                              (route) => false,
+                            );
                           },
                           // ... (keep the rest of the button style the same)
                           style: ElevatedButton.styleFrom(
