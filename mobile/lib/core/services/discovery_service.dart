@@ -114,9 +114,8 @@ class DiscoveryService {
         'chosen_lens': chosenLens,
         'image_url': publicUrl,
         'learning_deck': learningDeck,
-        'is_aligned_with_compass':
-            isAlignedWithCompass, // 🚀 FIX: Dynamic alignment
-        'gamification_token': ?gamificationToken,
+        'is_aligned_with_compass': isAlignedWithCompass,
+        'gamification_token': gamificationToken,
       };
 
       final response = await ApiClient.post(

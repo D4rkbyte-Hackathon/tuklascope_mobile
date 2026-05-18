@@ -1,9 +1,9 @@
+# backend/app/core/graph_db.py
 from neo4j import AsyncGraphDatabase, AsyncDriver
 from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class Neo4jConnection:
     def __init__(self):
@@ -12,17 +12,20 @@ class Neo4jConnection:
 
     def connect(self):
         if not settings.NEO4J_URI or not settings.NEO4J_PASSWORD:
-            logger.warning(
-                "Neo4j credentials missing. Graph features will be disabled.")
+            logger.warning("Neo4j credentials missing. Graph features will be disabled.")
             return
 
         try:
-            # Initialize the ASYNC driver
+            # Initialize the ASYNC driver with robust AuraDB pooling settings
             self.driver = AsyncGraphDatabase.driver(
                 settings.NEO4J_URI,
-                auth=(settings.NEO4J_USERNAME, settings.NEO4J_PASSWORD)
+                auth=(settings.NEO4J_USERNAME, settings.NEO4J_PASSWORD),
+                keep_alive=True,
+                max_connection_lifetime=30 * 60, # Recycle connections every 30 mins
+                max_connection_pool_size=50,     # Prevent connection exhaustion
+                connection_acquisition_timeout=2 * 60
             )
-            logger.info("Successfully initialized Async Neo4j AuraDB driver!")
+            logger.info("Successfully initialized Async Neo4j AuraDB driver with pooling!")
         except Exception as e:
             logger.error(f"Failed to connect to Neo4j: {str(e)}")
             self.driver = None
@@ -30,7 +33,7 @@ class Neo4jConnection:
     async def close(self):
         if self.driver:
             await self.driver.close()
-
+            logger.info("Neo4j driver connection closed.")
 
 # Instantiate globally
 neo4j_db = Neo4jConnection()
