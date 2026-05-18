@@ -133,6 +133,8 @@ class MainNavigationState extends State<MainNavigation> with SingleTickerProvide
       child: Scaffold(
         extendBody: true,
         backgroundColor: Colors.transparent,
+        // Explore history search: keep layout height; let keyboard overlay cards.
+        resizeToAvoidBottomInset: _currentIndex != 4,
         
         // Passive Raw Gesture Listener
         body: Listener(
