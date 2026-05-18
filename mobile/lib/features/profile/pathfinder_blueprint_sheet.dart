@@ -333,38 +333,33 @@ class _NeuralLinkOverlayState extends State<_NeuralLinkOverlay> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Glowing, pulsating icon
+            // Pulsating hub icon
             Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                        blurRadius: 30,
-                        spreadRadius: 10,
-                      ),
-                    ],
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                    blurRadius: 28,
+                    spreadRadius: 0,
                   ),
-                  child: Icon(
-                    Icons.hub,
-                    size: 48,
-                    color: theme.colorScheme.primary,
-                  ),
-                )
+                ],
+              ),
+              child: Icon(
+                Icons.hub,
+                size: 48,
+                color: theme.colorScheme.primary,
+              ),
+            )
                 .animate(
                   onPlay: (controller) => controller.repeat(reverse: true),
                 )
                 .scaleXY(
-                  begin: 0.9,
-                  end: 1.1,
+                  begin: 0.92,
+                  end: 1.08,
                   duration: 1.seconds,
                   curve: Curves.easeInOut,
-                )
-                .shimmer(
-                  duration: 2.seconds,
-                  color: theme.colorScheme.secondary,
                 ),
 
             const SizedBox(height: 32),
