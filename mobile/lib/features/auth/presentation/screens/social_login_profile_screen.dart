@@ -4,9 +4,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../onboarding/compass_questions_screen.dart';
+import '../../../profile/services/profile_service.dart';
+import '../../providers/auth_flow_providers.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/neon_text_field.dart';
+import '../widgets/profile_avatar_picker.dart';
 import '../../../../core/widgets/gradient_scaffold.dart';
 
 class SocialLoginProfileScreen extends ConsumerStatefulWidget {
@@ -29,13 +31,14 @@ class _SocialLoginProfileScreenState
   late final TextEditingController _nameController;
   final _cityController = TextEditingController();
   final _countryController = TextEditingController();
+  final _avatarPickerKey = GlobalKey<ProfileAvatarPickerState>();
 
   String? _selectedEducationLevel;
   final List<String> _educationLevels = [
     'Elementary',
     'High School',
     'Senior High School',
-    'Others'
+    'Others',
   ];
 
   bool _isLoading = false;
@@ -44,7 +47,6 @@ class _SocialLoginProfileScreenState
   @override
   void initState() {
     super.initState();
-    // Pre-fill name from social login account info
     _nameController = TextEditingController(text: widget.initialName ?? '');
   }
 
@@ -67,44 +69,53 @@ class _SocialLoginProfileScreenState
   }
 
   Future<void> _completeProfile() async {
-    // Validation
+    final avatarState = _avatarPickerKey.currentState;
+
     if (_nameController.text.trim().isEmpty) {
       return _showSnackBar('Please enter your name');
     }
     if (_selectedEducationLevel == null) {
       return _showSnackBar('Please select your educational level');
     }
+    if (avatarState == null || !avatarState.isValidSelection) {
+      return _showSnackBar(
+        'Please select a custom profile image or pick an avatar',
+      );
+    }
 
     setState(() => _isLoading = true);
 
     try {
       final user = Supabase.instance.client.auth.currentUser;
-      if (user != null) {
-        // Update user profile in database
-        await Supabase.instance.client
-            .from('profiles')
-            .update({
-              'full_name': _nameController.text.trim(),
-              'city': _cityController.text.trim(),
-              'country': _countryController.text.trim(),
-              'education_level': _selectedEducationLevel,
-            })
-            .eq('id', user.id);
-
-        if (!mounted) return;
-        _showSnackBar('Profile completed successfully!', isError: false);
-
-        // Navigate to the next screen (CompassQuestionsScreen)
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const CompassQuestionsScreen(),
-          ),
-        );
-      } else {
+      if (user == null) {
         if (!mounted) return;
         _showSnackBar('User not found. Please try again.');
+        return;
       }
+
+      final finalAvatarUrl = await avatarState.resolveAvatarUrl(
+        (path) => ref.read(profileServiceProvider).uploadProfilePicture(path),
+      );
+
+      if (finalAvatarUrl == null) {
+        if (!mounted) return;
+        _showSnackBar('Please choose a profile picture');
+        return;
+      }
+
+      await Supabase.instance.client.from('profiles').update({
+        'full_name': _nameController.text.trim(),
+        'city': _cityController.text.trim(),
+        'country': _countryController.text.trim(),
+        'education_level': _selectedEducationLevel,
+        'profile_picture_url': finalAvatarUrl,
+      }).eq('id', user.id);
+
+      ref.invalidate(profileCompletionCheckProvider(user.id));
+      ref.invalidate(compassCheckProvider(user.id));
+
+      if (!mounted) return;
+      _showSnackBar('Profile completed successfully!', isError: false);
     } catch (e) {
       if (!mounted) return;
       debugPrint('Error updating profile: $e');
@@ -226,22 +237,24 @@ class _SocialLoginProfileScreenState
                     color: primaryNeon.withValues(alpha: 0.2),
                     blurRadius: 15,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ]
               : [
                   BoxShadow(
                     color: theme.shadowColor.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ],
         ),
         child: Row(
           children: [
-            Icon(Icons.school_outlined,
-                color: isFocused
-                    ? primaryNeon
-                    : theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+            Icon(
+              Icons.school_outlined,
+              color: isFocused
+                  ? primaryNeon
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
             const SizedBox(width: 12),
             RichText(
               text: TextSpan(
@@ -264,11 +277,13 @@ class _SocialLoginProfileScreenState
               ),
             ),
             const Spacer(),
-            Icon(Icons.arrow_drop_down_rounded,
-                color: isFocused
-                    ? primaryNeon
-                    : theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                size: 28),
+            Icon(
+              Icons.arrow_drop_down_rounded,
+              color: isFocused
+                  ? primaryNeon
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              size: 28,
+            ),
           ],
         ),
       ),
@@ -280,103 +295,115 @@ class _SocialLoginProfileScreenState
     final theme = Theme.of(context);
     final primaryNeon = theme.colorScheme.secondary;
 
-    return GradientScaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Complete Your Profile',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.montserrat(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w900,
-                    color: theme.colorScheme.primary,
-                    shadows: [
-                      Shadow(
-                        color: theme.shadowColor.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
-                  ),
-                ).animate()
-                    .fade(duration: 600.ms, delay: 100.ms)
-                    .slideY(
-                      begin: -0.3,
-                      end: 0,
-                      duration: 600.ms,
-                      curve: Curves.easeOutCubic,
+    return PopScope(
+      canPop: false,
+      child: GradientScaffold(
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Complete Your Profile',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.primary,
+                      shadows: [
+                        Shadow(
+                          color: theme.shadowColor.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                const SizedBox(height: 12),
-                Text(
-                  'Logged in as: ${widget.userEmail}',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ).animate()
-                    .fade(duration: 600.ms, delay: 120.ms),
-                const SizedBox(height: 32),
-                NeonTextField(
-                  controller: _nameController,
-                  label: 'Full Name',
-                  icon: Icons.person_outline,
-                  neonColor: primaryNeon,
-                  isRequired: true,
-                )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 150.ms)
-                    .slideX(begin: 0.1, end: 0, duration: 600.ms),
-                const SizedBox(height: 16),
-                NeonTextField(
-                  controller: _cityController,
-                  label: 'City (Optional)',
-                  icon: Icons.location_city_outlined,
-                  neonColor: primaryNeon,
-                )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 200.ms)
-                    .slideX(begin: 0.1, end: 0, duration: 600.ms),
-                const SizedBox(height: 16),
-                NeonTextField(
-                  controller: _countryController,
-                  label: 'Country (Optional)',
-                  icon: Icons.public_outlined,
-                  neonColor: primaryNeon,
-                )
-                    .animate()
-                    .fade(duration: 600.ms, delay: 250.ms)
-                    .slideX(begin: 0.1, end: 0, duration: 600.ms),
-                const SizedBox(height: 16),
-                _buildNeonEducationSelector(theme, primaryNeon)
-                    .animate()
-                    .fade(duration: 600.ms, delay: 300.ms)
-                    .slideX(begin: 0.1, end: 0, duration: 600.ms),
-                const SizedBox(height: 32),
-                if (_isLoading)
-                  Center(
-                    child: CircularProgressIndicator(color: primaryNeon),
-                  )
-                else
-                  PrimaryAuthButton(
-                    label: 'Complete Profile',
-                    onPressed: _completeProfile,
-                    glowColor: primaryNeon,
-                    gradientColors: [
-                      theme.colorScheme.tertiary,
-                      theme.colorScheme.secondary
-                    ],
-                    textColor: theme.colorScheme.onSecondary,
-                  )
+                  ).animate().fade(duration: 600.ms, delay: 100.ms).slideY(
+                        begin: -0.3,
+                        end: 0,
+                        duration: 600.ms,
+                        curve: Curves.easeOutCubic,
+                      ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Signed in with Google · ${widget.userEmail}',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ).animate().fade(duration: 600.ms, delay: 120.ms),
+                  const SizedBox(height: 24),
+                  ProfileAvatarPicker(key: _avatarPickerKey)
                       .animate()
-                      .fade(duration: 600.ms, delay: 350.ms),
-              ],
+                      .fade(duration: 600.ms, delay: 150.ms)
+                      .scaleXY(
+                        begin: 0.8,
+                        end: 1.0,
+                        duration: 600.ms,
+                        curve: Curves.easeOutBack,
+                      ),
+                  const SizedBox(height: 24),
+                  NeonTextField(
+                    controller: _nameController,
+                    label: 'Name',
+                    icon: Icons.person_outline,
+                    neonColor: primaryNeon,
+                    isRequired: true,
+                  ).animate().fade(duration: 600.ms, delay: 200.ms).slideX(
+                        begin: 0.1,
+                        end: 0,
+                        duration: 600.ms,
+                      ),
+                  const SizedBox(height: 16),
+                  NeonTextField(
+                    controller: _cityController,
+                    label: 'City (Optional)',
+                    icon: Icons.location_city_outlined,
+                    neonColor: primaryNeon,
+                  ).animate().fade(duration: 600.ms, delay: 250.ms).slideX(
+                        begin: 0.1,
+                        end: 0,
+                        duration: 600.ms,
+                      ),
+                  const SizedBox(height: 16),
+                  NeonTextField(
+                    controller: _countryController,
+                    label: 'Country (Optional)',
+                    icon: Icons.public_outlined,
+                    neonColor: primaryNeon,
+                  ).animate().fade(duration: 600.ms, delay: 300.ms).slideX(
+                        begin: 0.1,
+                        end: 0,
+                        duration: 600.ms,
+                      ),
+                  const SizedBox(height: 16),
+                  _buildNeonEducationSelector(theme, primaryNeon)
+                      .animate()
+                      .fade(duration: 600.ms, delay: 350.ms)
+                      .slideX(begin: 0.1, end: 0, duration: 600.ms),
+                  const SizedBox(height: 32),
+                  if (_isLoading)
+                    Center(
+                      child: CircularProgressIndicator(color: primaryNeon),
+                    )
+                  else
+                    PrimaryAuthButton(
+                      label: 'Continue to Compass',
+                      onPressed: _completeProfile,
+                      glowColor: primaryNeon,
+                      gradientColors: [
+                        theme.colorScheme.tertiary,
+                        theme.colorScheme.secondary,
+                      ],
+                      textColor: theme.colorScheme.onSecondary,
+                    ).animate().fade(duration: 600.ms, delay: 400.ms),
+                ],
+              ),
             ),
           ),
         ),
