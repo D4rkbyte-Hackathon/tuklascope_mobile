@@ -9,6 +9,7 @@ from app.core.prompts import (
     VISION_DISCOVERY_PROMPT,
     LEARNING_DECK_PROMPT,
     PATHFINDER_PROMPT,
+    PATHFINDER_COMPASS_PROMPT,
 )
 from app.schemas.discover import DiscoverLLMResponse
 from app.schemas.pathfinder import PathfinderResponse
@@ -74,11 +75,16 @@ async def generate_discovery_from_image(
 
 
 async def generate_holistic_pathfinder(
-    xp_distribution: dict, top_skills: dict
+    xp_distribution: dict,
+    top_skills: list | dict,
+    *,
+    from_compass: bool = False,
 ) -> PathfinderResponse:
     try:
-        prompt_text = PATHFINDER_PROMPT.format(
-            xp_distribution=xp_distribution, top_skills=top_skills
+        template = PATHFINDER_COMPASS_PROMPT if from_compass else PATHFINDER_PROMPT
+        prompt_text = template.format(
+            xp_distribution=xp_distribution,
+            top_skills=top_skills if not from_compass else [],
         )
         return await asyncio.wait_for(
             structured_pathfinder.ainvoke(prompt_text), timeout=LLM_TIMEOUT
