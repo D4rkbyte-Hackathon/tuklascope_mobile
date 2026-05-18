@@ -8,7 +8,7 @@ class ScanDetailScreen extends StatefulWidget {
   final String scanId;
   final String objectName;
   final String imagUrl;
-  final List<Map<String, dynamic>>? relatedScans; // 🚀 ADDED
+  final List<Map<String, dynamic>>? relatedScans; 
 
   const ScanDetailScreen({
     super.key,
@@ -59,7 +59,6 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
     }
   }
 
-  // 🚀 Switch between strands dynamically without pushing a new screen
   void _switchLens(String newScanId) {
     if (_currentScanId == newScanId) return;
     setState(() {
@@ -181,11 +180,11 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                           ),
                         ).animate().fade(delay: 100.ms).slideX(begin: -0.1),
                         
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         
-                        // 🚀 NEW: Domain Tag + Strand Switcher
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                        // Domain Tag + Strand Switcher (Wrapped in a Column to strictly prevent horizontal overflow)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Current Active Domain Tag
                             Container(
@@ -199,50 +198,50 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                                 children: [
                                   Icon(Icons.category_rounded, size: 14, color: secondaryAccent),
                                   const SizedBox(width: 6),
-                                  Text(
-                                    _domain.toUpperCase(),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      color: secondaryAccent,
-                                      letterSpacing: 2.0,
+                                  // Added Flexible here to prevent text overflow if Domain name is very long
+                                  Flexible(
+                                    child: Text(
+                                      _domain.toUpperCase(),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: secondaryAccent,
+                                        letterSpacing: 2.0,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                             
-                            // Strand Switcher Options (If multiple exist)
+                            // Strand Switcher Options (Stacked safely below to prevent overflow)
                             if (widget.relatedScans != null && widget.relatedScans!.length > 1) ...[
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  physics: const BouncingScrollPhysics(),
-                                  child: Row(
-                                    children: widget.relatedScans!.map((s) {
-                                      final strandName = s['chosen_lens'] as String? ?? 'STEM';
-                                      final sId = s['id'] as String;
-                                      final isSelected = _currentScanId == sId;
-                                      
-                                      return Padding(
-                                        padding: const EdgeInsets.only(right: 8.0),
-                                        child: ChoiceChip(
-                                          label: Text(strandName),
-                                          selected: isSelected,
-                                          selectedColor: primaryColor.withValues(alpha: 0.3),
-                                          backgroundColor: theme.colorScheme.surface,
-                                          labelStyle: GoogleFonts.orbitron(
-                                            fontSize: 10,
-                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                            color: isSelected ? primaryColor : theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                          ),
-                                          onSelected: (_) => _switchLens(sId),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                ),
+                              const SizedBox(height: 16),
+                              Text("AVAILABLE STRANDS:", style: GoogleFonts.orbitron(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                              const SizedBox(height: 8),
+                              // Wrap dynamically breaks into next line if it runs out of horizontal space
+                              Wrap(
+                                spacing: 8.0,
+                                runSpacing: 8.0,
+                                children: widget.relatedScans!.map((s) {
+                                  final strandName = s['chosen_lens'] as String? ?? 'STEM';
+                                  final sId = s['id'] as String;
+                                  final isSelected = _currentScanId == sId;
+                                  
+                                  return ChoiceChip(
+                                    label: Text(strandName),
+                                    selected: isSelected,
+                                    selectedColor: primaryColor.withValues(alpha: 0.3),
+                                    backgroundColor: theme.colorScheme.surface,
+                                    labelStyle: GoogleFonts.orbitron(
+                                      fontSize: 10,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? primaryColor : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    ),
+                                    onSelected: (_) => _switchLens(sId),
+                                  );
+                                }).toList(),
                               ),
                             ]
                           ],
@@ -299,13 +298,15 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                           children: [
                             Icon(Icons.bar_chart_rounded, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                             const SizedBox(width: 8),
-                            Text(
-                              "DISCOVERY STATS",
-                              style: GoogleFonts.orbitron(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                                letterSpacing: 2.0,
+                            Flexible(
+                              child: Text(
+                                "DISCOVERY STATS",
+                                style: GoogleFonts.orbitron(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                  letterSpacing: 2.0,
+                                ),
                               ),
                             ),
                           ],
@@ -348,13 +349,15 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                             children: [
                               Icon(Icons.travel_explore_rounded, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                               const SizedBox(width: 8),
-                              Text(
-                                "DATALOG // REAL WORLD",
-                                style: GoogleFonts.orbitron(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                                  letterSpacing: 2.0,
+                              Flexible(
+                                child: Text(
+                                  "DATALOG // REAL WORLD",
+                                  style: GoogleFonts.orbitron(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                    letterSpacing: 2.0,
+                                  ),
                                 ),
                               ),
                             ],
@@ -397,7 +400,6 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                           ).animate().fade(delay: 600.ms).slideY(begin: 0.1),
                         ],
 
-                        // 🚀 FIX #3: Button moved OUT of positioned stack, sits naturally at the bottom
                         const SizedBox(height: 32),
                         
                         SizedBox(
@@ -426,12 +428,16 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                               children: [
                                 const Icon(Icons.smart_toy_rounded, size: 22),
                                 const SizedBox(width: 12),
-                                Text(
-                                  "ASK TUKLAS TUTOR",
-                                  style: GoogleFonts.orbitron(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.5,
+                                Flexible(
+                                  child: Text(
+                                    "ASK TUKLAS TUTOR",
+                                    style: GoogleFonts.orbitron(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.5,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
@@ -440,7 +446,6 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                            .shimmer(duration: 2.seconds, color: theme.colorScheme.onPrimary.withValues(alpha: 0.3)),
                         ),
                         
-                        // Give it enough padding so bottom navbar won't clip it
                         SizedBox(height: MediaQuery.paddingOf(context).bottom + 40), 
                       ],
                     ),
@@ -454,7 +459,6 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
     );
   }
 
-  // 🚀 FIX #2: Removed strict layouts to prevent text overflow dynamically
   Widget _buildStatBlock({
     required String label,
     required String value,
