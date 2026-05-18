@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/services/scan_service.dart';
+import '../../../scanner/tuklas_tutor_screen.dart';
 
 class ScanDetailScreen extends StatefulWidget {
   final String scanId;
@@ -33,6 +34,8 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
   String _skill = 'Unknown';
   String _domain = 'General';
   String _realWorldText = '';
+  String _strand = 'STEM';
+  String _lessonText = '';
 
   @override
   void initState() {
@@ -71,6 +74,9 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
   void _parseLearningDeck(Map<String, dynamic>? scanData) {
     if (scanData == null) return;
 
+    _strand = scanData['chosen_lens'] as String? ?? 'STEM';
+    _lessonText = '';
+
     try {
       var learningDeck = scanData['learning_deck'];
       if (learningDeck == null) return;
@@ -83,6 +89,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
         final conceptCard = learningDeck['concept_card'];
         _skill = conceptCard['skill'] ?? 'Unknown';
         _domain = conceptCard['domain'] ?? 'General';
+        _lessonText = conceptCard['lesson_text'] as String? ?? '';
       }
 
       if (learningDeck['real_world_card'] != null) {
@@ -416,11 +423,11 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
                               shadowColor: primaryColor.withValues(alpha: 0.4),
                             ),
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Tuklas Tutor initializing...', style: GoogleFonts.orbitron(color: theme.colorScheme.onPrimary)),
-                                  backgroundColor: primaryColor,
-                                ),
+                              navigateToTuklasTutor(
+                                context,
+                                objectName: widget.objectName,
+                                strand: _strand,
+                                currentCardContent: _lessonText,
                               );
                             },
                             child: Row(
