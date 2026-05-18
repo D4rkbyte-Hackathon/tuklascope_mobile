@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart'; // 🚀 ADDED GOOGLE FONTS
@@ -139,8 +140,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _showError('Authentication Error: ${e.message}');
     } catch (e) {
       if (!mounted) return;
+      if (e is GoogleSignInException &&
+          e.code == GoogleSignInExceptionCode.canceled) {
+        return;
+      }
       String errorMessage = 'Failed to sign in with $providerName';
-      if (e.toString().contains('MISSING_EMAIL')) {
+      if (e is Exception && e.toString().startsWith('Exception: ')) {
+        errorMessage = e.toString().replaceFirst('Exception: ', '');
+      } else if (e.toString().contains('MISSING_EMAIL')) {
         errorMessage = '$providerName account has no email. Please use another account.';
       }
       _showError(errorMessage);
