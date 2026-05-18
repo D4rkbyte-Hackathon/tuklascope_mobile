@@ -190,8 +190,8 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
       color: theme.colorScheme.surface,
       child: TextField(
         onChanged: (value) {
+          _resetPageView();
           setState(() => _searchQuery = value);
-          _resetPageView(); 
         },
         style: GoogleFonts.inter(color: theme.colorScheme.onSurface),
         decoration: InputDecoration(
@@ -291,11 +291,13 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
                           children: [
                             _buildSciFiChip('Newest', _sortOrder == 'newest', accentColor, () {
                               setDialogState(() => _sortOrder = 'newest');
-                              setState(() => _resetPageView());
+                              _resetPageView();
+                              setState(() {});
                             }),
                             _buildSciFiChip('Oldest', _sortOrder == 'oldest', accentColor, () {
                               setDialogState(() => _sortOrder = 'oldest');
-                              setState(() => _resetPageView());
+                              _resetPageView();
+                              setState(() {});
                             }),
                           ],
                         ),
@@ -308,7 +310,8 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
                           children: ['STEM', 'ABM', 'HUMSS', 'TVL'].map((lens) {
                             return _buildSciFiChip(lens, _selectedLens == lens, primaryColor, () {
                               setDialogState(() => _selectedLens = _selectedLens == lens ? null : lens);
-                              setState(() => _resetPageView());
+                              _resetPageView();
+                              setState(() {});
                             });
                           }).toList(),
                         ),
@@ -332,7 +335,8 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
                               Colors.amber,
                               () {
                                 setDialogState(() => _showFavoritesOnly = !_showFavoritesOnly);
-                                setState(() => _resetPageView());
+                                _resetPageView();
+                                setState(() {});
                               },
                             ),
                           ],
@@ -454,12 +458,13 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
           return AnimatedBuilder(
             animation: _pageController,
             builder: (context, child) {
-              // 🚀 FIX: Defaults to 0.0 on the very first frame to perfectly stagger sizes. 
-              double page = 0.0; 
+              double page = 0.0;
               if (_pageController.hasClients && _pageController.position.haveDimensions) {
-                page = _pageController.page ?? 0.0;
+                final rawPage = _pageController.page ?? 0.0;
+                final maxPage = max(0, filteredScans.length - 1).toDouble();
+                page = rawPage.clamp(0.0, maxPage);
               }
-              
+
               final double scale = max(0.85, 1.0 - (page - index).abs() * 0.15);
               final double opacity = max(0.4, 1.0 - (page - index).abs() * 0.5);
 

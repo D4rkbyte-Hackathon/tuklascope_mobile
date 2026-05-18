@@ -37,34 +37,52 @@ class SupabaseAuthService {
         throw Exception('GOOGLE_WEB_CLIENT_ID is missing from the .env file');
       }
 
-      final GoogleSignIn googleSignIn = GoogleSignIn.instance;
+      final iosClientId = dotenv.env['GOOGLE_IOS_CLIENT_ID'];
+      final googleSignIn = GoogleSignIn.instance;
+      const scopes = ['email', 'profile'];
 
-      await googleSignIn.initialize(serverClientId: webClientId);
+      await googleSignIn.initialize(
+        serverClientId: webClientId,
+        clientId: (iosClientId != null && iosClientId.isNotEmpty)
+            ? iosClientId
+            : null,
+      );
 
-      // Trigger the native popup
-      final GoogleSignInAccount googleUser = await googleSignIn.authenticate();
-// User canceled the sign-in
-
-      // Extract the authentication data
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-
-      // 🚀 V7 FIX: We ONLY grab the idToken.
-      // accessToken was removed in v7, but Supabase doesn't need it anyway!
-      final String? idToken = googleAuth.idToken;
-
-      if (idToken == null) {
-        throw 'Failed to retrieve Google Auth ID Token.';
+      final GoogleSignInAccount googleUser;
+      try {
+        googleUser = await googleSignIn.authenticate(scopeHint: scopes);
+      } on GoogleSignInException catch (e) {
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          // On Android, Credential Manager often reports config errors as "canceled".
+          throw Exception(
+            'Google Sign-In did not complete. If you did not cancel, check Google '
+            'Cloud Console: create an Android OAuth client for package '
+            'com.example.tuklascope_mobile with your debug SHA-1, and set '
+            'GOOGLE_WEB_CLIENT_ID in .env to your Web client ID (not the Android one).',
+          );
+        }
+        rethrow;
       }
 
-      // Hand the token over to Supabase
+      final authorization =
+          await googleUser.authorizationClient.authorizationForScopes(scopes) ??
+          await googleUser.authorizationClient.authorizeScopes(scopes);
+
+      final idToken = googleUser.authentication.idToken;
+      if (idToken == null) {
+        throw Exception(
+          'No Google ID token returned. GOOGLE_WEB_CLIENT_ID must be the Web '
+          'application client ID from Google Cloud Console.',
+        );
+      }
+
       return await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
-        // 🚀 V7 FIX: We completely removed the accessToken parameter here.
+        accessToken: authorization.accessToken,
       );
-    } catch (e) {
-      // ignore: avoid_print
-      print('Google Sign-In Exception: $e');
+    } catch (e, st) {
+      debugPrint('Google Sign-In Exception: $e\n$st');
       rethrow;
     }
   }
