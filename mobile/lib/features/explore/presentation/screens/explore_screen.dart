@@ -36,6 +36,7 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
     final theme = Theme.of(context);
 
     return GradientScaffold(
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         bottom: false,
         child: Column(

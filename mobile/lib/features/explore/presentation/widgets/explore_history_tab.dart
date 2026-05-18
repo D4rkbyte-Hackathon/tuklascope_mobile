@@ -26,17 +26,11 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
   bool _showFavoritesOnly = false;
 
   late PageController _pageController;
-  double _currentPage = 0.0;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(viewportFraction: 0.70);
-    _pageController.addListener(() {
-      setState(() {
-        _currentPage = _pageController.page ?? 0.0;
-      });
-    });
     _fetchScanHistory();
   }
 
@@ -44,6 +38,12 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _resetPageView() {
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(0);
+    }
   }
 
   Future<void> _fetchScanHistory() async {
@@ -63,25 +63,58 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
   }
 
   List<Map<String, dynamic>> _getFilteredScans() {
-    final filtered = _scanHistory.where((scan) {
-      final matchesSearch = _searchQuery.isEmpty ||
-          (scan['object_name'] as String?)
-              ?.toLowerCase()
-              .contains(_searchQuery.toLowerCase()) == true;
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (var scan in _scanHistory) {
+      final name = (scan['object_name'] as String? ?? 'unknown').trim().toLowerCase();
+      if (!grouped.containsKey(name)) grouped[name] = [];
+      grouped[name]!.add(scan);
+    }
+
+    final List<Map<String, dynamic>> finalDisplayList = [];
+    
+    grouped.forEach((key, list) {
+      list.sort((a, b) {
+        final dateA = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime.now();
+        final dateB = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime.now();
+        return dateB.compareTo(dateA);
+      });
+
+      final matchesSearch = _searchQuery.isEmpty || key.contains(_searchQuery.toLowerCase());
+      if (!matchesSearch) return;
+
+      if (_showFavoritesOnly) {
+         final hasFav = list.any((s) => _isScanFavorite(s));
+         if (!hasFav) return;
+      }
+
+      Map<String, dynamic>? representative;
+
+      if (_selectedLens != null) {
+        representative = list.firstWhere(
+          (s) => s['chosen_lens'] == _selectedLens,
+          orElse: () => <String, dynamic>{},
+        );
+        if (representative.isEmpty) return; 
+      } else {
+        representative = list.first; 
+      }
       
-      final matchesLens = _selectedLens == null || scan['chosen_lens'] == _selectedLens;
-      final matchesFavorite = !_showFavoritesOnly || _isScanFavorite(scan);
+      if (_showFavoritesOnly && representative != null && !_isScanFavorite(representative)) {
+         representative = list.firstWhere((s) => _isScanFavorite(s), orElse: () => list.first);
+      }
 
-      return matchesSearch && matchesLens && matchesFavorite;
-    }).toList();
+      final clone = Map<String, dynamic>.from(representative!);
+      clone['related_scans'] = list; 
+      finalDisplayList.add(clone);
+    });
 
-    filtered.sort((a, b) {
+    finalDisplayList.sort((a, b) {
       final dateA = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime.now();
       final dateB = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime.now();
       return _sortOrder == 'newest' ? dateB.compareTo(dateA) : dateA.compareTo(dateB);
     });
 
-    return filtered;
+    return finalDisplayList;
   }
 
   bool _isScanFavorite(Map<String, dynamic> scan) {
@@ -156,7 +189,10 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
       borderRadius: BorderRadius.circular(18),
       color: theme.colorScheme.surface,
       child: TextField(
-        onChanged: (value) => setState(() => _searchQuery = value),
+        onChanged: (value) {
+          setState(() => _searchQuery = value);
+          _resetPageView(); 
+        },
         style: GoogleFonts.inter(color: theme.colorScheme.onSurface),
         decoration: InputDecoration(
           hintText: 'Search discoveries...',
@@ -255,11 +291,11 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
                           children: [
                             _buildSciFiChip('Newest', _sortOrder == 'newest', accentColor, () {
                               setDialogState(() => _sortOrder = 'newest');
-                              setState(() {});
+                              setState(() => _resetPageView());
                             }),
                             _buildSciFiChip('Oldest', _sortOrder == 'oldest', accentColor, () {
                               setDialogState(() => _sortOrder = 'oldest');
-                              setState(() {});
+                              setState(() => _resetPageView());
                             }),
                           ],
                         ),
@@ -272,7 +308,7 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
                           children: ['STEM', 'ABM', 'HUMSS', 'TVL'].map((lens) {
                             return _buildSciFiChip(lens, _selectedLens == lens, primaryColor, () {
                               setDialogState(() => _selectedLens = _selectedLens == lens ? null : lens);
-                              setState(() {});
+                              setState(() => _resetPageView());
                             });
                           }).toList(),
                         ),
@@ -295,10 +331,8 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
                               _showFavoritesOnly,
                               Colors.amber,
                               () {
-                                setDialogState(
-                                  () => _showFavoritesOnly = !_showFavoritesOnly,
-                                );
-                                setState(() {});
+                                setDialogState(() => _showFavoritesOnly = !_showFavoritesOnly);
+                                setState(() => _resetPageView());
                               },
                             ),
                           ],
@@ -394,6 +428,11 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
           final createdAt = scan['created_at'] as String?;
           final imageUrl = scan['image_url'] as String?;
           final xp = scan['xp_awarded'] as int?;
+          final relatedScans = scan['related_scans'] as List<Map<String, dynamic>>?;
+
+          final tags = relatedScans != null 
+              ? relatedScans.map((s) => s['chosen_lens'] as String? ?? 'STEM').toSet().toList()
+              : [lens];
 
           String formattedDate = 'Recently';
           if (createdAt != null) {
@@ -412,34 +451,51 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
             } catch (_) {}
           }
 
-          final double scale = max(0.85, 1.0 - (_currentPage - index).abs() * 0.15);
-          final double opacity = max(0.4, 1.0 - (_currentPage - index).abs() * 0.5);
+          return AnimatedBuilder(
+            animation: _pageController,
+            builder: (context, child) {
+              // 🚀 FIX: Defaults to 0.0 on the very first frame to perfectly stagger sizes. 
+              double page = 0.0; 
+              if (_pageController.hasClients && _pageController.position.haveDimensions) {
+                page = _pageController.page ?? 0.0;
+              }
+              
+              final double scale = max(0.85, 1.0 - (page - index).abs() * 0.15);
+              final double opacity = max(0.4, 1.0 - (page - index).abs() * 0.5);
 
-          return Transform.scale(
-            scale: scale,
-            child: Opacity(
-              opacity: opacity,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: ScanHistoryCard(
-                  scanId: scanId,
-                  title: objectName,
-                  subtitle: formattedDate,
-                  tag: lens,
-                  imageUrl: imageUrl,
-                  xpAwarded: xp,
-                  isFavorite: _isScanFavorite(scan),
-                  accent: theme.colorScheme.secondary,
-                  onFavoriteChanged: scanId.isEmpty
-                      ? null
-                      : (isFavorite) => _toggleScanFavorite(scanId, isFavorite),
-                  onTap: () {
-                    if (scanId.isNotEmpty) {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => ScanDetailScreen(scanId: scanId, objectName: objectName, imagUrl: imageUrl ?? '')));
-                    }
-                  },
+              return Transform.scale(
+                scale: scale,
+                child: Opacity(
+                  opacity: opacity,
+                  child: child,
                 ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: ScanHistoryCard(
+                scanId: scanId,
+                title: objectName,
+                subtitle: formattedDate,
+                tags: tags, 
+                imageUrl: imageUrl,
+                xpAwarded: xp,
+                isFavorite: _isScanFavorite(scan),
+                accent: theme.colorScheme.secondary,
+                onFavoriteChanged: scanId.isEmpty
+                    ? null
+                    : (isFavorite) => _toggleScanFavorite(scanId, isFavorite),
+                onTap: () {
+                  if (scanId.isNotEmpty) {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => ScanDetailScreen(
+                          scanId: scanId, 
+                          objectName: objectName, 
+                          imagUrl: imageUrl ?? '',
+                          relatedScans: relatedScans,
+                        )));
+                  }
+                },
               ),
             ),
           );

@@ -5,13 +5,15 @@ class GradientScaffold extends StatelessWidget {
   final PreferredSizeWidget? appBar; 
   final Widget? bottomNavigationBar;
   final Widget? floatingActionButton;
+  final bool? resizeToAvoidBottomInset;
 
   const GradientScaffold({
     super.key,
     required this.body,
     this.appBar,
     this.bottomNavigationBar,
-    this.floatingActionButton, 
+    this.floatingActionButton,
+    this.resizeToAvoidBottomInset,
   });
 
   @override
@@ -19,6 +21,7 @@ class GradientScaffold extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
+      
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -48,6 +51,7 @@ class GradientScaffold extends StatelessWidget {
           ),
         ),
         child: Scaffold(
+          resizeToAvoidBottomInset: resizeToAvoidBottomInset,
           backgroundColor: Colors.transparent,
           appBar: appBar,
           // 🚀 FIX: Wrap the body in a SafeArea to protect from landscape notches,
