@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:ui';
 
 class ScanHistoryCard extends StatefulWidget {
   final String scanId;
   final String title;
   final String subtitle;
-  final String tag;
+  final List<String> tags; // 🚀 Updated to accept multiple tags
   final String? imageUrl;
   final int? xpAwarded;
   final bool isFavorite;
@@ -20,7 +19,7 @@ class ScanHistoryCard extends StatefulWidget {
     required this.scanId,
     required this.title,
     required this.subtitle,
-    required this.tag,
+    required this.tags,
     this.imageUrl,
     this.xpAwarded,
     this.isFavorite = false,
@@ -59,169 +58,138 @@ class _ScanHistoryCardState extends State<ScanHistoryCard> {
               },
               onTapCancel: () => setState(() => _isPressed = false),
               child: Container(
+                // 🚀 FIX #2: Border moved to the outermost container. ClipRRect will perfectly slice inside it.
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: glowColor.withValues(alpha: 0.4),
+                    width: 1.5,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: glowColor.withValues(alpha: 0.2),
-                      blurRadius: 25,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 8),
+                      color: glowColor.withValues(alpha: 0.08), 
+                      blurRadius: 15,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                    child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        theme.colorScheme.surface.withValues(alpha: isDark ? 0.8 : 0.95),
-                        theme.colorScheme.surface.withValues(alpha: isDark ? 0.6 : 0.85),
-                      ],
+                  borderRadius: BorderRadius.circular(22), // Subtracted border width for clean rounding
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface.withValues(alpha: isDark ? 0.98 : 1.0),
                     ),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: glowColor.withValues(alpha: 0.4),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // TOP HALF: Holographic Image
-                      Expanded(
-                        flex: 5,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            widget.imageUrl != null && widget.imageUrl!.isNotEmpty
-                                ? Image.network(widget.imageUrl!, fit: BoxFit.cover)
-                                : Container(
-                                    color: theme.colorScheme.surfaceContainerHighest,
-                                    child: Icon(Icons.science, color: glowColor.withValues(alpha: 0.5), size: 50),
-                                  ),
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withValues(alpha: 0.8),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            // Card Tag Badge
-                            Positioned(
-                              top: 12,
-                              right: 12,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withValues(alpha: 0.8),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                                ),
-                                child: Text(
-                                  widget.tag.toUpperCase(),
-                                  style: GoogleFonts.orbitron(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onPrimary,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      
-                      // BOTTOM HALF: Stats & Data
-                      Expanded(
-                        flex: 5, // 👈 Gave a little more flex to fit the new skill box comfortably
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // TOP HALF: Holographic Image
+                        Expanded(
+                          flex: 4, // 🚀 Adjusted flex to give bottom portion more room
+                          child: Stack(
+                            fit: StackFit.expand,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    widget.title,
-                                    style: GoogleFonts.orbitron(
-                                      fontSize: 18, 
-                                      fontWeight: FontWeight.w800,
-                                      color: theme.colorScheme.onSurface,
-                                      letterSpacing: 0.5,
+                              widget.imageUrl != null && widget.imageUrl!.isNotEmpty
+                                  ? Image.network(widget.imageUrl!, fit: BoxFit.cover)
+                                  : Container(
+                                      color: theme.colorScheme.surfaceContainerHighest,
+                                      child: Icon(Icons.science, color: glowColor.withValues(alpha: 0.5), size: 50),
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.timeline, size: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        "Discovered: ${widget.subtitle}",
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                        ),
-                                      ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withValues(alpha: 0.8),
                                     ],
                                   ),
-                                ],
+                                ),
                               ),
-
-                              // XP Reward Bar
-                              if (widget.xpAwarded != null && widget.xpAwarded! > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.tertiary.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: theme.colorScheme.tertiary.withValues(alpha: 0.4)),
-                                    boxShadow: [
-                                      BoxShadow(color: theme.colorScheme.tertiary.withValues(alpha: 0.3), blurRadius: 10),
-                                    ]
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.stars, color: theme.colorScheme.tertiary, size: 16)
-                                        .animate(onPlay: (c) => c.repeat())
-                                        .shimmer(duration: 1500.ms, color: Colors.white),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        "+${widget.xpAwarded} XP",
-                                        style: GoogleFonts.orbitron(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: theme.colorScheme.tertiary,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ).animate(onPlay: (c) => c.repeat(reverse: true))
-                                 .scaleXY(begin: 1.0, end: 1.02, duration: 2.seconds, curve: Curves.easeInOut),
                             ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        
+                        // BOTTOM HALF: Stats & Data
+                        Expanded(
+                          flex: 5, 
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.title,
+                                      style: GoogleFonts.orbitron(
+                                        fontSize: 18, 
+                                        fontWeight: FontWeight.w800,
+                                        color: theme.colorScheme.onSurface,
+                                        letterSpacing: 0.5,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.timeline, size: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          "Discovered: ${widget.subtitle}",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    
+                                    // 🚀 FIX #1: All tags dynamically wrapped under the Discovered text!
+                                    const SizedBox(height: 10),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: widget.tags.map((t) => _buildMiniBadge(t, theme)).toList(),
+                                    )
+                                  ],
+                                ),
+
+                                // XP Reward Bar
+                                if (widget.xpAwarded != null && widget.xpAwarded! > 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.tertiary.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: theme.colorScheme.tertiary.withValues(alpha: 0.4)),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.stars, color: theme.colorScheme.tertiary, size: 16),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          "+${widget.xpAwarded} XP",
+                                          style: GoogleFonts.orbitron(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.tertiary,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -233,6 +201,27 @@ class _ScanHistoryCardState extends State<ScanHistoryCard> {
               child: _buildFavoriteButton(),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // 🚀 Builder helper for the dynamically sized mini strand tags
+  Widget _buildMiniBadge(String text, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        text.toUpperCase(),
+        style: GoogleFonts.orbitron(
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          color: theme.colorScheme.primary,
+          letterSpacing: 0.5,
         ),
       ),
     );

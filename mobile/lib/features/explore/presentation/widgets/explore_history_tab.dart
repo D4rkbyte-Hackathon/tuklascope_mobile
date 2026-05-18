@@ -63,25 +63,58 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
   }
 
   List<Map<String, dynamic>> _getFilteredScans() {
-    final filtered = _scanHistory.where((scan) {
-      final matchesSearch = _searchQuery.isEmpty ||
-          (scan['object_name'] as String?)
-              ?.toLowerCase()
-              .contains(_searchQuery.toLowerCase()) == true;
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (var scan in _scanHistory) {
+      final name = (scan['object_name'] as String? ?? 'unknown').trim().toLowerCase();
+      if (!grouped.containsKey(name)) grouped[name] = [];
+      grouped[name]!.add(scan);
+    }
+
+    final List<Map<String, dynamic>> finalDisplayList = [];
+    
+    grouped.forEach((key, list) {
+      list.sort((a, b) {
+        final dateA = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime.now();
+        final dateB = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime.now();
+        return dateB.compareTo(dateA);
+      });
+
+      final matchesSearch = _searchQuery.isEmpty || key.contains(_searchQuery.toLowerCase());
+      if (!matchesSearch) return;
+
+      if (_showFavoritesOnly) {
+         final hasFav = list.any((s) => _isScanFavorite(s));
+         if (!hasFav) return;
+      }
+
+      Map<String, dynamic>? representative;
+
+      if (_selectedLens != null) {
+        representative = list.firstWhere(
+          (s) => s['chosen_lens'] == _selectedLens,
+          orElse: () => <String, dynamic>{},
+        );
+        if (representative.isEmpty) return; 
+      } else {
+        representative = list.first; 
+      }
       
-      final matchesLens = _selectedLens == null || scan['chosen_lens'] == _selectedLens;
-      final matchesFavorite = !_showFavoritesOnly || _isScanFavorite(scan);
+      if (_showFavoritesOnly && representative != null && !_isScanFavorite(representative)) {
+         representative = list.firstWhere((s) => _isScanFavorite(s), orElse: () => list.first);
+      }
 
-      return matchesSearch && matchesLens && matchesFavorite;
-    }).toList();
+      final clone = Map<String, dynamic>.from(representative!);
+      clone['related_scans'] = list; 
+      finalDisplayList.add(clone);
+    });
 
-    filtered.sort((a, b) {
+    finalDisplayList.sort((a, b) {
       final dateA = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime.now();
       final dateB = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime.now();
       return _sortOrder == 'newest' ? dateB.compareTo(dateA) : dateA.compareTo(dateB);
     });
 
-    return filtered;
+    return finalDisplayList;
   }
 
   bool _isScanFavorite(Map<String, dynamic> scan) {
@@ -394,6 +427,12 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
           final createdAt = scan['created_at'] as String?;
           final imageUrl = scan['image_url'] as String?;
           final xp = scan['xp_awarded'] as int?;
+          final relatedScans = scan['related_scans'] as List<Map<String, dynamic>>?;
+
+          // 🚀 Dynamically extract ALL available lenses for this item
+          final tags = relatedScans != null 
+              ? relatedScans.map((s) => s['chosen_lens'] as String? ?? 'STEM').toSet().toList()
+              : [lens];
 
           String formattedDate = 'Recently';
           if (createdAt != null) {
@@ -425,7 +464,7 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
                   scanId: scanId,
                   title: objectName,
                   subtitle: formattedDate,
-                  tag: lens,
+                  tags: tags, // 🚀 Passed list of tags here!
                   imageUrl: imageUrl,
                   xpAwarded: xp,
                   isFavorite: _isScanFavorite(scan),
@@ -436,7 +475,12 @@ class _ExploreHistoryTabState extends State<ExploreHistoryTab> {
                   onTap: () {
                     if (scanId.isNotEmpty) {
                       Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => ScanDetailScreen(scanId: scanId, objectName: objectName, imagUrl: imageUrl ?? '')));
+                          builder: (_) => ScanDetailScreen(
+                            scanId: scanId, 
+                            objectName: objectName, 
+                            imagUrl: imageUrl ?? '',
+                            relatedScans: relatedScans,
+                          )));
                     }
                   },
                 ),

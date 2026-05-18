@@ -8,12 +8,14 @@ class ScanDetailScreen extends StatefulWidget {
   final String scanId;
   final String objectName;
   final String imagUrl;
+  final List<Map<String, dynamic>>? relatedScans; // 🚀 ADDED
 
   const ScanDetailScreen({
     super.key,
     required this.scanId,
     required this.objectName,
     required this.imagUrl,
+    this.relatedScans, 
   });
 
   @override
@@ -25,6 +27,8 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
   Map<String, dynamic>? _scanData;
   bool _isLoadingScan = true;
 
+  late String _currentScanId;
+
   // Parsed learning deck data
   String _skill = 'Unknown';
   String _domain = 'General';
@@ -33,12 +37,13 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
   @override
   void initState() {
     super.initState();
+    _currentScanId = widget.scanId;
     _fetchScanDetails();
   }
 
   Future<void> _fetchScanDetails() async {
     try {
-      final scanData = await ScanService.getScanById(widget.scanId);
+      final scanData = await ScanService.getScanById(_currentScanId);
       if (mounted) {
         setState(() {
           _scanData = scanData;
@@ -52,6 +57,16 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
         setState(() => _isLoadingScan = false);
       }
     }
+  }
+
+  // 🚀 Switch between strands dynamically without pushing a new screen
+  void _switchLens(String newScanId) {
+    if (_currentScanId == newScanId) return;
+    setState(() {
+      _currentScanId = newScanId;
+      _isLoadingScan = true;
+    });
+    _fetchScanDetails();
   }
 
   void _parseLearningDeck(Map<String, dynamic>? scanData) {
@@ -90,339 +105,356 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
     final tertiaryAccent = theme.colorScheme.tertiary;
 
     return Scaffold(
-      // Standardizes the background to your app's core theme
       backgroundColor: theme.colorScheme.surface,
-      body: _isLoadingScan
-          ? Center(child: CircularProgressIndicator(color: primaryColor))
-          : Stack(
+      body: Stack(
+        children: [
+          // 1. CLEAN, THEME-ADAPTIVE BACKGROUND GRADIENT
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    theme.colorScheme.surface,
+                    primaryColor.withValues(alpha: isDark ? 0.08 : 0.03),
+                    theme.colorScheme.surface,
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+              ),
+            ),
+          ),
+
+          // Subtle Tech Grid overlay
+          Positioned.fill(
+            child: Opacity(
+              opacity: isDark ? 0.03 : 0.06, 
+              child: CustomPaint(painter: _GridPainter(color: theme.colorScheme.onSurface)),
+            ),
+          ),
+
+          SafeArea(
+            child: Column(
               children: [
-                // 1. CLEAN, THEME-ADAPTIVE BACKGROUND GRADIENT
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          theme.colorScheme.surface,
-                          primaryColor.withValues(alpha: isDark ? 0.08 : 0.03),
-                          theme.colorScheme.surface,
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Subtle Tech Grid overlay
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: isDark ? 0.03 : 0.06, 
-                    child: CustomPaint(painter: _GridPainter(color: theme.colorScheme.onSurface)),
-                  ),
-                ),
-
-                SafeArea(
-                  child: Column(
+                // 2. TOP BAR & BACK BUTTON
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Row(
                     children: [
-                      // 2. TOP BAR & BACK BUTTON
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                        child: Row(
-                          children: [
-                            GestureDetector(
-                              onTap: () => Navigator.pop(context),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-                                  border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(Icons.arrow_back_ios_new, color: theme.colorScheme.onSurface, size: 16),
-                              ),
-                            ),
-                            const Spacer(),
-                            // Tech Deco Icon
-                            Icon(Icons.analytics_outlined, color: primaryColor.withValues(alpha: 0.6)),
-                          ],
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                            border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.arrow_back_ios_new, color: theme.colorScheme.onSurface, size: 16),
                         ),
-                      ).animate().fade().slideX(begin: -0.2),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.analytics_outlined, color: primaryColor.withValues(alpha: 0.6)),
+                    ],
+                  ),
+                ).animate().fade().slideX(begin: -0.2),
 
-                      Expanded(
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // 3. TITLE & DOMAIN TAG
-                              Text(
-                                widget.objectName.toUpperCase(),
-                                style: GoogleFonts.orbitron(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.w900,
-                                  color: theme.colorScheme.onSurface,
-                                  letterSpacing: 2.0,
-                                  height: 1.1,
-                                ),
-                              ).animate().fade(delay: 100.ms).slideX(begin: -0.1),
-                              
-                              const SizedBox(height: 8),
-                              
-                              // Domain Tag with Icon
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: secondaryAccent.withValues(alpha: 0.15),
-                                  border: Border(left: BorderSide(color: secondaryAccent, width: 3)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.category_rounded, size: 14, color: secondaryAccent),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _domain.toUpperCase(),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w800,
-                                        color: secondaryAccent,
-                                        letterSpacing: 2.0,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ).animate().fade(delay: 200.ms).slideX(begin: -0.1),
-
-                              const SizedBox(height: 30),
-
-                              // 4. HERO IMAGE (Center Stage)
-                              SizedBox(
-                                height: 260,
-                                width: double.infinity,
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    // Spinning tech ring
-                                    Container(
-                                      width: 200,
-                                      height: 200,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 1.5),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: primaryColor.withValues(alpha: 0.15),
-                                            blurRadius: 40,
-                                            spreadRadius: 5,
-                                          )
-                                        ]
-                                      ),
-                                    ).animate(onPlay: (c) => c.repeat())
-                                     .rotate(duration: 20.seconds)
-                                     .scaleXY(begin: 0.95, end: 1.05, duration: 3.seconds, curve: Curves.easeInOut)
-                                     .then().scaleXY(begin: 1.05, end: 0.95, duration: 3.seconds, curve: Curves.easeInOut),
-
-                                    // Inner crosshairs
-                                    CustomPaint(
-                                      size: const Size(220, 220),
-                                      painter: _CrosshairPainter(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
-                                    ),
-
-                                    // Item image
-                                    if (widget.imagUrl.isNotEmpty)
-                                      Image.network(
-                                        widget.imagUrl,
-                                        fit: BoxFit.contain,
-                                      ).animate().scale(begin: const Offset(0.8, 0.8), duration: 600.ms, curve: Curves.easeOutBack).fade()
-                                    else
-                                      Icon(Icons.science, size: 100, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
-                                  ],
-                                ),
+                Expanded(
+                  child: _isLoadingScan 
+                  ? Center(child: CircularProgressIndicator(color: primaryColor))
+                  : SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 3. TITLE
+                        Text(
+                          widget.objectName.toUpperCase(),
+                          style: GoogleFonts.orbitron(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            color: theme.colorScheme.onSurface,
+                            letterSpacing: 1.5,
+                            height: 1.1,
+                          ),
+                        ).animate().fade(delay: 100.ms).slideX(begin: -0.1),
+                        
+                        const SizedBox(height: 12),
+                        
+                        // 🚀 NEW: Domain Tag + Strand Switcher
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Current Active Domain Tag
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: secondaryAccent.withValues(alpha: 0.15),
+                                border: Border(left: BorderSide(color: secondaryAccent, width: 3)),
                               ),
-
-                              const SizedBox(height: 40),
-
-                              // 5. RPG STAT BLOCKS
-                              Row(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.bar_chart_rounded, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                                  const SizedBox(width: 8),
+                                  Icon(Icons.category_rounded, size: 14, color: secondaryAccent),
+                                  const SizedBox(width: 6),
                                   Text(
-                                    "DISCOVERY STATS",
-                                    style: GoogleFonts.orbitron(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                    _domain.toUpperCase(),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: secondaryAccent,
                                       letterSpacing: 2.0,
                                     ),
                                   ),
                                 ],
-                              ).animate().fade(delay: 300.ms),
-                              
-                              const SizedBox(height: 12),
-                              
-                              // IntrinsicHeight ensures both blocks stay exactly the same height 
-                              // even if the skill text gets super long!
-                              IntrinsicHeight(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    // XP Block
-                                    Expanded(
-                                      child: _buildStatBlock(
-                                        label: "KNOWLEDGE XP",
-                                        value: "+${_scanData?['xp_awarded'] ?? 50}",
-                                        icon: Icons.stars_rounded,
-                                        color: primaryColor,
-                                        theme: theme,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    // Skill Block (No cutting off text)
-                                    Expanded(
-                                      child: _buildStatBlock(
-                                        label: "SKILL UNLOCKED",
-                                        value: _skill,
-                                        icon: Icons.psychology_rounded,
-                                        color: secondaryAccent,
-                                        theme: theme,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
-
-                              const SizedBox(height: 24),
-
-                              // 6. REAL WORLD LORE DATALOG
-                              if (_realWorldText.isNotEmpty) ...[
-                                Row(
-                                  children: [
-                                    Icon(Icons.travel_explore_rounded, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      "DATALOG // REAL WORLD",
-                                      style: GoogleFonts.orbitron(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                                        letterSpacing: 2.0,
-                                      ),
-                                    ),
-                                  ],
-                                ).animate().fade(delay: 500.ms),
-                                
-                                const SizedBox(height: 12),
-                                
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: tertiaryAccent.withValues(alpha: 0.05),
-                                    border: Border.all(color: tertiaryAccent.withValues(alpha: 0.3), width: 1.5),
-                                    borderRadius: const BorderRadius.only(
-                                      topLeft: Radius.circular(4),
-                                      topRight: Radius.circular(24),
-                                      bottomLeft: Radius.circular(24),
-                                      bottomRight: Radius.circular(4),
-                                    )
-                                  ),
+                              ),
+                            ),
+                            
+                            // Strand Switcher Options (If multiple exist)
+                            if (widget.relatedScans != null && widget.relatedScans!.length > 1) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Icon(Icons.public_rounded, color: tertiaryAccent, size: 22)
-                                        .animate(onPlay: (c) => c.repeat(reverse: true))
-                                        .fadeIn(duration: 1.seconds),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          _realWorldText,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 14,
-                                            height: 1.6,
-                                            color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                                    children: widget.relatedScans!.map((s) {
+                                      final strandName = s['chosen_lens'] as String? ?? 'STEM';
+                                      final sId = s['id'] as String;
+                                      final isSelected = _currentScanId == sId;
+                                      
+                                      return Padding(
+                                        padding: const EdgeInsets.only(right: 8.0),
+                                        child: ChoiceChip(
+                                          label: Text(strandName),
+                                          selected: isSelected,
+                                          selectedColor: primaryColor.withValues(alpha: 0.3),
+                                          backgroundColor: theme.colorScheme.surface,
+                                          labelStyle: GoogleFonts.orbitron(
+                                            fontSize: 10,
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                            color: isSelected ? primaryColor : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                                           ),
+                                          onSelected: (_) => _switchLens(sId),
                                         ),
-                                      ),
-                                    ],
+                                      );
+                                    }).toList(),
                                   ),
-                                ).animate().fade(delay: 600.ms).slideY(begin: 0.1),
-                              ],
+                                ),
+                              ),
+                            ]
+                          ],
+                        ).animate().fade(delay: 200.ms).slideX(begin: -0.1),
 
-                              const SizedBox(height: 120), // Bottom padding for floating button
+                        const SizedBox(height: 30),
+
+                        // 4. HERO IMAGE (Center Stage)
+                        SizedBox(
+                          height: 260,
+                          width: double.infinity,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: 200,
+                                height: 200,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 1.5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: primaryColor.withValues(alpha: 0.15),
+                                      blurRadius: 40,
+                                      spreadRadius: 5,
+                                    )
+                                  ]
+                                ),
+                              ).animate(onPlay: (c) => c.repeat())
+                               .rotate(duration: 20.seconds)
+                               .scaleXY(begin: 0.95, end: 1.05, duration: 3.seconds, curve: Curves.easeInOut)
+                               .then().scaleXY(begin: 1.05, end: 0.95, duration: 3.seconds, curve: Curves.easeInOut),
+
+                              CustomPaint(
+                                size: const Size(220, 220),
+                                painter: _CrosshairPainter(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
+                              ),
+
+                              if (widget.imagUrl.isNotEmpty)
+                                Image.network(
+                                  widget.imagUrl,
+                                  fit: BoxFit.contain,
+                                ).animate().scale(begin: const Offset(0.8, 0.8), duration: 600.ms, curve: Curves.easeOutBack).fade()
+                              else
+                                Icon(Icons.science, size: 100, color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
                             ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
 
-                // 7. BOTTOM ACTION BUTTON ("Equip" style button)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: EdgeInsets.fromLTRB(20, 30, 20, MediaQuery.paddingOf(context).bottom + 20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          theme.colorScheme.surface,
-                          theme.colorScheme.surface.withValues(alpha: 0.9),
-                          theme.colorScheme.surface.withValues(alpha: 0.0),
-                        ],
-                        stops: const [0.4, 0.8, 1.0],
-                      )
-                    ),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: theme.colorScheme.onPrimary,
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 15,
-                        shadowColor: primaryColor.withValues(alpha: 0.5),
-                      ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Tuklas Tutor initializing...', style: GoogleFonts.orbitron(color: theme.colorScheme.onPrimary)),
-                            backgroundColor: primaryColor,
-                          ),
-                        );
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.smart_toy_rounded, size: 22),
-                          const SizedBox(width: 12),
-                          Text(
-                            "ASK TUKLAS TUTOR",
-                            style: GoogleFonts.orbitron(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2.0,
+                        const SizedBox(height: 40),
+
+                        // 5. RPG STAT BLOCKS
+                        Row(
+                          children: [
+                            Icon(Icons.bar_chart_rounded, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                            const SizedBox(width: 8),
+                            Text(
+                              "DISCOVERY STATS",
+                              style: GoogleFonts.orbitron(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                letterSpacing: 2.0,
+                              ),
                             ),
+                          ],
+                        ).animate().fade(delay: 300.ms),
+                        
+                        const SizedBox(height: 12),
+                        
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _buildStatBlock(
+                                  label: "KNOWLEDGE XP",
+                                  value: "+${_scanData?['xp_awarded'] ?? 50}",
+                                  icon: Icons.stars_rounded,
+                                  color: primaryColor,
+                                  theme: theme,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildStatBlock(
+                                  label: "SKILL UNLOCKED",
+                                  value: _skill,
+                                  icon: Icons.psychology_rounded,
+                                  color: secondaryAccent,
+                                  theme: theme,
+                                ),
+                              ),
+                            ],
                           ),
+                        ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+
+                        const SizedBox(height: 24),
+
+                        // 6. REAL WORLD LORE DATALOG
+                        if (_realWorldText.isNotEmpty) ...[
+                          Row(
+                            children: [
+                              Icon(Icons.travel_explore_rounded, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                              const SizedBox(width: 8),
+                              Text(
+                                "DATALOG // REAL WORLD",
+                                style: GoogleFonts.orbitron(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                  letterSpacing: 2.0,
+                                ),
+                              ),
+                            ],
+                          ).animate().fade(delay: 500.ms),
+                          
+                          const SizedBox(height: 12),
+                          
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: tertiaryAccent.withValues(alpha: 0.05),
+                              border: Border.all(color: tertiaryAccent.withValues(alpha: 0.3), width: 1.5),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(4),
+                                topRight: Radius.circular(24),
+                                bottomLeft: Radius.circular(24),
+                                bottomRight: Radius.circular(4),
+                              )
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.public_rounded, color: tertiaryAccent, size: 22)
+                                  .animate(onPlay: (c) => c.repeat(reverse: true))
+                                  .fadeIn(duration: 1.seconds),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _realWorldText,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      height: 1.6,
+                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ).animate().fade(delay: 600.ms).slideY(begin: 0.1),
                         ],
-                      ),
-                    ).animate(onPlay: (c) => c.repeat(reverse: true))
-                     .shimmer(duration: 2.seconds, color: theme.colorScheme.onPrimary.withValues(alpha: 0.3)),
+
+                        // 🚀 FIX #3: Button moved OUT of positioned stack, sits naturally at the bottom
+                        const SizedBox(height: 32),
+                        
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: theme.colorScheme.onPrimary,
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 8,
+                              shadowColor: primaryColor.withValues(alpha: 0.4),
+                            ),
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Tuklas Tutor initializing...', style: GoogleFonts.orbitron(color: theme.colorScheme.onPrimary)),
+                                  backgroundColor: primaryColor,
+                                ),
+                              );
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.smart_toy_rounded, size: 22),
+                                const SizedBox(width: 12),
+                                Text(
+                                  "ASK TUKLAS TUTOR",
+                                  style: GoogleFonts.orbitron(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ).animate(onPlay: (c) => c.repeat(reverse: true))
+                           .shimmer(duration: 2.seconds, color: theme.colorScheme.onPrimary.withValues(alpha: 0.3)),
+                        ),
+                        
+                        // Give it enough padding so bottom navbar won't clip it
+                        SizedBox(height: MediaQuery.paddingOf(context).bottom + 40), 
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
+          ),
+        ],
+      ),
     );
   }
 
-  // RPG style rigid stat blocks (Allows unlimited text lines for long skill names)
+  // 🚀 FIX #2: Removed strict layouts to prevent text overflow dynamically
   Widget _buildStatBlock({
     required String label,
     required String value,
@@ -463,11 +495,10 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
             ],
           ),
           const SizedBox(height: 12),
-          // VALUE TEXT - Completely unrestricted, will wrap automatically
           Text(
             value,
             style: GoogleFonts.orbitron(
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.w900,
               color: theme.colorScheme.onSurface,
             ),
@@ -478,7 +509,6 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
   }
 }
 
-// Custom Painter for the subtle HUD background grid
 class _GridPainter extends CustomPainter {
   final Color color;
   _GridPainter({required this.color});
@@ -503,7 +533,6 @@ class _GridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// Custom Painter for tech crosshairs around the item
 class _CrosshairPainter extends CustomPainter {
   final Color color;
   const _CrosshairPainter({required this.color});
@@ -519,19 +548,12 @@ class _CrosshairPainter extends CustomPainter {
     final double h = size.height;
     const double len = 15.0;
 
-    // Top Left
     canvas.drawLine(const Offset(0, 0), const Offset(len, 0), paint);
     canvas.drawLine(const Offset(0, 0), const Offset(0, len), paint);
-
-    // Top Right
     canvas.drawLine(Offset(w, 0), Offset(w - len, 0), paint);
     canvas.drawLine(Offset(w, 0), Offset(w, len), paint);
-
-    // Bottom Left
     canvas.drawLine(Offset(0, h), Offset(len, h), paint);
     canvas.drawLine(Offset(0, h), Offset(0, h - len), paint);
-
-    // Bottom Right
     canvas.drawLine(Offset(w, h), Offset(w - len, h), paint);
     canvas.drawLine(Offset(w, h), Offset(w, h - len), paint);
   }
