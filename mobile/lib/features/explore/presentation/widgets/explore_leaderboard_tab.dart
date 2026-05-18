@@ -21,6 +21,10 @@ class ExploreLeaderboardTab extends StatefulWidget {
 }
 
 class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with SingleTickerProviderStateMixin {
+  /// Glass FAB height (12 + 20 icon + 12 vertical padding) plus gap above nav bar.
+  static const double _glassFabHeight = 44.0;
+  static const double _fabListGap = 12.0;
+
   late TabController _filterTabController;
   final ScrollController _scrollController = ScrollController();
 
@@ -512,49 +516,61 @@ class _ExploreLeaderboardTabState extends State<ExploreLeaderboardTab> with Sing
     );
   }
 
+  double _fabOverlayPadding() {
+    if (!_showGoToTop && !_showGoToMe) return 0;
+    return _glassFabHeight + _fabListGap;
+  }
+
   Widget _buildGamifiedList(String? currentUserId, double bottomInset, ThemeData theme) {
     final top3 = _leaderboardData.take(3).toList();
     final remaining = _leaderboardData.skip(3).toList();
+    final fabOverlayPadding = _fabOverlayPadding();
 
-    return ListView.builder(
-      controller: _scrollController, 
-      padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset),
-      physics: const BouncingScrollPhysics(),
-      itemCount: remaining.length + (top3.isNotEmpty ? 1 : 0),
-      itemBuilder: (context, index) {
-        
-        if (index == 0 && top3.isNotEmpty) {
-          return LeaderboardPodium(
-            topUsers: top3,
-            onUserTap: _showUserProfile,
-          ).animate().fade(duration: 600.ms).slideY(begin: 0.1);
-        }
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      tween: Tween<double>(end: fabOverlayPadding),
+      builder: (context, animatedFabPadding, _) {
+        return ListView.builder(
+          controller: _scrollController,
+          padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + animatedFabPadding),
+          physics: const BouncingScrollPhysics(),
+          itemCount: remaining.length + (top3.isNotEmpty ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == 0 && top3.isNotEmpty) {
+              return LeaderboardPodium(
+                topUsers: top3,
+                onUserTap: _showUserProfile,
+              ).animate().fade(duration: 600.ms).slideY(begin: 0.1);
+            }
 
-        final remainingIndex = top3.isNotEmpty ? index - 1 : index;
-        final user = remaining[remainingIndex];
-        final actualRank = remainingIndex + 4; 
-        
-        final isMe = user['id'] == currentUserId;
-        final name = user['full_name'] ?? 'Anonymous Explorer';
-        final xp = user['total_xp'] ?? 0;
-        final displayName = isMe ? '$name (You)' : name;
-        
-        final avatarUrl = user['profile_picture_url'];
+            final remainingIndex = top3.isNotEmpty ? index - 1 : index;
+            final user = remaining[remainingIndex];
+            final actualRank = remainingIndex + 4;
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: DiscovererRowCard(
-            name: displayName,
-            xpLabel: '$xp XP',
-            avatarUrl: avatarUrl, 
-            orangeBorder: isMe ? theme.colorScheme.secondary : theme.colorScheme.onSurface.withValues(alpha: 0.1),
-            trophyColor: theme.colorScheme.onSurface.withValues(alpha: 0.3), 
-            rank: actualRank,
-            onTap: () => _showUserProfile(user, actualRank), 
-          )
-          .animate(key: ValueKey('leaderboard_${_filterTabController.index}_${_currentLocationScope}_$actualRank'))
-          .fade(duration: 600.ms, delay: (50 * remainingIndex).ms)
-          .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (50 * remainingIndex).ms),
+            final isMe = user['id'] == currentUserId;
+            final name = user['full_name'] ?? 'Anonymous Explorer';
+            final xp = user['total_xp'] ?? 0;
+            final displayName = isMe ? '$name (You)' : name;
+
+            final avatarUrl = user['profile_picture_url'];
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: DiscovererRowCard(
+                name: displayName,
+                xpLabel: '$xp XP',
+                avatarUrl: avatarUrl,
+                orangeBorder: isMe ? theme.colorScheme.secondary : theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                trophyColor: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                rank: actualRank,
+                onTap: () => _showUserProfile(user, actualRank),
+              )
+                  .animate(key: ValueKey('leaderboard_${_filterTabController.index}_${_currentLocationScope}_$actualRank'))
+                  .fade(duration: 600.ms, delay: (50 * remainingIndex).ms)
+                  .slideY(begin: 0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic, delay: (50 * remainingIndex).ms),
+            );
+          },
         );
       },
     );

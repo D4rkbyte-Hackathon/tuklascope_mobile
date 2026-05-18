@@ -5,6 +5,7 @@ import logging
 from app.schemas.pathfinder import PathfinderResponse, SkillWebResponse
 from app.services.graph_service import get_user_skill_web
 from app.services.llm_service import generate_holistic_pathfinder
+from app.services.compass_service import resolve_pathfinder_input
 from app.core.security import get_user_db_client
 
 router = APIRouter()
@@ -16,21 +17,28 @@ async def get_career_recommendations(
     db_data: tuple[Client, str] = Depends(get_user_db_client),
 ):
     try:
-        _, user_id = db_data
+        db_client, user_id = db_data
 
-        # 1. Ask Neo4j for the complete Skill Web
-        skill_web = await get_user_skill_web(user_id)
-
-        if not skill_web:
+        # 1. Neo4j skill web, or Compass when no scans exist yet
+        neo4j_web = await get_user_skill_web(user_id)
+        try:
+            skill_web, from_compass = resolve_pathfinder_input(
+                db_client, user_id, neo4j_web
+            )
+        except ValueError:
             raise HTTPException(
                 status_code=404,
-                detail="Not enough data. Scan objects to build your Kaalaman Skill Tree first!",
+                detail=(
+                    "Not enough data. Complete the Compass quiz or scan objects "
+                    "to build your Kaalaman Skill Tree first!"
+                ),
             )
 
-        # 2. Ask Gemini to synthesize the web into the 3 Tiers
+        # 2. Ask Gemini to synthesize into the 3 career tiers
         recommendations = await generate_holistic_pathfinder(
             xp_distribution=skill_web["xp_distribution"],
-            top_skills=skill_web["top_skills"],
+            top_skills=skill_web.get("top_skills", []),
+            from_compass=from_compass,
         )
 
         return recommendations

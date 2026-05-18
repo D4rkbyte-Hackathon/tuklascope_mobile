@@ -90,7 +90,7 @@ class HomeStatsNotifier extends AsyncNotifier<HomeStats> {
         .select('id, object_name, chosen_lens, created_at, image_url')
         .eq('user_id', user.id)
         .order('created_at', ascending: false)
-        .limit(3)
+        .limit(30)
         .catchError((_) => []);
 
     final skillWebFuture = PathfinderService.getSkillWeb()

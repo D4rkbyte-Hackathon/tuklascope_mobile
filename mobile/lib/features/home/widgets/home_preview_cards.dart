@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -475,11 +477,136 @@ class RecentDiscoveriesSection extends StatelessWidget {
     }
   }
 
+  /// Groups scans with the same object name (different strands) into one card,
+  /// matching explore history tab behavior.
+  List<Map<String, dynamic>> _mergeScansByObjectName(
+    List<Map<String, dynamic>> scans, {
+    int maxItems = 3,
+  }) {
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (final scan in scans) {
+      final name = (scan['object_name'] as String? ?? 'unknown').trim().toLowerCase();
+      grouped.putIfAbsent(name, () => []).add(scan);
+    }
+
+    final List<Map<String, dynamic>> merged = [];
+    for (final list in grouped.values) {
+      list.sort((a, b) {
+        final dateA = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime.now();
+        final dateB = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime.now();
+        return dateB.compareTo(dateA);
+      });
+      final representative = list.first;
+      final clone = Map<String, dynamic>.from(representative);
+      clone['related_scans'] = list;
+      merged.add(clone);
+    }
+
+    merged.sort((a, b) {
+      final dateA = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime.now();
+      final dateB = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime.now();
+      return dateB.compareTo(dateA);
+    });
+
+    return merged.take(maxItems).toList();
+  }
+
+  static const _strandOrder = ['STEM', 'ABM', 'HUMSS', 'TVL'];
+
+  List<String> _sortedTags(List<String> tags) {
+    final normalized = tags.map((t) => t.toUpperCase()).toSet().toList();
+    normalized.sort((a, b) {
+      final ai = _strandOrder.indexOf(a);
+      final bi = _strandOrder.indexOf(b);
+      return (ai == -1 ? 99 : ai).compareTo(bi == -1 ? 99 : bi);
+    });
+    return normalized;
+  }
+
+  Widget _buildStrandChip(String lens) {
+    final color = _getLensColor(lens);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.55), width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.25),
+            blurRadius: 6,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: color.withOpacity(0.9), blurRadius: 4),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            lens.toUpperCase(),
+            style: GoogleFonts.orbitron(
+              fontSize: 7.5,
+              fontWeight: FontWeight.w800,
+              color: color,
+              letterSpacing: 0.6,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStrandTagsCluster(List<String> tags) {
+    final sorted = _sortedTags(tags);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 130),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.42),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white.withOpacity(0.14)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.35),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            alignment: WrapAlignment.end,
+            children: sorted.map(_buildStrandChip).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
-    if (recentScans.isEmpty) return const SizedBox.shrink();
+    final displayScans = _mergeScansByObjectName(recentScans);
+
+    if (displayScans.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -502,16 +629,20 @@ class RecentDiscoveriesSection extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             clipBehavior: Clip.none, 
-            itemCount: recentScans.length,
+            itemCount: displayScans.length,
             separatorBuilder: (context, index) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
-              final scan = recentScans[index];
+              final scan = displayScans[index];
               final objectName = scan['object_name'] as String? ?? 'Unknown';
               final imageUrl = scan['image_url'] as String?;
               final lens = scan['chosen_lens'] as String? ?? 'STEM';
               final scanId = scan['id'] as String? ?? '';
               final timeStr = _formatDate(scan['created_at'] as String?);
               final accentColor = _getLensColor(lens);
+              final relatedScans = scan['related_scans'] as List<Map<String, dynamic>>?;
+              final tags = relatedScans != null
+                  ? relatedScans.map((s) => s['chosen_lens'] as String? ?? 'STEM').toSet().toList()
+                  : [lens];
 
               return GestureDetector(
                 onTap: () {
@@ -521,7 +652,8 @@ class RecentDiscoveriesSection extends StatelessWidget {
                         builder: (_) => ScanDetailScreen(
                           scanId: scanId,
                           objectName: objectName,
-                          imagUrl: imageUrl ?? '', 
+                          imagUrl: imageUrl ?? '',
+                          relatedScans: relatedScans,
                         ),
                       ),
                     );
@@ -565,26 +697,14 @@ class RecentDiscoveriesSection extends StatelessWidget {
                           ),
                         ),
 
-                        // Lens Tag Badge (Top Right)
+                        // Strand tags (Top Right)
                         Positioned(
-                          top: 10,
-                          right: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: accentColor.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.white.withOpacity(0.2)),
-                            ),
-                            child: Text(
-                              lens.toUpperCase(),
-                              style: GoogleFonts.orbitron(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
+                          top: 8,
+                          right: 8,
+                          left: 8,
+                          child: Align(
+                            alignment: Alignment.topRight,
+                            child: _buildStrandTagsCluster(tags),
                           ),
                         ),
 
