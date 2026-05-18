@@ -3,6 +3,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import '../../core/services/pathfinder_service.dart';
+import '../../core/utils/strand_distribution.dart';
+import '../onboarding/widgets/diamond_radar_painter.dart';
+import '../pathways/services/compass_recommendation_service.dart';
 
 /// Opens a near-full-screen sheet that can be dragged down from the top to dismiss.
 Future<void> showPathfinderBlueprintSheet(
@@ -52,11 +55,14 @@ class PathfinderBlueprintSheet extends StatefulWidget {
 
 class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
   Future<Map<String, dynamic>?>? _analysisFuture;
+  late final Future<CompassAffinityScores?> _compassFuture;
 
   @override
   void initState() {
     super.initState();
     _analysisFuture = PathfinderService.analyzePaths();
+    _compassFuture =
+        CompassRecommendationService().fetchCompassScores();
   }
 
   @override
@@ -180,12 +186,18 @@ class _PathfinderBlueprintSheetState extends State<PathfinderBlueprintSheet> {
               ),
               const SizedBox(height: 24),
 
-              // Real-time Fields Card
-              _StrongestFieldsCard(
-                stemXp: widget.stemXp,
-                humssXp: widget.humssXp,
-                abmXp: widget.abmXp,
-                tvlXp: widget.tvlXp,
+              // Graph distribution: Compass onboarding + skill-tree XP
+              FutureBuilder<CompassAffinityScores?>(
+                future: _compassFuture,
+                builder: (context, compassSnapshot) {
+                  return _StrongestFieldsCard(
+                    stemXp: widget.stemXp,
+                    humssXp: widget.humssXp,
+                    abmXp: widget.abmXp,
+                    tvlXp: widget.tvlXp,
+                    compass: compassSnapshot.data,
+                  );
+                },
               ),
               const SizedBox(height: 32),
 
@@ -402,24 +414,29 @@ class _StrongestFieldsCard extends StatelessWidget {
   final int humssXp;
   final int abmXp;
   final int tvlXp;
+  final CompassAffinityScores? compass;
 
   const _StrongestFieldsCard({
     required this.stemXp,
     required this.humssXp,
     required this.abmXp,
     required this.tvlXp,
+    this.compass,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    // Mathematical Calculation for Real Data
-    final total = stemXp + humssXp + abmXp + tvlXp;
-    final double stemPct = total == 0 ? 0 : stemXp / total;
-    final double humssPct = total == 0 ? 0 : humssXp / total;
-    final double abmPct = total == 0 ? 0 : abmXp / total;
-    final double tvlPct = total == 0 ? 0 : tvlXp / total;
+    final neonOrange = theme.colorScheme.secondary;
+    final affinityScores = blendStrandAffinityScores(
+      stemXp: stemXp,
+      humssXp: humssXp,
+      abmXp: abmXp,
+      tvlXp: tvlXp,
+      compass: compass,
+    );
+    final usesCompass = compass != null && compass!.hasData;
+    final usesSkillTree = stemXp + humssXp + abmXp + tvlXp > 0;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -435,6 +452,7 @@ class _StrongestFieldsCard extends StatelessWidget {
         children: [
           Text(
             'Your Graph Distribution',
+            textAlign: TextAlign.center,
             style: GoogleFonts.montserrat(
               fontSize: 14,
               fontWeight: FontWeight.bold,
@@ -442,100 +460,79 @@ class _StrongestFieldsCard extends StatelessWidget {
               letterSpacing: 1.1,
             ),
           ),
-          const SizedBox(height: 20),
-          _FieldProgressRow(
-            label: 'STEM',
-            value: stemPct,
-            color: const Color(0xFF4CAF50),
-          ),
+          if (usesCompass && usesSkillTree) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Compass + Skill Tree',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.secondary.withValues(alpha: 0.9),
+                letterSpacing: 0.5,
+              ),
+            ),
+          ] else if (usesCompass) ...[
+            const SizedBox(height: 6),
+            Text(
+              'From Compass',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.secondary.withValues(alpha: 0.9),
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
-          _FieldProgressRow(
-            label: 'HUMSS',
-            value: humssPct,
-            color: const Color(0xFF9C27B0),
-          ),
-          const SizedBox(height: 16),
-          _FieldProgressRow(
-            label: 'ABM',
-            value: abmPct,
-            color: const Color(0xFF2196F3),
-          ),
-          const SizedBox(height: 16),
-          _FieldProgressRow(
-            label: 'TVL',
-            value: tvlPct,
-            color: const Color(0xFFFF9800),
+          SizedBox(
+            height: 260,
+            width: double.infinity,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: neonOrange.withValues(alpha: 0.15),
+                        blurRadius: 40,
+                        spreadRadius: 10,
+                      ),
+                    ],
+                  ),
+                ).animate(
+                  onPlay: (controller) => controller.repeat(reverse: true),
+                ).fade(begin: 0.5, end: 1.0, duration: 2.seconds),
+                TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 1500),
+                  curve: Curves.elasticOut,
+                  builder: (context, animValue, child) {
+                    return CustomPaint(
+                      size: const Size(double.infinity, double.infinity),
+                      painter: DiamondRadarPainter(
+                        scores: affinityScores,
+                        animationValue: animValue,
+                        neonColor: neonOrange,
+                        textColor: theme.colorScheme.onSurface,
+                        gridColor: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.2,
+                        ),
+                        surfaceColor: theme.colorScheme.surface,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _FieldProgressRow extends StatelessWidget {
-  final String label;
-  final double value;
-  final Color color;
-
-  const _FieldProgressRow({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final pct = (value * 100).round();
-
-    return Row(
-      children: [
-        SizedBox(
-          width: 60,
-          child: Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-        ),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: SizedBox(
-              height: 8,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ColoredBox(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-                  ),
-                  FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: value.clamp(0.0, 1.0),
-                    child: ColoredBox(color: color),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        SizedBox(
-          width: 40,
-          child: Text(
-            '$pct%',
-            textAlign: TextAlign.right,
-            style: GoogleFonts.orbitron(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
