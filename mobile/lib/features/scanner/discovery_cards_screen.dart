@@ -48,6 +48,11 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   }
 
   Future<void> _fetchLearningDeck() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.8),
@@ -55,24 +60,28 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
       builder: (context) => DeckQueryModal(lens: widget.selectedLens),
     );
 
-    final data = await LearnService.generateDeck(
-      objectName: widget.objectName,
-      gradeLevel: widget.gradeLevel,
-      selectedLens: widget.selectedLens,
-      teaserContext: widget.teaserContext,
-    );
+    try {
+      final data = await LearnService.generateDeck(
+        objectName: widget.objectName,
+        gradeLevel: widget.gradeLevel,
+        selectedLens: widget.selectedLens,
+        teaserContext: widget.teaserContext,
+      );
 
-    if (!mounted) return;
-    Navigator.pop(context); // Dismiss loading modal
+      if (!mounted) return;
+      Navigator.pop(context); // Dismiss loading modal
 
-    if (data != null) {
       setState(() {
         _deckData = data;
         _isLoading = false;
       });
-    } else {
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Dismiss loading modal
+
       setState(() {
-        _error = 'Failed to generate the learning deck. Please try again.';
+        // Clean up the Exception text so it looks professional to the user
+        _error = e.toString().replaceAll('Exception: ', '');
         _isLoading = false;
       });
     }
@@ -126,9 +135,59 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
             )
           : _error != null
           ? Center(
-              child: Text(
-                _error!,
-                style: GoogleFonts.inter(color: theme.colorScheme.error),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 64,
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'NETWORK CONGESTION',
+                      style: GoogleFonts.orbitron(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.8,
+                        ),
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                      icon: const Icon(Icons.refresh),
+                      label: Text(
+                        'RETRY UPLINK',
+                        style: GoogleFonts.orbitron(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      onPressed:
+                          _fetchLearningDeck, // Triggers the fetch again!
+                    ),
+                  ],
+                ),
               ),
             )
           : Stack(
@@ -266,7 +325,9 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.15,
+                            ),
                             border: Border(
                               left: BorderSide(
                                 color: theme.colorScheme.primary,
@@ -300,7 +361,12 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                           children: [
                             _buildTabButton(0, 'Fact', Icons.bolt, theme),
                             const SizedBox(width: 8),
-                            _buildTabButton(1, 'Lesson', Icons.menu_book, theme),
+                            _buildTabButton(
+                              1,
+                              'Lesson',
+                              Icons.menu_book,
+                              theme,
+                            ),
                             const SizedBox(width: 8),
                             _buildTabButton(2, 'World', Icons.public, theme),
                           ],
@@ -312,9 +378,8 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                           width: double.infinity,
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: theme.colorScheme.secondary.withValues(
-                                alpha: 0.1,
-                              ),
+                              backgroundColor: theme.colorScheme.secondary
+                                  .withValues(alpha: 0.1),
                               foregroundColor: theme.colorScheme.secondary,
                               side: BorderSide(
                                 color: theme.colorScheme.secondary.withValues(
@@ -338,13 +403,15 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                             ),
                             onPressed: () {
                               final conceptCard =
-                                  _deckData?['concept_card'] as Map<String, dynamic>? ??
+                                  _deckData?['concept_card']
+                                      as Map<String, dynamic>? ??
                                   {};
                               navigateToTuklasTutor(
                                 context,
                                 objectName: widget.objectName,
                                 strand: widget.selectedLens,
-                                currentCardContent: conceptCard['lesson_text'] ?? '',
+                                currentCardContent:
+                                    conceptCard['lesson_text'] ?? '',
                               );
                             },
                           ),

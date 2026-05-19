@@ -11,7 +11,6 @@ class LearnService {
     required String teaserContext,
   }) async {
     try {
-      // 🚀 FIX: Removed the hardcoded path and reverted to your exact ApiConfig constant
       final response = await ApiClient.post(
         ApiConfig.generateLearnDeck,
         body: {
@@ -26,14 +25,21 @@ class LearnService {
         debugPrint('🎯 AI DECK RESPONSE: ${response.body}');
         return jsonDecode(response.body);
       } else {
-        debugPrint(
-          'Learn API Error: ${response.statusCode} - ${response.body}',
-        );
-        return null;
+        // 🚀 FIX: Extract the specific error message from the backend
+        String errorMessage = 'An unknown error occurred.';
+        try {
+          final errorBody = jsonDecode(response.body);
+          if (errorBody['detail'] != null) {
+            errorMessage = errorBody['detail'];
+          }
+        } catch (_) {} // If body isn't JSON, fallback to default
+
+        debugPrint('Learn API Error: ${response.statusCode} - $errorMessage');
+        throw Exception(errorMessage);
       }
     } catch (e) {
       debugPrint('Learn API Exception: $e');
-      return null;
+      rethrow; // Pass the error up to the UI
     }
   }
 }

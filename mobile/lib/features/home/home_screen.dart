@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart'; 
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 
@@ -19,22 +19,11 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-
   @override
   void initState() {
     super.initState();
-    // 🚀 FIX: We use our new silent method. 
-    // This tells Supabase to get new data without destroying the current UI state.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(homeStatsProvider.notifier).refreshSilently();
-      // Assuming your pathways provider has a similar notifier, use .refresh(), 
-      // otherwise invalidate is fine for pathways since it's off-screen right now.
-      try {
-        ref.read(pathwaysCatalogProvider.notifier).refresh();
-      } catch (e) {
-        ref.invalidate(pathwaysCatalogProvider);
-      }
-    });
+    // Riverpod automatically handles the initial data fetch when ref.watch()
+    // is called in the build method below. No need to force it here!
   }
 
   @override
@@ -66,7 +55,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final streak = stats?.dailyStreak ?? 0;
     final avatarUrl = stats?.avatarUrl;
 
-    final branchXp = stats?.branchXp ?? {'STEM': 0, 'HUMSS': 0, 'ABM': 0, 'TVL': 0};
+    final branchXp =
+        stats?.branchXp ?? {'STEM': 0, 'HUMSS': 0, 'ABM': 0, 'TVL': 0};
     final userRank = stats?.userRank;
     final totalUsers = stats?.totalUsers ?? 0;
     final recentScans = stats?.recentScans ?? [];
@@ -78,11 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 0.0),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              HomeHeader(
-                userName: userName,
-                xp: xp,
-                avatarUrl: avatarUrl,
-              ),
+              HomeHeader(userName: userName, xp: xp, avatarUrl: avatarUrl),
               const SizedBox(height: 24),
 
               DailyMotivation(streak: streak),
@@ -117,7 +103,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               AnimatedContainer(
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeOutQuint,
-                height: (isNavBarVisible ? 0.0 : 0.0) + MediaQuery.paddingOf(context).bottom,
+                height:
+                    (isNavBarVisible ? 0.0 : 0.0) +
+                    MediaQuery.paddingOf(context).bottom,
               ),
             ]),
           ),
@@ -131,7 +119,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           .shimmer(
             duration: 1500.ms,
             color: theme.colorScheme.onSurface.withValues(alpha: 0.15),
-            angle: 1.0, 
+            angle: 1.0,
           );
     }
 
