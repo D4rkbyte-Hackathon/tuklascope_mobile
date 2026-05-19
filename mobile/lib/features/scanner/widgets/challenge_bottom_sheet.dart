@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:tuklascope_mobile/core/services/discovery_service.dart';
@@ -81,7 +82,10 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
     );
 
     if (success && mounted) {
-      ref.invalidate(homeStatsProvider);
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId != null) {
+        ref.invalidate(homeStatsProvider(userId));
+      }
       ref.invalidate(profileStatsProvider);
       ref.invalidate(
         pathwaysCatalogProvider,

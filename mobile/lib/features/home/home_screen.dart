@@ -5,7 +5,7 @@ import 'package:tuklascope_mobile/core/navigation/main_nav_scope.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 
 import 'providers/home_provider.dart';
-import '../pathways/providers/pathways_provider.dart';
+import '../auth/providers/auth_controller.dart';
 import 'widgets/home_header.dart';
 import 'widgets/daily_motivation.dart';
 import 'widgets/hero_scan_button.dart';
@@ -29,13 +29,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final statsAsync = ref.watch(homeStatsProvider);
+    final userId = ref.watch(currentAuthUserIdProvider);
+    final statsAsync = ref.watch(homeStatsProvider(userId));
 
     final navScope = MainNavScope.maybeOf(context);
     final isNavBarVisible = navScope?.isNavBarVisible ?? true;
 
     // Optional error listening if the initial load fails
-    ref.listen<AsyncValue<HomeStats>>(homeStatsProvider, (previous, next) {
+    ref.listen<AsyncValue<HomeStats>>(homeStatsProvider(userId), (previous, next) {
       if (next.hasError && !next.isLoading && previous?.value == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -49,7 +50,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final isInitialLoading = statsAsync.isLoading && statsAsync.value == null;
 
-    final stats = statsAsync.value;
+    // Ignore cached stats from a previous account while the new session loads.
+    final rawStats = statsAsync.value;
+    final stats =
+        rawStats != null && rawStats.userId == userId ? rawStats : null;
     final userName = stats?.userName ?? '...';
     final xp = stats?.totalPoints ?? 0;
     final streak = stats?.dailyStreak ?? 0;
@@ -130,7 +134,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           backgroundColor: theme.colorScheme.surface,
           onRefresh: () async {
             // Manual pull-to-refresh will still use the silent refresh for a buttery smooth experience!
-            await ref.read(homeStatsProvider.notifier).refreshSilently();
+            if (userId != null) {
+              await ref
+                  .read(homeStatsProvider(userId).notifier)
+                  .refreshSilently();
+            }
           },
           child: mainContent,
         ),

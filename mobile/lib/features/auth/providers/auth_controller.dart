@@ -4,6 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:rxdart/rxdart.dart';
 import '../models/app_user.dart';
 import '../services/supabase_auth_service.dart';
+import '../../home/providers/home_provider.dart';
+import '../../pathways/providers/pathways_provider.dart';
+import '../../profile/providers/profile_provider.dart';
 
 // ==========================================
 // 1. SERVICES & BASIC STATE
@@ -20,6 +23,24 @@ final authServiceProvider = Provider<SupabaseAuthService>((ref) {
 final authStateProvider = StreamProvider<User?>((ref) {
   final supabase = ref.watch(supabaseClientProvider);
   return supabase.auth.onAuthStateChange.map((event) => event.session?.user);
+});
+
+/// Active Supabase user id; use as a dependency for user-scoped providers.
+/// Reads [Supabase.auth.currentUser] after auth events so we do not keep the
+/// previous account during [AsyncLoading] (AsyncValue.value can be stale).
+final currentAuthUserIdProvider = Provider<String?>((ref) {
+  ref.watch(authStateProvider);
+  return ref.watch(supabaseClientProvider).auth.currentUser?.id;
+});
+
+/// Clears cached per-user state when the signed-in account changes or signs out.
+final authSessionListenerProvider = Provider<void>((ref) {
+  ref.listen<String?>(currentAuthUserIdProvider, (previous, next) {
+    if (previous == next) return;
+    ref.invalidate(homeStatsProvider);
+    ref.invalidate(pathwaysCatalogProvider);
+    ref.invalidate(profileStatsProvider);
+  });
 });
 
 // ==========================================
