@@ -9,8 +9,46 @@ import '../../../../core/widgets/gradient_scaffold.dart';
 import '../widgets/explore_history_tab.dart';
 import '../widgets/explore_leaderboard_tab.dart';
 
+/// Lets [MainNavigation] switch Explore sub-tabs without a [GlobalKey].
+///
+/// Explore may not be mounted until the user opens that bottom tab, so
+/// [requestLeaderboard] stores a pending flag consumed in [ExploreScreen.initState].
+class ExploreTabController {
+  TabController? _tabController;
+  bool _pendingLeaderboard = false;
+
+  void bind(TabController controller) {
+    _tabController = controller;
+  }
+
+  void unbind() {
+    _tabController = null;
+  }
+
+  /// Returns whether the next [ExploreScreen] mount should start on leaderboards.
+  bool consumePendingLeaderboard() {
+    if (!_pendingLeaderboard) return false;
+    _pendingLeaderboard = false;
+    return true;
+  }
+
+  void requestLeaderboard() {
+    _pendingLeaderboard = true;
+
+    final controller = _tabController;
+    if (controller == null) return;
+
+    _pendingLeaderboard = false;
+    if (controller.index != 1) {
+      controller.animateTo(1);
+    }
+  }
+}
+
 class ExploreScreen extends StatefulWidget {
-  const ExploreScreen({super.key});
+  const ExploreScreen({super.key, this.tabController});
+
+  final ExploreTabController? tabController;
 
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();
@@ -22,11 +60,19 @@ class _ExploreScreenState extends State<ExploreScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _mainTabController = TabController(length: 2, vsync: this);
+    final startOnLeaderboard =
+        widget.tabController?.consumePendingLeaderboard() ?? false;
+    _mainTabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: startOnLeaderboard ? 1 : 0,
+    );
+    widget.tabController?.bind(_mainTabController);
   }
 
   @override
   void dispose() {
+    widget.tabController?.unbind();
     _mainTabController.dispose();
     super.dispose();
   }

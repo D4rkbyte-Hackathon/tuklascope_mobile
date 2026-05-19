@@ -18,9 +18,12 @@ class MainNavigation extends StatefulWidget {
 }
 
 class MainNavigationState extends State<MainNavigation> with SingleTickerProviderStateMixin {
+  static const int _exploreTabIndex = 4;
+
   int _currentIndex = 0;
   late PageController _pageController;
   late AnimationController _shineController;
+  final ExploreTabController _exploreTabController = ExploreTabController();
 
   Timer? _inactivityTimer;
   bool _isNavBarVisible = true;
@@ -30,12 +33,14 @@ class MainNavigationState extends State<MainNavigation> with SingleTickerProvide
   Offset? _dragStartPosition;
   DateTime? _lastTapTime;
 
-  final List<Widget> _screens = const [
-    TabWrapper(rootScreen: HomeScreen()),
-    TabWrapper(rootScreen: LiveFeedScreen()),
-    TabWrapper(rootScreen: PathwaysScreen()),
-    TabWrapper(rootScreen: ProfileScreen()),
-    TabWrapper(rootScreen: ExploreScreen()),
+  late final List<Widget> _screens = [
+    const TabWrapper(rootScreen: HomeScreen()),
+    const TabWrapper(rootScreen: LiveFeedScreen()),
+    const TabWrapper(rootScreen: PathwaysScreen()),
+    const TabWrapper(rootScreen: ProfileScreen()),
+    TabWrapper(
+      rootScreen: ExploreScreen(tabController: _exploreTabController),
+    ),
   ];
 
   @override
@@ -114,6 +119,31 @@ class MainNavigationState extends State<MainNavigation> with SingleTickerProvide
     }
   }
 
+  Future<void> goToExploreLeaderboard() async {
+    _startInactivityTimer();
+    // Set before navigation so a lazily-mounted ExploreScreen opens on leaderboards.
+    _exploreTabController.requestLeaderboard();
+
+    if (_currentIndex != _exploreTabIndex) {
+      setState(() {
+        _currentIndex = _exploreTabIndex;
+        _isProgrammaticScroll = true;
+      });
+
+      await _pageController.animateToPage(
+        _exploreTabIndex,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+
+      if (mounted) {
+        _isProgrammaticScroll = false;
+      }
+    }
+
+    _exploreTabController.requestLeaderboard();
+  }
+
   @override
   Widget build(BuildContext context) {
     final padding = MediaQuery.paddingOf(context);
@@ -128,6 +158,7 @@ class MainNavigationState extends State<MainNavigation> with SingleTickerProvide
 
     return MainNavScope(
       goToTab: goToTab,
+      goToExploreLeaderboard: goToExploreLeaderboard,
       isNavBarVisible: _isNavBarVisible,
       setNavBarVisibility: _setNavBarVisibility,
       child: Scaffold(

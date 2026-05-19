@@ -395,7 +395,7 @@ class LeaderboardTeaser extends StatelessWidget {
     }
 
     return GestureDetector(
-      onTap: () => MainNavScope.maybeOf(context)?.goToTab(4), 
+      onTap: () => MainNavScope.maybeOf(context)?.goToExploreLeaderboard(),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
