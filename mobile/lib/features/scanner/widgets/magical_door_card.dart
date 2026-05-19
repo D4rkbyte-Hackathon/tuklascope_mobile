@@ -293,7 +293,8 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
                         physics: const BouncingScrollPhysics(),
                         child: Text(
                           widget.isSecured
-                              ? "You have already extracted and archived the datalogs for this pathway. Choose an unmapped lens to discover new knowledge."
+                              // 🚀 FIX: Update text to encourage revisiting
+                              ? "Datalogs successfully archived. Re-enter the portal at any time to review your insights (0 XP)."
                               : teaser,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
@@ -318,9 +319,8 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
                         strandColor: widget.isQuestMatch && !widget.isSecured
                             ? Colors.amber
                             : strandColor,
-                        onPressed: widget.isSecured
-                            ? null
-                            : widget.onEnterPortal,
+                        // 🚀 FIX: Remove the ternary operator. Always allow entry!
+                        onPressed: widget.onEnterPortal,
                       ),
                     ),
                   ],

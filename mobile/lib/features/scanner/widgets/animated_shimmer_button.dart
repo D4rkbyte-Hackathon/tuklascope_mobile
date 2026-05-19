@@ -3,7 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AnimatedShimmerButton extends StatefulWidget {
   final bool isSecured;
-  final bool isFocused; // 🚀 OPTIMIZATION: Track focus to kill off-screen animations
+  final bool
+  isFocused; // 🚀 OPTIMIZATION: Track focus to kill off-screen animations
   final Color strandColor;
   final VoidCallback? onPressed;
 
@@ -30,7 +31,7 @@ class _AnimatedShimmerButtonState extends State<AnimatedShimmerButton>
       vsync: this,
       duration: const Duration(milliseconds: 2500),
     );
-    
+
     // 🚀 OPTIMIZATION: Only start if it's both focused and unlocked
     if (widget.isFocused && !widget.isSecured) {
       _shimmerController.repeat();
@@ -40,7 +41,7 @@ class _AnimatedShimmerButtonState extends State<AnimatedShimmerButton>
   @override
   void didUpdateWidget(AnimatedShimmerButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // 🚀 OPTIMIZATION: Start/Stop animation dynamically when scrolling
     final bool shouldAnimate = widget.isFocused && !widget.isSecured;
     final bool wasAnimating = oldWidget.isFocused && !oldWidget.isSecured;
@@ -65,10 +66,12 @@ class _AnimatedShimmerButtonState extends State<AnimatedShimmerButton>
         Positioned.fill(
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  widget.isSecured ? Colors.transparent : widget.strandColor,
-              foregroundColor:
-                  widget.isSecured ? Colors.greenAccent : Colors.white,
+              backgroundColor: widget.isSecured
+                  ? Colors.transparent
+                  : widget.strandColor,
+              foregroundColor: widget.isSecured
+                  ? Colors.greenAccent
+                  : Colors.white,
               elevation: widget.isSecured ? 0 : 8,
               shadowColor: widget.strandColor.withValues(alpha: 0.6),
               padding: EdgeInsets.zero,
@@ -96,7 +99,9 @@ class _AnimatedShimmerButtonState extends State<AnimatedShimmerButton>
                   builder: (context, child) {
                     return FractionalTranslation(
                       translation: Offset(
-                          -1.5 + (_shimmerController.value * 3.0), 0),
+                        -1.5 + (_shimmerController.value * 3.0),
+                        0,
+                      ),
                       child: Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
@@ -124,7 +129,8 @@ class _AnimatedShimmerButtonState extends State<AnimatedShimmerButton>
           child: IgnorePointer(
             child: Center(
               child: Text(
-                widget.isSecured ? 'PORTAL CLOSED' : 'ENTER PORTAL',
+                // 🚀 FIX: Update text to show it's accessible for review
+                widget.isSecured ? 'REVIEW DATALOG' : 'ENTER PORTAL',
                 style: GoogleFonts.inter(
                   color: widget.isSecured ? Colors.greenAccent : Colors.white,
                   fontSize: 16,
