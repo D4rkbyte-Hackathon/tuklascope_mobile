@@ -32,3 +32,7 @@ class DiscoverResponse(DiscoverLLMResponse):
     quest_target_lenses: list[str] = Field(
         default_factory=list, description="Lenses to highlight in UI"
     )
+    completed_lenses: list[str] = Field(
+        default_factory=list,
+        description="Lenses already completed for this object by this user",
+    )

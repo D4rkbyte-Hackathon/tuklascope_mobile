@@ -8,7 +8,7 @@ class MagicalDoorCard extends StatefulWidget {
   final Map<String, dynamic> doorData;
   final bool isSecured;
   final bool isFocused;
-  final bool isQuestMatch; // 🚀 NEW PROPERTY
+  final bool isQuestMatch;
   final VoidCallback onEnterPortal;
 
   const MagicalDoorCard({
@@ -16,7 +16,7 @@ class MagicalDoorCard extends StatefulWidget {
     required this.doorData,
     required this.isSecured,
     required this.isFocused,
-    this.isQuestMatch = false, // 🚀 DEFAULT TO FALSE
+    this.isQuestMatch = false,
     required this.onEnterPortal,
   });
 
@@ -126,7 +126,6 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
               ),
               borderRadius: BorderRadius.circular(32),
               border: Border.all(
-                // 🚀 MAKE THE BORDER GLOW GOLD IF IT'S A QUEST MATCH
                 color: widget.isQuestMatch && !widget.isSecured
                     ? Colors.amberAccent
                     : strandColor.withValues(
@@ -136,7 +135,6 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
               ),
               boxShadow: [
                 BoxShadow(
-                  // 🚀 MATCH THE GLOW
                   color: widget.isQuestMatch && !widget.isSecured
                       ? Colors.amberAccent.withValues(
                           alpha: widget.isFocused ? 0.3 : 0.1,
@@ -203,7 +201,7 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                widget.isSecured ? 'EXTRACTED' : '+$xp XP',
+                                widget.isSecured ? 'ARCHIVED' : '+$xp XP',
                                 style: GoogleFonts.orbitron(
                                   color: widget.isSecured
                                       ? Colors.greenAccent
@@ -217,10 +215,8 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
                       ],
                     ),
 
-                    const SizedBox(
-                      height: 16,
-                    ), // 🚀 Replaced Spacer to prevent Flex issues
-                    // 🚀 THE MAGICAL QUEST DETECTED BADGE
+                    const SizedBox(height: 16),
+
                     if (widget.isQuestMatch && !widget.isSecured)
                       Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -278,7 +274,7 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      widget.isSecured ? "Data Fully Assimilated" : title,
+                      widget.isSecured ? "DATALOG ARCHIVED" : title,
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -290,18 +286,18 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
                       ),
                     ),
 
-                    const SizedBox(height: 12), // 🚀 Replaced Spacer
-                    // 🚀 FIX: Wrap Teaser in an Expanded + ScrollView so it NEVER overflows again!
+                    const SizedBox(height: 12),
+
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
                         child: Text(
                           widget.isSecured
-                              ? "You have successfully absorbed the knowledge from this pathway. Choose another lens to continue extracting."
+                              ? "You have already extracted and archived the datalogs for this pathway. Choose an unmapped lens to discover new knowledge."
                               : teaser,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
-                            fontSize: 14, // Slightly smaller font
+                            fontSize: 14,
                             color: theme.colorScheme.onSurface.withValues(
                               alpha: 0.8,
                             ),
@@ -311,7 +307,7 @@ class _MagicalDoorCardState extends State<MagicalDoorCard>
                       ),
                     ),
 
-                    const SizedBox(height: 16), // 🚀 Replaced Spacer
+                    const SizedBox(height: 16),
 
                     SizedBox(
                       width: double.infinity,

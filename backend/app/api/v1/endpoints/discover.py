@@ -90,12 +90,32 @@ async def discover_from_vision(
 
         token = sign_quest_matches(verified_matches) if verified_matches else None
 
+        # --- 4. NEW: Memory Pre-Check (Foreshadowing State) ---
+        completed_lenses = []
+        try:
+            past_scans = (
+                db_client.table("scans")
+                .select("chosen_lens")
+                .eq("user_id", user_id)
+                .eq("object_name", llm_resp.scanned_object)
+                .execute()
+            )
+            if past_scans.data:
+                # Extract unique lenses they have already completed for this object
+                completed_lenses = list(
+                    set([scan["chosen_lens"] for scan in past_scans.data])
+                )
+        except Exception as mem_err:
+            logger.error(f"Failed to fetch completed lenses: {mem_err}")
+            # Non-fatal error, we just pass an empty list if it fails
+
         return DiscoverResponse(
             scanned_object=llm_resp.scanned_object,
             teaser_doors=llm_resp.teaser_doors,
             matched_quest_ids=[m["id"] for m in verified_matches],
             gamification_token=token,
             quest_target_lenses=list(target_lenses),
+            completed_lenses=completed_lenses,  # 🚀 Pass it to the mobile UI
         )
 
     except HTTPException:
