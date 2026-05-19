@@ -39,6 +39,12 @@ class _TeaserDoorsScreenState extends State<TeaserDoorsScreen>
       vsync: this,
       duration: const Duration(seconds: 15),
     )..repeat();
+
+    // 🚀 ANTI-CHEAT FORESHADOWING: Pre-fill secured portals from backend memory
+    final preCompleted = List<String>.from(
+      widget.aiData['completed_lenses'] ?? [],
+    );
+    _securedPortals.addAll(preCompleted);
   }
 
   @override
