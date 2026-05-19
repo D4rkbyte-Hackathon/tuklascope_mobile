@@ -14,8 +14,28 @@ def save_user_discovery(
 ) -> tuple[str, int]:
     """
     Saves the finalized scan, and triggers the Postgres RPC to update Streaks, XP, and the Skill Tree.
+    Includes strict Anti-Cheat validation.
     """
     try:
+        # --- ANTI-CHEAT DB CHECK ---
+        # Prevent hackers from hitting /save repeatedly for the same object+lens
+        past_scan = (
+            db_client.table("scans")
+            .select("id")
+            .eq("user_id", user_id)
+            .eq("object_name", request.object_name)
+            .eq("chosen_lens", request.chosen_lens)
+            .execute()
+        )
+
+        if past_scan.data:
+            # They already did this. Return the old ID and 0 XP. Do not insert duplicate data.
+            logger.warning(
+                f"Anti-Cheat: User {user_id} attempted to save duplicate scan ({request.object_name} + {request.chosen_lens})."
+            )
+            return past_scan.data[0]["id"], 0
+
+        # --- PROCEED WITH NEW SAVE ---
         # 1. Calculate actual XP server-side
         final_xp = (
             BASE_XP_PER_SCAN * 2
@@ -30,7 +50,7 @@ def save_user_discovery(
             "chosen_lens": request.chosen_lens,
             "image_url": request.image_url,
             "learning_deck": request.learning_deck,
-            "xp_awarded": final_xp,  # Use the secure server calculated XP
+            "xp_awarded": final_xp,
             "is_aligned_with_compass": request.is_aligned_with_compass,
         }
 
@@ -42,7 +62,7 @@ def save_user_discovery(
 
         scan_id = response.data[0]["id"]
 
-        # 4. 🚀 CRITICAL: Execute the Postgres Function to update Streaks and Profile XP
+        # 4. 🚀 Execute the Postgres Function to update Streaks and Profile XP
         db_client.rpc(
             "award_xp_and_update_streak",
             {
@@ -53,7 +73,6 @@ def save_user_discovery(
             },
         ).execute()
 
-        # 🚀 FIX: Return both the ID and the calculated XP securely
         return scan_id, final_xp
 
     except Exception as e:

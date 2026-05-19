@@ -120,14 +120,21 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
     // If true, do nothing else! The UI will automatically show the EXTRACT XP button.
   }
 
-  // 🚀 NEW: This handles the actual backend database saving when the user clicks EXTRACT
   Future<void> _handleExtractXP() async {
     setState(() {
       isExtracting = true; // Show spinner on the button
     });
 
-    // 🚀 AWAIT THE BACKEND SAVE ONLY UPON CLICKING THE BUTTON
-    await _saveProgressToBackend();
+    final isMemory = widget.fullDeckData['is_memory'] == true;
+
+    // 🚀 ANTI-CHEAT: If it's a memory, bypass the backend save entirely to reduce server load!
+    if (!isMemory) {
+      await _saveProgressToBackend();
+    } else {
+      await Future.delayed(
+        const Duration(milliseconds: 600),
+      ); // Smooth UX delay
+    }
 
     if (mounted) {
       setState(() {
@@ -331,53 +338,86 @@ class _ChallengeBottomSheetState extends ConsumerState<ChallengeBottomSheet> {
                             .animate(onPlay: (c) => c.repeat(reverse: true))
                             .scaleXY(begin: 0.9, end: 1.1),
                         const SizedBox(height: 16),
-                        Text(
-                          lastResult == true
-                              ? "ACCESS GRANTED\n$explanation"
-                              : attemptsLeft > 0
-                              ? "WARNING: Incorrect. You have 1 attempt remaining."
-                              : "CRITICAL FAILURE. The door closes...",
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            color: lastResult == true
-                                ? Colors.green
-                                : Colors.red,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+
+                        // 🚀 UI FIX: Adjust text based on memory status
+                        Builder(
+                          builder: (context) {
+                            final isMemory =
+                                widget.fullDeckData['is_memory'] == true;
+                            String successText = isMemory
+                                ? "MEMORY VERIFIED\n$explanation"
+                                : "ACCESS GRANTED\n$explanation";
+
+                            return Text(
+                              lastResult == true
+                                  ? successText
+                                  : attemptsLeft > 0
+                                  ? "WARNING: Incorrect. You have 1 attempt remaining."
+                                  : "CRITICAL FAILURE. The door closes...",
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                color: lastResult == true
+                                    ? Colors.green
+                                    : Colors.red,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            );
+                          },
                         ),
+
                         if (lastResult == true) ...[
                           const SizedBox(height: 24),
-                          ElevatedButton(
-                            onPressed: isExtracting ? null : _handleExtractXP,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            child: isExtracting
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2.5,
-                                    ),
-                                  )
-                                : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(Icons.download_rounded),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'EXTRACT XP',
-                                        style: GoogleFonts.orbitron(
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 1.5,
-                                        ),
-                                      ),
-                                    ],
+                          Builder(
+                            builder: (context) {
+                              final isMemory =
+                                  widget.fullDeckData['is_memory'] == true;
+
+                              return ElevatedButton(
+                                onPressed: isExtracting
+                                    ? null
+                                    : _handleExtractXP,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isMemory
+                                      ? Colors.grey[800]
+                                      : Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
                                   ),
+                                ),
+                                child: isExtracting
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            isMemory
+                                                ? Icons.cloud_sync_rounded
+                                                : Icons.download_rounded,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            isMemory
+                                                ? 'SYNC RECORD (0 XP)'
+                                                : 'EXTRACT XP',
+                                            style: GoogleFonts.orbitron(
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 1.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              );
+                            },
                           ),
                         ],
                       ],
