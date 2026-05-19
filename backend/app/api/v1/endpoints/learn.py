@@ -31,6 +31,8 @@ async def create_learning_deck(
 
         return deck
 
+    except HTTPException:
+        raise
     except RuntimeError as e:
         logger.error(f"Deck Generation Error: {e}")
         raise HTTPException(

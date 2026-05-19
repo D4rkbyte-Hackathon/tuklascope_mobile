@@ -127,7 +127,14 @@ async def generate_learning_deck(
             detail="Learning Deck AI timed out generating the lesson. Please try again.",
         )
     except Exception as e:
+        error_str = str(e)
+        if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Tuklascope AI is currently analyzing too many anomalies globally. Please wait a few seconds and try again.",
+            )
+        # Handle Safety blocks in the future here
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Learning Deck AI Failed: {str(e)}",
+            detail=f"Learning Deck AI Failed: {error_str}",
         )
