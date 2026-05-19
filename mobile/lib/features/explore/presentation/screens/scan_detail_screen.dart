@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/services/scan_service.dart';
 import '../../../scanner/tuklas_tutor_screen.dart';
+import '../../../scanner/widgets/glass_concept_card.dart';
 
 class ScanDetailScreen extends StatefulWidget {
   final String scanId;
@@ -30,10 +31,13 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
 
   late String _currentScanId;
 
+  int _selectedTabIndex = 0;
+
   // Parsed learning deck data
   String _skill = 'Unknown';
   String _domain = 'General';
-  String _realWorldText = '';
+  String _funFact = '';
+  String _applicationText = '';
   String _strand = 'STEM';
   String _lessonText = '';
 
@@ -67,6 +71,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
     setState(() {
       _currentScanId = newScanId;
       _isLoadingScan = true;
+      _selectedTabIndex = 0;
     });
     _fetchScanDetails();
   }
@@ -76,6 +81,8 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
 
     _strand = scanData['chosen_lens'] as String? ?? 'STEM';
     _lessonText = '';
+    _funFact = '';
+    _applicationText = '';
 
     try {
       var learningDeck = scanData['learning_deck'];
@@ -94,10 +101,85 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
 
       if (learningDeck['real_world_card'] != null) {
         final realWorldCard = learningDeck['real_world_card'];
-        _realWorldText = realWorldCard['fun_fact'] ?? 'No data available.';
+        _funFact = realWorldCard['fun_fact'] as String? ?? '';
+        _applicationText = realWorldCard['application_text'] as String? ?? '';
       }
     } catch (e) {
       debugPrint('Error parsing learning deck: $e');
+    }
+  }
+
+  bool get _hasLearningContent =>
+      _funFact.isNotEmpty || _lessonText.isNotEmpty || _applicationText.isNotEmpty;
+
+  Widget _buildTabButton(
+    int index,
+    String label,
+    IconData icon,
+    ThemeData theme,
+  ) {
+    final isSelected = _selectedTabIndex == index;
+    final color = isSelected
+        ? theme.colorScheme.secondary
+        : theme.colorScheme.onSurface.withValues(alpha: 0.5);
+    final bgColor = isSelected
+        ? theme.colorScheme.secondary.withValues(alpha: 0.15)
+        : Colors.transparent;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTabIndex = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: bgColor,
+            border: Border(
+              bottom: BorderSide(
+                color: isSelected
+                    ? theme.colorScheme.secondary
+                    : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 8),
+              Text(
+                label.toUpperCase(),
+                style: GoogleFonts.orbitron(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveCard() {
+    if (_selectedTabIndex == 0) {
+      return GlassConceptCard(
+        title: 'DATALOG // ANOMALY',
+        content: _funFact,
+      );
+    } else if (_selectedTabIndex == 1) {
+      return GlassConceptCard(
+        title: 'DATALOG // CORE SECRET',
+        content: _lessonText,
+        badgeText: '$_domain | $_skill',
+      );
+    } else {
+      return GlassConceptCard(
+        title: 'DATALOG // APPLICATION',
+        content: _applicationText,
+      );
     }
   }
 
@@ -108,7 +190,6 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
     
     final primaryColor = theme.colorScheme.primary;
     final secondaryAccent = theme.colorScheme.secondary;
-    final tertiaryAccent = theme.colorScheme.tertiary;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -350,61 +431,19 @@ class _ScanDetailScreenState extends State<ScanDetailScreen>
 
                         const SizedBox(height: 24),
 
-                        // 6. REAL WORLD LORE DATALOG
-                        if (_realWorldText.isNotEmpty) ...[
+                        // 6. LEARNING DECK (Fact / Lesson / World tabs)
+                        if (_hasLearningContent) ...[
                           Row(
                             children: [
-                              Icon(Icons.travel_explore_rounded, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                              _buildTabButton(0, 'Fact', Icons.bolt, theme),
                               const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  "DATALOG // REAL WORLD",
-                                  style: GoogleFonts.orbitron(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                                    letterSpacing: 2.0,
-                                  ),
-                                ),
-                              ),
+                              _buildTabButton(1, 'Lesson', Icons.menu_book, theme),
+                              const SizedBox(width: 8),
+                              _buildTabButton(2, 'World', Icons.public, theme),
                             ],
-                          ).animate().fade(delay: 500.ms),
-                          
-                          const SizedBox(height: 12),
-                          
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: tertiaryAccent.withValues(alpha: 0.05),
-                              border: Border.all(color: tertiaryAccent.withValues(alpha: 0.3), width: 1.5),
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(4),
-                                topRight: Radius.circular(24),
-                                bottomLeft: Radius.circular(24),
-                                bottomRight: Radius.circular(4),
-                              )
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.public_rounded, color: tertiaryAccent, size: 22)
-                                  .animate(onPlay: (c) => c.repeat(reverse: true))
-                                  .fadeIn(duration: 1.seconds),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    _realWorldText,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      height: 1.6,
-                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ).animate().fade(delay: 600.ms).slideY(begin: 0.1),
+                          ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
+                          const SizedBox(height: 24),
+                          _buildActiveCard().animate().fade(delay: 600.ms).slideY(begin: 0.1),
                         ],
 
                         const SizedBox(height: 32),
