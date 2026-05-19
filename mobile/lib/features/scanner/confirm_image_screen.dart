@@ -19,19 +19,20 @@ class ConfirmImageScreen extends ConsumerStatefulWidget {
   ConsumerState<ConfirmImageScreen> createState() => _ConfirmImageScreenState();
 }
 
-class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with SingleTickerProviderStateMixin {
+class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen>
+    with SingleTickerProviderStateMixin {
   bool _isIsolating = true;
   bool _segmentationFailed = false; // Tracks if ML Kit failed
   File? _segmentedImage;
   late AnimationController _glitchController;
-  late Animation<Color?> _glowAnimation; 
+  late Animation<Color?> _glowAnimation;
 
   @override
   void initState() {
     super.initState();
     _glitchController = AnimationController(
-      vsync: this, 
-      duration: const Duration(milliseconds: 1200)
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
     _isolateSubject();
   }
@@ -40,10 +41,13 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
   void didChangeDependencies() {
     super.didChangeDependencies();
     final theme = Theme.of(context);
-    _glowAnimation = ColorTween(
-      begin: theme.colorScheme.secondary, 
-      end: theme.colorScheme.primary,
-    ).animate(CurvedAnimation(parent: _glitchController, curve: Curves.easeInOut));
+    _glowAnimation =
+        ColorTween(
+          begin: theme.colorScheme.secondary,
+          end: theme.colorScheme.primary,
+        ).animate(
+          CurvedAnimation(parent: _glitchController, curve: Curves.easeInOut),
+        );
   }
 
   Future<void> _isolateSubject() async {
@@ -61,8 +65,8 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
           enableForegroundBitmap: true,
           enableForegroundConfidenceMask: false,
           enableMultipleSubjects: SubjectResultOptions(
-            enableConfidenceMask: false, 
-            enableSubjectBitmap: false
+            enableConfidenceMask: false,
+            enableSubjectBitmap: false,
           ),
         ),
       );
@@ -71,7 +75,8 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
       final result = await segmenter.processImage(inputImage);
 
       if (result.foregroundBitmap != null) {
-        final segmentedPath = '${widget.originalImage.parent.path}/segmented_${DateTime.now().millisecondsSinceEpoch}.png';
+        final segmentedPath =
+            '${widget.originalImage.parent.path}/segmented_${DateTime.now().millisecondsSinceEpoch}.png';
         final segmentedFile = File(segmentedPath);
         await segmentedFile.writeAsBytes(result.foregroundBitmap!);
 
@@ -99,7 +104,10 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$message Using original image.', style: GoogleFonts.orbitron()),
+          content: Text(
+            '$message Using original image.',
+            style: GoogleFonts.orbitron(),
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
           duration: const Duration(seconds: 4),
           action: SnackBarAction(
@@ -118,35 +126,75 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
 
     String apiSafeGradeLevel;
     switch (rawGrade) {
-      case 'Elementary': apiSafeGradeLevel = 'Elementary (Grades 4-6)'; break;
-      case 'Senior High School': apiSafeGradeLevel = 'SHS (Grades 11-12)'; break;
-      case 'College': case 'Others': apiSafeGradeLevel = 'College/Undergrad'; break;
-      case 'High School': default: apiSafeGradeLevel = 'JHS (Grades 7-10)'; break;
+      case 'Elementary':
+        apiSafeGradeLevel = 'Elementary (Grades 4-6)';
+        break;
+      case 'Senior High School':
+        apiSafeGradeLevel = 'SHS (Grades 11-12)';
+        break;
+      case 'College':
+      case 'Others':
+        apiSafeGradeLevel = 'College/Undergrad';
+        break;
+      case 'High School':
+      default:
+        apiSafeGradeLevel = 'JHS (Grades 7-10)';
+        break;
     }
 
     final imageToUpload = _segmentedImage ?? widget.originalImage;
-    showDialog(context: context, barrierDismissible: false, builder: (context) => const AiQueryModal());
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AiQueryModal(),
+    );
 
-    final aiResult = await DiscoveryService.analyzeImage(imageFile: imageToUpload, gradeLevel: apiSafeGradeLevel);
+    try {
+      final aiResult = await DiscoveryService.analyzeImage(
+        imageFile: imageToUpload,
+        gradeLevel: apiSafeGradeLevel,
+      );
 
-    if (!mounted) return;
-    Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context); // Dismiss loading modal
 
-    if (aiResult != null) {
-      Navigator.pushReplacement(context, MaterialPageRoute(
-        builder: (context) => TeaserDoorsScreen(aiData: aiResult, imagePath: imageToUpload.path, gradeLevel: apiSafeGradeLevel),
-      ));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Failed to analyze. Check your connection.', style: GoogleFonts.orbitron()),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ));
+      if (aiResult != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TeaserDoorsScreen(
+              aiData: aiResult,
+              imagePath: imageToUpload.path,
+              gradeLevel: apiSafeGradeLevel,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Ensure loading modal is dismissed on error
+
+      // Clean the exception text
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+
+      // Show the specific backend error in the SnackBar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            errorMsg,
+            style: GoogleFonts.orbitron(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 5),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
   // Smooth alternating outline renderer for isolated subjects
   Widget _buildStickerOutline(File image) {
-    const double stroke = 6.0; 
+    const double stroke = 6.0;
     return AnimatedBuilder(
       animation: _glowAnimation,
       builder: (context, child) {
@@ -160,7 +208,7 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                     offset: Offset(dx, dy),
                     child: ColorFiltered(
                       colorFilter: ColorFilter.mode(
-                        _glowAnimation.value ?? Colors.white, 
+                        _glowAnimation.value ?? Colors.white,
                         BlendMode.srcIn,
                       ),
                       child: Image.file(image, fit: BoxFit.contain),
@@ -169,7 +217,7 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
             Image.file(image, fit: BoxFit.contain),
           ],
         );
-      }
+      },
     );
   }
 
@@ -183,18 +231,20 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: (_glowAnimation.value ?? Colors.white).withValues(alpha: 0.5),
+                color: (_glowAnimation.value ?? Colors.white).withValues(
+                  alpha: 0.5,
+                ),
                 blurRadius: 15,
                 spreadRadius: 2,
-              )
-            ]
+              ),
+            ],
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.file(image, fit: BoxFit.cover),
           ),
         );
-      }
+      },
     );
   }
 
@@ -213,26 +263,34 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
         child: Column(
           children: [
             const SizedBox(height: 20),
-            // HEADER 
+            // HEADER
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
                 border: Border(
                   left: BorderSide(
-                    color: _segmentationFailed 
-                        ? theme.colorScheme.error 
-                        : (_isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary), 
-                    width: 4
+                    color: _segmentationFailed
+                        ? theme.colorScheme.error
+                        : (_isIsolating
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.secondary),
+                    width: 4,
                   ),
                 ),
               ),
               child: Row(
                 children: [
                   Icon(
-                    _segmentationFailed ? Icons.warning_amber_rounded 
-                    : (_isIsolating ? Icons.hourglass_empty : Icons.check_circle_outline), 
-                    color: _segmentationFailed ? theme.colorScheme.error 
-                         : (_isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary)
+                    _segmentationFailed
+                        ? Icons.warning_amber_rounded
+                        : (_isIsolating
+                              ? Icons.hourglass_empty
+                              : Icons.check_circle_outline),
+                    color: _segmentationFailed
+                        ? theme.colorScheme.error
+                        : (_isIsolating
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.secondary),
                   ),
                   const SizedBox(width: 10),
                   AnimatedBuilder(
@@ -250,19 +308,22 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                           fontWeight: FontWeight.bold,
                           letterSpacing: 2,
                           shadows: [
-                            if (_isIsolating) BoxShadow(
-                              color: theme.colorScheme.primary.withValues(alpha: _glitchController.value), 
-                              blurRadius: 10
-                            )
-                          ]
+                            if (_isIsolating)
+                              BoxShadow(
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: _glitchController.value,
+                                ),
+                                blurRadius: 10,
+                              ),
+                          ],
                         ),
                       );
-                    }
+                    },
                   ),
                 ],
               ),
             ),
-            
+
             const Spacer(),
 
             // INCUBATOR CHAMBER
@@ -271,16 +332,25 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                 width: MediaQuery.of(context).size.width * 0.85,
                 height: MediaQuery.of(context).size.height * 0.55,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0D1117), 
+                  color: const Color(0xFF0D1117),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: _segmentationFailed ? theme.colorScheme.error.withValues(alpha: 0.5) 
-                         : (_isIsolating ? theme.colorScheme.primary.withValues(alpha: 0.5) : theme.colorScheme.secondary),
+                    color: _segmentationFailed
+                        ? theme.colorScheme.error.withValues(alpha: 0.5)
+                        : (_isIsolating
+                              ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                              : theme.colorScheme.secondary),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: (_segmentationFailed ? theme.colorScheme.error : (_isIsolating ? theme.colorScheme.primary : theme.colorScheme.secondary)).withValues(alpha: 0.2),
+                      color:
+                          (_segmentationFailed
+                                  ? theme.colorScheme.error
+                                  : (_isIsolating
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.secondary))
+                              .withValues(alpha: 0.2),
                       blurRadius: 30,
                       spreadRadius: 5,
                     ),
@@ -291,20 +361,25 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                   children: [
                     // Grid Background
                     CustomPaint(
-                      painter: _GridPainter(color: theme.colorScheme.primary.withValues(alpha: 0.1)),
+                      painter: _GridPainter(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      ),
                     ),
 
                     // The image or breathing segmented sticker
                     Padding(
                       padding: const EdgeInsets.all(12.0),
                       child: _segmentedImage != null && !_isIsolating
-                          ? _buildStickerOutline(_segmentedImage!) 
-                          : (_segmentationFailed 
-                              ? _buildFallbackOutline(widget.originalImage) 
-                              : ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(widget.originalImage, fit: BoxFit.cover),
-                                )),
+                          ? _buildStickerOutline(_segmentedImage!)
+                          : (_segmentationFailed
+                                ? _buildFallbackOutline(widget.originalImage)
+                                : ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(
+                                      widget.originalImage,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )),
                     ),
 
                     // Scanning Loader Overlay
@@ -322,7 +397,7 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                 ),
               ),
             ),
-            
+
             // Optional Retry Button right below the chamber
             if (_segmentationFailed)
               Padding(
@@ -331,8 +406,11 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                   onPressed: _isolateSubject,
                   icon: Icon(Icons.refresh, color: theme.colorScheme.primary),
                   label: Text(
-                    'RETRY ISOLATION', 
-                    style: GoogleFonts.orbitron(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)
+                    'RETRY ISOLATION',
+                    style: GoogleFonts.orbitron(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -349,14 +427,27 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _isIsolating ? null : () => Navigator.pop(context),
+                        onPressed: _isIsolating
+                            ? null
+                            : () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          side: BorderSide(color: theme.colorScheme.primary, width: 2),
+                          side: BorderSide(
+                            color: theme.colorScheme.primary,
+                            width: 2,
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 20),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                        child: Text('RETAKE', style: GoogleFonts.orbitron(fontWeight: FontWeight.bold, letterSpacing: 2)),
+                        child: Text(
+                          'RETAKE',
+                          style: GoogleFonts.orbitron(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -365,17 +456,25 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
                       child: ElevatedButton(
                         onPressed: _isIsolating ? null : _sendToAI,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.secondary, 
-                          foregroundColor: Colors.black, 
+                          backgroundColor: theme.colorScheme.secondary,
+                          foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 20),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           elevation: 15,
                           shadowColor: theme.colorScheme.secondary,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('ANALYZE', style: GoogleFonts.orbitron(fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                            Text(
+                              'ANALYZE',
+                              style: GoogleFonts.orbitron(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
                             const SizedBox(width: 8),
                             const Icon(Icons.satellite_alt, size: 18),
                           ],
@@ -396,10 +495,12 @@ class _ConfirmImageScreenState extends ConsumerState<ConfirmImageScreen> with Si
 class _GridPainter extends CustomPainter {
   final Color color;
   _GridPainter({required this.color});
-  
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color..strokeWidth = 1;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
     for (double i = 0; i < size.width; i += 20) {
       canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
     }
@@ -407,6 +508,7 @@ class _GridPainter extends CustomPainter {
       canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
     }
   }
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
