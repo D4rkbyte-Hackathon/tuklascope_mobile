@@ -504,6 +504,9 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
   }
 
   Widget _buildChallengeBottomBar(ThemeData theme) {
+    // 🚀 ANTI-CHEAT: Check if this is a retrieved memory
+    final isMemory = _deckData?['is_memory'] == true;
+
     return Container(
       padding: EdgeInsets.fromLTRB(
         20,
@@ -530,26 +533,39 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
       child:
           ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
+                  backgroundColor: isMemory
+                      ? theme.colorScheme.surfaceTint
+                      : theme.colorScheme.primary,
+                  foregroundColor: isMemory
+                      ? theme.colorScheme.onSurface
+                      : theme.colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 15,
-                  shadowColor: theme.colorScheme.primary.withValues(alpha: 0.5),
+                  elevation: isMemory ? 5 : 15,
+                  shadowColor: isMemory
+                      ? Colors.transparent
+                      : theme.colorScheme.primary.withValues(alpha: 0.5),
                 ),
                 onPressed: _showChallengeModal,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.sports_esports_rounded, size: 22),
+                    Icon(
+                      isMemory
+                          ? Icons.history_edu_rounded
+                          : Icons.sports_esports_rounded,
+                      size: 22,
+                    ),
                     const SizedBox(width: 12),
                     Flexible(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          'TAKE CHALLENGE TO EARN XP',
+                          isMemory
+                              ? 'REVIEW ARCHIVED DATALOG'
+                              : 'TAKE CHALLENGE TO EARN XP',
                           style: GoogleFonts.orbitron(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -561,7 +577,7 @@ class _DiscoveryCardsScreenState extends ConsumerState<DiscoveryCardsScreen> {
                   ],
                 ),
               )
-              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .animate(onPlay: (c) => isMemory ? null : c.repeat(reverse: true))
               .shimmer(
                 duration: 2.seconds,
                 color: theme.colorScheme.onPrimary.withValues(alpha: 0.3),

@@ -43,7 +43,6 @@ async def generate_discovery_from_image(
 ) -> DiscoverLLMResponse:
     try:
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-        # Now passing the context
         prompt_text = VISION_DISCOVERY_PROMPT.format(
             grade_level=grade_level, active_quests_context=active_quests_context
         )
@@ -65,12 +64,28 @@ async def generate_discovery_from_image(
     except asyncio.TimeoutError:
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Vision AI timed out while analyzing the image. The image might be too complex or the network is slow.",
+            detail="Vision AI timed out while analyzing the image. The network might be slow.",
         )
     except Exception as e:
+        error_str = str(e)
+
+        # 1. Handle Rate Limits
+        if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Scanner network congested. Please wait a few seconds and try scanning again.",
+            )
+
+        # 2. Handle Inappropriate Objects (NSFW, Violence, etc.)
+        if "SAFETY" in error_str or "FinishReason.SAFETY" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="System Override: Unidentified or Restricted Anomaly Detected. Scan Aborted.",
+            )
+
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"AI Vision Processing Failed: {str(e)}",
+            detail=f"AI Vision Processing Failed: {error_str}",
         )
 
 
@@ -96,9 +111,18 @@ async def generate_holistic_pathfinder(
             detail="Pathfinder AI timed out. Please try again.",
         )
     except Exception as e:
+        error_str = str(e)
+
+        # 1. Handle Rate Limits
+        if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Pathfinder generation is currently queued. Please try again in a moment.",
+            )
+
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Pathfinder generation failed: {str(e)}",
+            detail=f"Pathfinder generation failed: {error_str}",
         )
 
 

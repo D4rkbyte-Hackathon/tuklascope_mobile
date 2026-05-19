@@ -57,14 +57,23 @@ class DiscoveryService {
         debugPrint('✅ AI Analysis Complete!');
         return jsonDecode(utf8.decode(response.bodyBytes));
       } else {
+        // 🚀 FIX: Extract the specific backend error (e.g. Safety Block or Rate Limit)
+        String errorMessage = 'An unknown anomaly interfered with the scan.';
+        try {
+          final errorBody = jsonDecode(response.body);
+          if (errorBody['detail'] != null) {
+            errorMessage = errorBody['detail'];
+          }
+        } catch (_) {}
+
         debugPrint(
-          '❌ Vision API Error [${response.statusCode}]: ${response.body}',
+          '❌ Vision API Error [${response.statusCode}]: $errorMessage',
         );
-        return null;
+        throw Exception(errorMessage);
       }
     } catch (e) {
       debugPrint('🚨 CRITICAL FAILURE: Image upload crashed. Error: $e');
-      return null;
+      rethrow; // Pass error up to UI
     }
   }
 
