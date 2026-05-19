@@ -140,11 +140,17 @@ class HomeStatsNotifier extends AsyncNotifier<HomeStats> {
     Map<String, int> branchXp = {'STEM': 0, 'HUMSS': 0, 'ABM': 0, 'TVL': 0};
     if (skillData != null && skillData['xp_distribution'] != null) {
       final dist = skillData['xp_distribution'] as Map<String, dynamic>;
+      // Neo4j returns lowercase keys (stem, humss, …); keep uppercase for UI maps.
+      int xpFor(String lower, String upper) =>
+          int.tryParse(
+                (dist[lower] ?? dist[upper])?.toString() ?? '0',
+              ) ??
+          0;
       branchXp = {
-        'STEM': (dist['STEM'] ?? 0) as int,
-        'HUMSS': (dist['HUMSS'] ?? 0) as int,
-        'ABM': (dist['ABM'] ?? 0) as int,
-        'TVL': (dist['TVL'] ?? 0) as int,
+        'STEM': xpFor('stem', 'STEM'),
+        'HUMSS': xpFor('humss', 'HUMSS'),
+        'ABM': xpFor('abm', 'ABM'),
+        'TVL': xpFor('tvl', 'TVL'),
       };
     }
 
