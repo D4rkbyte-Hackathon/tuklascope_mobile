@@ -54,3 +54,26 @@ Map<Affinity, double> blendStrandAffinityScores({
         Affinity.tvl: 0.0,
       };
 }
+
+/// 0–100 strand scores for pathway matching and For You graph UI.
+CompassAffinityScores blendedCompassAffinityScores({
+  int stemXp = 0,
+  int humssXp = 0,
+  int abmXp = 0,
+  int tvlXp = 0,
+  CompassAffinityScores? compass,
+}) {
+  final blended = blendStrandAffinityScores(
+    stemXp: stemXp,
+    humssXp: humssXp,
+    abmXp: abmXp,
+    tvlXp: tvlXp,
+    compass: compass,
+  );
+  return CompassAffinityScores(
+    stemAffinity: (blended[Affinity.stem]! * 100).round(),
+    abmAffinity: (blended[Affinity.abm]! * 100).round(),
+    humssAffinity: (blended[Affinity.humss]! * 100).round(),
+    tvlAffinity: (blended[Affinity.tvl]! * 100).round(),
+  );
+}

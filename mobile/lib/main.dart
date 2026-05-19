@@ -7,6 +7,7 @@ import 'core/theme/theme_provider.dart'; // The state notifier
 import 'core/theme/app_theme.dart';      // <-- ADDED: The actual color palettes we made
 
 import 'features/auth/presentation/widgets/auth_gate.dart';
+import 'features/auth/providers/auth_controller.dart';
 
 Future<void> main() async {
   // 1. Ensure Flutter bindings are initialized before calling native code
@@ -32,6 +33,8 @@ class TuklascopeApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(authSessionListenerProvider);
+
     // 1. Wrap MaterialApp with ValueListenableBuilder
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: appThemeNotifier,

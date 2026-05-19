@@ -8,6 +8,7 @@ import '../../../core/navigation/main_nav_scope.dart';
 import '../../../core/widgets/gradient_scaffold.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../auth/providers/auth_controller.dart';
+import '../../home/providers/home_provider.dart';
 import '../../auth/presentation/widgets/auth_gate.dart';
 import '../pathfinder_blueprint_sheet.dart'; 
 import '../screens/change_password_screen.dart'; 
@@ -446,6 +447,7 @@ class _ProfileTabsSectionState extends ConsumerState<ProfileTabsSection>
                 onTap: () async {
                   final nav = Navigator.of(context, rootNavigator: true);
                   await Supabase.instance.client.auth.signOut();
+                  ref.invalidate(homeStatsProvider);
                   nav.pushAndRemoveUntil(
                     MaterialPageRoute(builder: (context) => const AuthGate()),
                     (route) => false,

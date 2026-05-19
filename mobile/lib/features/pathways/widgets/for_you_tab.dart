@@ -5,6 +5,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/utils/strand_distribution.dart';
+import '../../profile/models/profile_models.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../models/pathway_models.dart';
 import '../providers/pathways_provider.dart';
 import '../screens/reward_screen.dart';
@@ -23,6 +26,7 @@ class ForYouTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final catalogAsync = ref.watch(pathwaysCatalogProvider);
     final compassAsync = ref.watch(compassAffinityProvider);
+    final profileAsync = ref.watch(profileStatsProvider);
 
     return catalogAsync.when(
       loading: () => _LoadingShimmer(embedInParentScroll: embedInParentScroll),
@@ -30,22 +34,46 @@ class ForYouTab extends ConsumerWidget {
         embedInParentScroll: embedInParentScroll,
         onRetry: () => ref.invalidate(pathwaysCatalogProvider),
       ),
-      data: (catalog) => compassAsync.when(
-        loading: () => _LoadingShimmer(embedInParentScroll: embedInParentScroll),
-        error: (e, _) => _NoCompassState(embedInParentScroll: embedInParentScroll),
-        data: (scores) {
-          if (scores == null || !scores.hasData) {
-            return _NoCompassState(embedInParentScroll: embedInParentScroll);
-          }
-          final service = ref.read(compassRecommendationServiceProvider);
-          final ranked = service.rankPathways(catalog.pathways, scores);
-          return _RecommendedList(
-            ranked: ranked,
-            scores: scores,
-            embedInParentScroll: embedInParentScroll,
-          );
-        },
-      ),
+      data: (catalog) {
+        if (compassAsync.isLoading || profileAsync.isLoading) {
+          return _LoadingShimmer(embedInParentScroll: embedInParentScroll);
+        }
+
+        final stats = profileAsync.maybeWhen(
+          data: (value) => value,
+          orElse: () => ProfileStats(
+            totalXp: 0,
+            currentLevel: 1,
+            conceptsMastered: 0,
+            stemXp: 0,
+            humssXp: 0,
+            abmXp: 0,
+            tvlXp: 0,
+            topSkills: [],
+          ),
+        );
+
+        final blended = blendedCompassAffinityScores(
+          stemXp: stats.stemXp,
+          humssXp: stats.humssXp,
+          abmXp: stats.abmXp,
+          tvlXp: stats.tvlXp,
+          compass: compassAsync.value,
+        );
+
+        if (!blended.hasData) {
+          return _NoCompassState(embedInParentScroll: embedInParentScroll);
+        }
+
+        final service = ref.read(compassRecommendationServiceProvider);
+        final ranked = service.rankPathways(catalog.pathways, blended);
+
+        return _RecommendedList(
+          ranked: ranked,
+          scores: blended,
+          embedInParentScroll: embedInParentScroll,
+        );
+      },
     );
   }
 }
@@ -99,7 +127,7 @@ class _RecommendedList extends StatelessWidget {
   }
 }
 
-// ─── Compass Summary Banner ──────────────────────────────────────────────────
+// ─── Compass summary (strand % bars; blends in skill-tree XP when present) ─
 
 class _CompassSummaryCard extends StatelessWidget {
   final CompassAffinityScores scores;

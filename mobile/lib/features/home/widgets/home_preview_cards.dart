@@ -107,8 +107,9 @@ class MiniSkillTreeCard extends StatelessWidget {
   const MiniSkillTreeCard({super.key, required this.branchXp});
 
   Widget _buildSkillNode(ThemeData theme, String label, int xp, Color color, IconData icon) {
-    final int level = (xp ~/ 50) + 1;
-    final double progress = (xp % 50) / 50.0;
+    // Match profile skill tree: 500 XP per strand level
+    final int level = 1 + (xp ~/ 500);
+    final double progress = (xp % 500) / 500.0;
 
     return Column(
       children: [
@@ -395,7 +396,7 @@ class LeaderboardTeaser extends StatelessWidget {
     }
 
     return GestureDetector(
-      onTap: () => MainNavScope.maybeOf(context)?.goToTab(4), 
+      onTap: () => MainNavScope.maybeOf(context)?.goToExploreLeaderboard(),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
